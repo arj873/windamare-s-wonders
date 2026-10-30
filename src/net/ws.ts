@@ -10,10 +10,9 @@ import type { Connect, RoomApi } from './transport';
 export interface SocketLike {
   send(data: string): void;
   close(code?: number, reason?: string): void;
-  addEventListener(type: 'open', cb: () => void): void;
+  addEventListener(type: 'open' | 'error', cb: () => void): void;
   addEventListener(type: 'message', cb: (e: { data: unknown }) => void): void;
   addEventListener(type: 'close', cb: (e: { code: number; reason: string }) => void): void;
-  addEventListener(type: 'error', cb: () => void): void;
 }
 export type SocketFactory = (url: string) => SocketLike;
 
