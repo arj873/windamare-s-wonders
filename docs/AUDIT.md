@@ -21,7 +21,7 @@ any real token/seed generator.
 
 Open findings: none. The tests stay as regression guards; any lane that changes an API they use must keep them compiling.
 
-## Q1 — Windamere engine against docs/RULES.md (re-run on main b50fccd, fixture content)
+## Q1 — Windamere engine against docs/RULES.md (re-run on main 9a7a293, fixture content)
 
 Tested: `src/engine/game/*` through `createWindamereEngine(FIXTURE)` in
 `src/engine/game/rules.audit.test.ts`. The real card data (`src/content/`) is not on main, so card
@@ -51,6 +51,14 @@ those two are covered only by the generic buy/short-supply tests and need a re-c
 - **Mutation check.** I broke the engine on purpose in 10 places (Winter Yield, bounty order,
   plunder size, covered cards counting, seller order, buy limit, missing glean, market price,
   bank price, final tier check): all but one equivalent mutant were caught by these tests.
+
+**Watch: D8 (on `agent/design`, not on main).** It changes the Market price to 1, 3, 4, 5 and the
+bank to 6 (R6.3, R6.6c), and R17.9 so a purchase is filled from the seller's store _after its own
+Build is paid and including its step-1 Spend gains_. These tests hard-code the current numbers
+(`PRICE`, bank 5) and the current fill rule (R6.7 "seller short" tests); when the engine adopts
+D8 they must change in the same commit, and a seller whose Spend produces the wanted good needs a
+new test. Also: E3 renamed the log events (`sale`/`saleShort` are now one `trade` event with
+`filled`); the audit reads `trade`.
 
 **R14 and R2.4/R2.5 (landed in engine PR #27 / E2)** are now tested: 2 seats deal 10 cards
 from the 4-seat deck, a Burn is required on turns 1-4 and forbidden on the fifth (hands 10, 8, 6,

@@ -1020,10 +1020,15 @@ describe('edges the random games rarely reach', () => {
       1: pk(left, 'build', { pay: buy }),
       2: pk(right, 'build', { pay: buy }),
     });
-    const sales = after.log.filter((l) => l.kind === 'sale' || l.kind === 'saleShort');
-    expect(sales.map((l) => [l.kind, (l.data as { buyer: number }).buyer])).toEqual([
-      ['sale', 1],
-      ['saleShort', 2],
+    const trades = after.log.filter((l) => l.kind === 'trade');
+    expect(
+      trades.map((l) => {
+        const d = l.data as { buyer: number; filled: boolean };
+        return [d.filled, d.buyer];
+      }),
+    ).toEqual([
+      [true, 1],
+      [false, 2],
     ]);
   });
 
