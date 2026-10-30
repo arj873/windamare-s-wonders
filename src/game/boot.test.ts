@@ -103,6 +103,35 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
+  it('?debug=1 starts an all-human game with no covers and stable data-* hooks', () => {
+    const root = mount();
+    const app = boot(root, { game: windamereBinding(), debug: { seats: 3, seed: 'qa' } });
+    const table = root.querySelector<HTMLElement>('.dt')!;
+    expect(app.play?.game.humans).toEqual([0, 1, 2]);
+    expect(table.dataset.phase).toBe('prompt');
+    expect(root.querySelector('.dt-cover')).toBeNull();
+    // Each seat chooses its Great Work in turn; the screen moves on with no pass cover.
+    for (const seat of [0, 1, 2]) {
+      expect(table.dataset.viewer).toBe(String(seat));
+      const option = root.querySelector<HTMLElement>('[data-answer]')!;
+      expect(option.dataset.answer).toMatch(/^the-/);
+      option.click();
+    }
+    expect(table.dataset.phase).toBe('pick');
+    const card = root.querySelector<HTMLElement>('.dt-card[data-card][data-def]')!;
+    card.click();
+    expect(
+      root.querySelector(`[data-use="spend"][data-card="${card.dataset.card}"]`),
+    ).not.toBeNull();
+    expect(table.dataset.viewer).toBe('2'); // the last seat to choose keeps the screen
+    root.querySelector<HTMLElement>('[data-use="spend"]')!.click();
+    expect(table.dataset.viewer).toBe('0');
+    expect(root.querySelector('.dt-chip[data-seat="2"]')?.getAttribute('data-status')).toBe(
+      'picked',
+    );
+    app.play?.dispose();
+  });
+
   it('refuses a setup the ruleset cannot seat, with a notice', () => {
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });

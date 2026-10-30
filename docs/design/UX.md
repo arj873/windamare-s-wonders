@@ -45,6 +45,7 @@ author, same stack). §14 maps each Catan module to its use here.
 15. Reuse map (Catan → here)
 16. Open questions
 17. Online client API (what `RoomClient` gives the UI)
+18. Test hooks (qa playtest harness)
 
 ---
 
@@ -963,3 +964,34 @@ new server message is needed (MULTIPLAYER.md §3 already marks a `reveal` messag
 - The client never holds other seats' hands or picks: it only stores what the server sent.
 - A test double (`LocalNet` + fake clock, as Catan) so ui tests can drive lobby and table
   without a server.
+
+---
+
+## 18. Test hooks (qa playtest harness)
+
+Stable hooks for scripts that drive a browser game (qa Q2). Implemented in U4; changing one is a
+breaking change for qa: say so in the status file.
+
+**Start.** `/?debug=1[&seats=N][&seed=S]` skips the setup screen and starts a game with N human
+seats (default 4, clamped to the player range), named `P1`…`PN`, no pick timer and **no pass
+covers**: the table shows whichever seat the game waits for, so a script plays each seat in turn.
+In debug mode only, `window.ww` is the app handle (`ww.play.game.state` = the full state, for
+assertions; never read it to choose moves). Without `debug=1` nothing of this exists.
+
+**Attributes** (the table's root is `.dt`):
+
+| Element                     | Attributes                                                                        |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| table root `.dt`            | `data-phase` = `pick` / `prompt` / `gameOver` / `cover`; `data-viewer` = seat     |
+| status chip, summary row    | `data-seat`, `data-status` = `picked` / `thinking` / `idle`                       |
+| neighbour panel             | `data-seat`                                                                       |
+| hand card (button)          | `data-card` (card id), `data-def` (catalog id), `data-playable`                   |
+| Build / Spend button        | `data-use` = `build` / `spend`, `data-card`; disabled when not legal              |
+| choice row (in the popover) | `data-choice` = `cover` or `pay-<i>-<good>`                                       |
+| choice option (button)      | `data-option` = `cover-<cardId>`, `full`, `buy-<seat>`, `exchange-<good>`, `bank` |
+| prompt answer (Great Work)  | `data-answer` = the answer (a Great Work id)                                      |
+| final scores                | `.dt-band-card` per town, best first                                              |
+
+**Flow for one pick:** click the hand card → click `[data-option]` buttons to change sellers (each
+option is re-checked by the engine; disabled ones carry the reason in `title`) → click
+`[data-use="build"]` or `[data-use="spend"]`. Keyboard works too (`1`–`9`, `B`, `S`, `Z`, `Esc`).

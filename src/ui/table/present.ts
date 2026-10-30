@@ -64,6 +64,8 @@ export interface SeatStat {
 
 /** One alternative for a choice inside a pick (who to buy a good from, an upgrade or not). */
 export interface ChoiceOption {
+  /** Stable id for tests and the playtest harness (`data-option`): 'buy-1', 'bank', ... */
+  key: string;
   label: string;
   /** The whole pick with this alternative chosen. */
   pick: Pick;
@@ -73,6 +75,8 @@ export interface ChoiceOption {
 }
 
 export interface ChoiceRow {
+  /** Stable id (`data-choice`): 'cover', 'pay-0-reed', ... */
+  key: string;
   label: string;
   options: ChoiceOption[];
 }

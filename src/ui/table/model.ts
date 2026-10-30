@@ -91,6 +91,8 @@ export interface UseOption {
 
 export interface HandCard {
   id: CardId;
+  /** The card's catalog id (`data-def` for the playtest harness). */
+  def: string;
   face: CardFace;
   kind: KindInfo;
   options: UseOption[];
@@ -368,6 +370,7 @@ function handCards<S, T>(
     });
     return {
       id: c.id,
+      def: c.def,
       face,
       kind: kindOf(face.kind),
       options,

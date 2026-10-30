@@ -24,6 +24,8 @@ export interface PlayHooks {
   botDelayMs: () => number;
   onNewGame(): void;
   onRematch(): void;
+  /** Hotseat pass covers between humans (default on; the playtest harness turns them off). */
+  covers?: boolean;
 }
 
 export interface PlayHandle<S, T> {
@@ -101,7 +103,8 @@ export function playLocal<S, T>(
    */
   let shownTo: SeatId | null = null;
   const syncCover = (g: LocalGame<S, T>) => {
-    const next = g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
+    const covers = hooks.covers ?? true;
+    const next = covers && g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
     if (next === null) {
       g.resume();
       table.setCover(null);

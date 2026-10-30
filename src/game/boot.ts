@@ -17,6 +17,7 @@ import {
   type MenuItem,
   type NewGameConfig,
 } from '../ui';
+import { MAX_PLAYERS, MIN_PLAYERS, SEAT_COLORS } from '../ui/setup/model';
 import { playLocal, type GameBinding, type PlayHandle } from './play';
 
 export interface BootOptions<S, T> {
@@ -24,6 +25,26 @@ export interface BootOptions<S, T> {
   onStart?: (cfg: NewGameConfig) => void;
   /** The ruleset to play; absent = no game yet. */
   game?: GameBinding<S, T>;
+  /**
+   * Playtest harness (`?debug=1`, UX.md §18): skip setup, start at once with every seat human,
+   * no timer and no pass covers, so a script can play each seat in turn.
+   */
+  debug?: { seats: number; seed?: string };
+}
+
+/** The all-human game `?debug=1` starts. */
+export function debugConfig(seats: number, seed?: string): NewGameConfig {
+  const n = Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Math.floor(seats) || 4));
+  return {
+    mode: 'standard',
+    players: Array.from({ length: n }, (_, i) => ({
+      name: `P${i + 1}`,
+      color: SEAT_COLORS[i % SEAT_COLORS.length]?.color ?? '#888888',
+      controller: 'human',
+    })),
+    pickTimerSec: null,
+    ...(seed ? { seed } : {}),
+  };
 }
 
 export interface BootHandle<S, T> {
@@ -110,6 +131,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     }
     const next = playLocal(opts.game, cfg, {
       botDelayMs,
+      covers: !opts.debug,
       onNewGame: showSetup,
       onRematch: () => {
         if (!lastConfig) return;
@@ -128,6 +150,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   }
 
   showSetup();
+  if (opts.debug) start(debugConfig(opts.debug.seats, opts.debug.seed));
   return {
     menu,
     get setup() {

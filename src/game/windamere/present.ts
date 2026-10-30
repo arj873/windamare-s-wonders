@@ -182,12 +182,13 @@ export function windamerePresenter(
   function option(
     view: View,
     seat: SeatId,
+    key: string,
     label: string,
     pick: Pick,
     selected: boolean,
   ): ChoiceOption {
     const err = check(view, seat, pick);
-    return { label, pick, selected, why: err ? whyNot(view, seat, pick, err) : null };
+    return { key, label, pick, selected, why: err ? whyNot(view, seat, pick, err) : null };
   }
 
   function choices(view: View, seat: SeatId, pick: Pick): ChoiceRow[] {
@@ -205,6 +206,7 @@ export function windamerePresenter(
         option(
           view,
           seat,
+          `cover-${t.id}`,
           `Upgrade ${rules.card(t.def).name} (${costShort(rules, def.upgrade?.cost ?? {}) || 'free'})`,
           normalize(view, seat, { card: c.id, use: BUILD, args: { cover: t.id } }),
           args.cover === t.id,
@@ -214,36 +216,45 @@ export function windamerePresenter(
         option(
           view,
           seat,
+          'full',
           `Full cost (${costShort(rules, def.cost) || 'free'})`,
           normalize(view, seat, { card: c.id, use: BUILD, args: { cover: null } }),
           args.cover == null,
         ),
       );
-      rows.push({ label: 'Upgrade', options: opts });
+      rows.push({ key: 'cover', label: 'Upgrade', options: opts });
     }
 
     const pay = args.pay ?? [];
     const price = marketPrice(rules, view);
     pay.forEach((p, i) => {
-      const alternatives: { label: string; pay: Payment }[] = [
+      const alternatives: { key: string; label: string; pay: Payment }[] = [
         ...neighboursOf(view, seat).map((n) => ({
+          key: `buy-${n}`,
           label: `${nameOf(view, n)} ${price}g`,
           pay: { good: p.good, via: 'buy', from: n } as Payment,
         })),
         ...exchangeGoods(rules, view, seat)
           .filter((x) => x !== p.good)
           .map((x) => ({
+            key: `exchange-${x}`,
             label: `${rules.tunables.exchangeRate} ${goodName(rules, x)}`,
             pay: { good: p.good, via: 'exchange', give: x } as Payment,
           })),
-        { label: `Bank ${rules.tunables.bankPrice}g`, pay: { good: p.good, via: 'bank' } },
+        {
+          key: 'bank',
+          label: `Bank ${rules.tunables.bankPrice}g`,
+          pay: { good: p.good, via: 'bank' },
+        },
       ];
       rows.push({
+        key: `pay-${i}-${p.good}`,
         label: `Get ${goodName(rules, p.good)}`,
         options: alternatives.map((a) =>
           option(
             view,
             seat,
+            a.key,
             a.label,
             {
               ...pick,

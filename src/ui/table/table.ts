@@ -281,6 +281,9 @@ export class DraftTable {
     const m = this.model;
     if (!m) return;
     const focused = document.activeElement?.getAttribute('data-k');
+    // Test hooks (UX.md §18): what the table shows, readable without parsing text.
+    this.element.dataset.phase = this.cover ? 'cover' : m.phase;
+    this.element.dataset.viewer = m.viewer === null ? '' : String(m.viewer);
     patchChildren(this.element, [
       this.top(m),
       this.neighbour(m.left, 'left', m),
@@ -330,7 +333,11 @@ export class DraftTable {
             {
               class: `dt-chip is-${s.status}${s.you ? ' is-you' : ''}`,
               style: { '--seat': s.color },
-              attrs: { 'aria-label': `${s.you ? 'You' : s.name}: ${STATUS_TEXT[s.status]}` },
+              attrs: {
+                'aria-label': `${s.you ? 'You' : s.name}: ${STATUS_TEXT[s.status]}`,
+                'data-seat': String(s.seat),
+                'data-status': s.status,
+              },
             },
             h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
             s.you ? 'You' : s.name,
@@ -415,7 +422,10 @@ export class DraftTable {
       {
         class: `${area} seat`,
         style: { '--seat': s.color },
-        attrs: { 'aria-label': `${side === 'left' ? 'Left' : 'Right'} neighbour: ${s.name}` },
+        attrs: {
+          'aria-label': `${side === 'left' ? 'Left' : 'Right'} neighbour: ${s.name}`,
+          'data-seat': String(s.seat),
+        },
       },
       h(
         'header',
@@ -647,6 +657,9 @@ export class DraftTable {
           attrs: {
             'data-act': `select:${c.id}`,
             'data-k': `card-${c.id}`,
+            'data-card': String(c.id),
+            'data-def': c.def,
+            'data-playable': String(c.playable),
             'aria-pressed': String(open),
             'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
             'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.face.alt ? `. ${c.face.alt}` : ''}${c.staged ? '. Your locked pick' : ''}`,
@@ -696,6 +709,8 @@ export class DraftTable {
                   attrs: {
                     'data-act': `pick:${c.id}:${o.use.id}`,
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-use': o.use.id,
+                    'data-card': String(c.id),
                     'aria-keyshortcuts': o.use.key.toUpperCase(),
                   },
                 },
@@ -719,6 +734,8 @@ export class DraftTable {
                   disabled: true,
                   attrs: {
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-use': o.use.id,
+                    'data-card': String(c.id),
                     'aria-describedby': `why-${c.id}-${o.use.id}`,
                   },
                 },
@@ -733,7 +750,10 @@ export class DraftTable {
   private choiceRow(c: HandCard, o: UseOption, row: UseOption['choices'][number], r: number) {
     return h(
       'div',
-      { class: 'dt-choice', attrs: { role: 'radiogroup', 'aria-label': row.label } },
+      {
+        class: 'dt-choice',
+        attrs: { role: 'radiogroup', 'aria-label': row.label, 'data-choice': row.key },
+      },
       h('span', { class: 'dt-choice-label' }, row.label),
       h(
         'span',
@@ -750,6 +770,7 @@ export class DraftTable {
                 'aria-checked': String(opt.selected),
                 'data-act': `choose:${c.id}:${o.use.id}:${r}:${k}`,
                 'data-k': `choice-${c.id}-${o.use.id}-${r}-${k}`,
+                'data-option': opt.key,
               },
             },
             opt.label,
@@ -793,6 +814,7 @@ export class DraftTable {
                 'aria-checked': String(a.chosen),
                 'data-act': `answer:${i}`,
                 'data-k': `answer-${i}`,
+                'data-answer': typeof a.answer === 'string' ? a.answer : JSON.stringify(a.answer),
                 'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
               },
             },
@@ -831,7 +853,11 @@ export class DraftTable {
           ...m.seats.map((s) =>
             h(
               'li',
-              { class: `dt-row${s.you ? ' is-you' : ''}`, style: { '--seat': s.color } },
+              {
+                class: `dt-row${s.you ? ' is-you' : ''}`,
+                style: { '--seat': s.color },
+                attrs: { 'data-seat': String(s.seat), 'data-status': s.status },
+              },
               h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
               h(
                 'span',

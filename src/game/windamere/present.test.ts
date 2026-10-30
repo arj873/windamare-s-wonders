@@ -158,6 +158,8 @@ describe('windamerePresenter', () => {
       `Bank ${bankPrice}g`,
     ]);
     expect(row.options.map((o) => o.selected)).toEqual([true, false, false]);
+    expect(row.key).toBe('pay-0-reed');
+    expect(row.options.map((o) => o.key)).toEqual(['buy-1', 'buy-3', 'bank']);
     expect(row.options[1]!.why).toMatch(/Dee holds only 0 reed/);
     const bank = row.options[2]!;
     expect(bank.why).toBeNull();
