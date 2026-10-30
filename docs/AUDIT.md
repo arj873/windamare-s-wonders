@@ -69,6 +69,26 @@ revealed together with the unchosen offers never visible in any view. The proper
 at 2 to 7 seats. Extra mutants checked (Burn unmasked, Burn on the last turn, wrong timeout
 choice): all caught.
 
+## Q3 — First game (R19) and the `scoreBeat` rivalry cards (main 9394739, shipped content)
+
+Tested in `src/engine/game/firstgame.audit.test.ts` on `windamereContent()` (the real cards, not
+the fixture). **Open findings: none.**
+
+- **R19 at 2 to 7 seats, several seeds:** no Honours dealt or leading, no prompt ever, every town
+  holds its own distinct Great Work from the start (public to every viewer), a cover pick is
+  refused while the full-cost Build works (and the same pick is accepted in the full game, so the
+  refusal is about the option), 12 whole random games never show a cover, an Honour, a changed
+  Great Work or a Score in the Honours group; hands, coins, pass direction match the full game.
+- **Rivalry cards (D10):** every card with `scoreBeat` (5 in the content: Rival Stalls, Tilting
+  Green, Disputation House, The Victors' Oak, Pride of the Wend) against an oracle from R11.5/R13:
+  Renown = amount x neighbours strictly lower, over 4 table sizes (2, 3, 4, 7 seats; 2 seats has one
+  neighbour) x 64 own/left/right levels; ties and stronger neighbours score nothing; covered
+  neighbour cards and a covered rivalry card do not count.
+- **Mutation check:** 5 deliberate engine breaks (`<` to `<=` in the beat, upgrades allowed in a
+  First game, Honours not removed, Great Works offered not reduced, covered cards counted as
+  uncovered): all caught. Sources restored.
+- Not tested: `scoreBeat` as a Great Work effect (The Ring of Oaths, Guard); the First-game clock default (R19.5, net/ui), the guided first game (tutorial T3).
+
 ## Checked and fine (tests pass, keep them green)
 
 Engine (`src/engine/core/engine.audit.test.ts`):
