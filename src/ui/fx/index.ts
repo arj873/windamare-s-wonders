@@ -38,4 +38,5 @@ export function playRevealWithSound(
   return playReveal(events, anchors, { ...opts, onCue: (cue, seat) => playCue(cue, seat, who) });
 }
 export * from './moments';
+export * from './speed';
 export * from './audition';

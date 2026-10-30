@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { WwEvent, WwEventEntry } from '../../engine/game/events';
 import { gainsText, planReveal } from './plan';
+import { fxSpeed, FxSpeedSetting, type FxSpeed } from './speed';
 import { playReveal, revealDuration, type RevealAnchors } from './reveal';
 
 const entry = (event: WwEvent, seq = 1): WwEventEntry => ({
@@ -161,5 +162,70 @@ describe('playReveal', () => {
   it('estimates a duration that shrinks with speed', () => {
     const b = planReveal(turn);
     expect(revealDuration(b, 2)).toBeCloseTo(revealDuration(b, 1) / 2);
+  });
+});
+
+describe('edges and speed', () => {
+  it('a chip near the left edge is slid inside the layer', async () => {
+    const layer = document.createElement('div');
+    const town = document.createElement('div');
+    town.getBoundingClientRect = () => ({ left: 0, top: 0, width: 10, height: 10 }) as DOMRect;
+    layer.getBoundingClientRect = () => ({ left: 0, top: 0, width: 360, height: 400 }) as DOMRect;
+    Object.defineProperty(layer, 'clientWidth', { value: 360 });
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { value: 80, configurable: true });
+    const lefts: number[] = [];
+    HTMLElement.prototype.animate = function (this: HTMLElement) {
+      lefts.push(parseFloat(this.style.left));
+      return { finished: Promise.resolve() };
+    } as unknown as HTMLElement['animate'];
+    try {
+      await playReveal(
+        [entry({ type: 'burn', seat: 0 })],
+        { layer, town: () => town },
+        {
+          instant: false,
+          speed: 100,
+        },
+      );
+    } finally {
+      // @ts-expect-error jsdom has no animate, so remove the stub
+      delete HTMLElement.prototype.animate;
+      // @ts-expect-error jsdom has no layout width, so remove the stub
+      delete HTMLElement.prototype.offsetWidth;
+    }
+    // The town centre is x=5, the chip 80 wide: its centre is kept >= 40 from the edge.
+    expect(lefts[0]).toBeGreaterThanOrEqual(40);
+  });
+
+  it('the Off setting skips motion even when ui passes instant: false', async () => {
+    fxSpeed.set('off');
+    try {
+      const a = anchors();
+      const cues: string[] = [];
+      await playReveal(turn, a, { instant: false, onCue: (c) => cues.push(c) });
+      expect(cues).toHaveLength(5);
+      expect(a.layer.children).toHaveLength(0);
+    } finally {
+      fxSpeed.set('normal');
+    }
+  });
+
+  it('saves and restores the speed, ignores junk', () => {
+    const mem = new Map<string, string>();
+    const store = {
+      getItem: (k: string) => mem.get(k) ?? null,
+      setItem: (k: string, v: string) => void mem.set(k, v),
+    };
+    const s = new FxSpeedSetting(store);
+    expect(s.get()).toBe('normal');
+    const seen: string[] = [];
+    s.onChange((v) => seen.push(v));
+    s.set('fast');
+    s.set('bogus' as FxSpeed);
+    expect(seen).toEqual(['fast']);
+    expect(new FxSpeedSetting(store).get()).toBe('fast');
+    expect(s.factor).toBe(2);
+    mem.set('ww:fxspeed', 'zzz');
+    expect(new FxSpeedSetting(store).get()).toBe('normal');
   });
 });
