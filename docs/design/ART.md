@@ -83,10 +83,11 @@ Goods (lumber, brick, wool, grain, ore) reuse Colonizers of Windamere's glyphs (
 - `honours/*.svg`: eight rosette badges, one glyph each: warden, steward, patron, merchant, sage,
   master-builder, treasurer, broad-town.
 
-## Monument (`public/art/monument-frame.svg`, 480×220)
+## Great Work frame (`public/art/monument-frame.svg`, 160×300)
 
-Stepped plinth with three sockets (`stage-1..3`) and a saffron capstone. A Great Work has four
-tiers, so this frame is **superseded by the track above; retire or restyle it** (open).
+A slim tower of four stacked bands, ids `tier-1..4` (base first), numerals I to IV. Replaces the
+old three-socket plinth (7 Wonders wonder-board look, "stage" ids; research O3). Pairs with
+`badges/great-work-track.svg`, the horizontal progress bar.
 
 ## Table chrome (A2)
 
@@ -114,5 +115,4 @@ except goods glyphs, which are ours from Colonizers of Windamere.
 
 - Reconcile table chrome with `docs/design/UX.md`.
 - Season marker on the card frame; Spend band layout for 3+ gains.
-- Monument frame (3 sockets) vs 4-tier Great Work.
 - Card art illustrations: none yet, the art window is a flat placeholder.
