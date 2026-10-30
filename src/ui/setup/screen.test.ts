@@ -100,6 +100,11 @@ describe('SetupScreen', () => {
     q('learn')!.click();
     expect(onBack).toHaveBeenCalledOnce();
     expect(onTutorial).toHaveBeenCalledOnce();
+    // "Start" names one button only: a by-name lookup must not land on Learn to play.
+    const starts = [...screen.element.querySelectorAll('button')].filter((b) =>
+      /start/i.test(`${b.textContent ?? ''} ${b.getAttribute('aria-label') ?? ''}`),
+    );
+    expect(starts.map((b) => b.dataset.k)).toEqual(['start']);
   });
 
   it('keeps More options open across re-renders', () => {

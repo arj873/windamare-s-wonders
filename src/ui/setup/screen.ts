@@ -186,7 +186,14 @@ export class SetupScreen {
             on: { click: () => this.opts.onTutorial?.() },
           },
           h('span', { class: 'su-learn-q', attrs: { 'aria-hidden': 'true' } }, '?'),
-          h('span', {}, h('b', {}, 'Learn to play'), h('small', {}, 'New here? Start with this')),
+          // Never the word "Start" here: it names the Start game button alone (a lookup by
+          // name or text that matched this one launched the tutorial instead of the game).
+          h(
+            'span',
+            {},
+            h('b', {}, 'Learn to play'),
+            h('small', {}, 'New here? A guided first game'),
+          ),
         ),
     );
   }
