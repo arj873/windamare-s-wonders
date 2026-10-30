@@ -4,6 +4,7 @@
  * transform/opacity only, resolve at once under prefers-reduced-motion (or `instant`) and never
  * reject. The count-up writes text only (use tabular figures so the width does not move).
  */
+import './fx.css';
 import { prefersReducedMotion } from './reveal';
 
 export interface MomentOptions {

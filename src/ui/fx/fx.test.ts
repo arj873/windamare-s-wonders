@@ -38,6 +38,26 @@ describe('gainsText', () => {
   });
 });
 
+describe('planReveal extras', () => {
+  it('pluralises one coin', () => {
+    expect(gainsText({ coins: 1 })).toBe('+1 coin');
+    expect(gainsText({ coins: -3 })).toBe('−3 coins');
+  });
+
+  it('announces great works, the season raid and honour changes', () => {
+    const b = planReveal([
+      entry({ type: 'greatWork', seat: 2, greatWork: 'gw' }),
+      entry({ type: 'raidRevealed', season: 2, raid: 'wolves', strength: 4 }),
+      entry({ type: 'honour', honour: 'h', leaders: [1], was: [], best: 3 }),
+      entry({ type: 'honour', honour: 'g', leaders: [], was: [1], best: 0 }),
+    ]);
+    const steps = b.flatMap((x) => x.steps);
+    expect(steps.map((s) => s.kind)).toEqual(['chip', 'notice', 'chip', 'notice']);
+    expect(steps[1]).toMatchObject({ text: 'Raid: wolves (strength 4)' });
+    expect(b[0]!.cue).toBe('reveal');
+  });
+});
+
 describe('planReveal', () => {
   it('orders beats by what happened and attaches sounds', () => {
     const beats = planReveal(turn);
