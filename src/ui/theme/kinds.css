@@ -1,0 +1,76 @@
+/*
+ * Card-kind styling for live layout (A8). Header band colour per kind, plus a CSS-only shape
+ * badge so kinds differ by silhouette at 12-14 px without loading an SVG. Same shapes as
+ * public/art/kinds/*.svg. Use:  <div class="kind-head" data-kind="market">  and
+ * <span class="kind-badge" data-kind="market"></span>.
+ */
+.kind-head[data-kind='holding'] {
+  background: var(--kind-holding);
+  color: var(--kind-holding-ink);
+}
+.kind-head[data-kind='hall'] {
+  background: var(--kind-hall);
+  color: var(--kind-hall-ink);
+}
+.kind-head[data-kind='market'] {
+  background: var(--kind-market);
+  color: var(--kind-market-ink);
+}
+.kind-head[data-kind='watch'] {
+  background: var(--kind-watch);
+  color: var(--kind-watch-ink);
+}
+.kind-head[data-kind='lore'] {
+  background: var(--kind-lore);
+  color: var(--kind-lore-ink);
+}
+.kind-head[data-kind='landmark'] {
+  background: var(--kind-landmark);
+  color: var(--kind-landmark-ink);
+}
+
+.kind-badge {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: var(--kind-color, currentColor);
+}
+.kind-badge[data-kind='holding'] {
+  --kind-color: var(--kind-holding);
+  clip-path: polygon(50% 0, 100% 42%, 100% 100%, 0 100%, 0 42%);
+}
+.kind-badge[data-kind='hall'] {
+  --kind-color: var(--kind-hall);
+  border-radius: 50% 50% 0 0 / 45% 45% 0 0;
+}
+.kind-badge[data-kind='market'] {
+  --kind-color: var(--kind-market);
+  border-radius: 50%;
+}
+.kind-badge[data-kind='watch'] {
+  --kind-color: var(--kind-watch);
+  clip-path: polygon(10% 0, 90% 0, 68% 50%, 90% 100%, 10% 100%);
+}
+.kind-badge[data-kind='lore'] {
+  --kind-color: var(--kind-lore);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.kind-badge[data-kind='landmark'] {
+  --kind-color: var(--kind-landmark);
+  clip-path: polygon(
+    50% 0,
+    62% 25%,
+    90% 15%,
+    75% 40%,
+    100% 55%,
+    72% 65%,
+    80% 95%,
+    50% 78%,
+    20% 95%,
+    28% 65%,
+    0 55%,
+    25% 40%,
+    10% 15%,
+    38% 25%
+  );
+}

@@ -52,7 +52,7 @@ every kind has its own band silhouette and glyph, and the band prints the kind n
 | -------- | --------- | ----------- | -------------- |
 | Holding  | `#009e73` | house       | house in roof  |
 | Hall     | `#e69f00` | arch        | columns        |
-| Market   | `#cc79a7` | hexagon     | market basket  |
+| Market   | `#cc79a7` | circle      | market basket  |
 | Watch    | `#56b4e9` | banner      | tower          |
 | Lore     | `#d55e00` | diamond     | cross-and-ring |
 | Landmark | `#2b2d6e` | eight-burst | peak           |
@@ -65,6 +65,12 @@ eye. Colour-blind safety is by palette and shape only, no simulator run.
 
 **Adding a kind:** add `--kind-<id>` and `--kind-<id>-ink` to `tokens.css`; copy a
 `public/art/kinds/*.svg` and change the shape path and glyph. No frame change needed.
+
+**Live layout (A8):** `src/ui/theme/kinds.css` colours a card header by kind
+(`.kind-head[data-kind]`) and draws a CSS-only silhouette badge (`.kind-badge[data-kind]`).
+Holding is a house (pointed top, flat base), Market a circle, so the two no longer look alike at
+12-14 px (UX review 1 #6). The card frame's unset-colour fallback is now neutral grey, not blue,
+so a missing `--kind-color` is visible as a bug rather than passing as a kind.
 
 ## Goods and counters (`public/art/goods/`, 32×32)
 

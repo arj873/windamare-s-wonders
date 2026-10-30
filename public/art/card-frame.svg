@@ -5,11 +5,11 @@
 <rect x="2" y="2" width="196" height="276" rx="14" fill="url(#paper)" stroke="var(--card-edge,#3a1a0c)" stroke-width="4"/>
 <rect x="8" y="8" width="184" height="264" rx="10" fill="none" stroke="var(--card-inner,#f5b82e)" stroke-width="1.5"/>
 <g id="cost"><rect x="12" y="12" width="34" height="86" rx="10" fill="#fff" stroke="var(--card-edge,#3a1a0c)" stroke-width="2" opacity=".9"/></g>
-<g id="name"><rect x="52" y="12" width="136" height="32" rx="8" fill="var(--kind-color,#0072b2)" stroke="var(--card-edge,#3a1a0c)" stroke-width="2"/></g>
+<g id="name"><rect x="52" y="12" width="136" height="32" rx="8" fill="var(--kind-color,#6b6f78)" stroke="var(--card-edge,#3a1a0c)" stroke-width="2"/></g>
 <g id="art"><rect x="52" y="50" width="136" height="100" rx="6" fill="#d9c9a8" stroke="var(--card-edge,#3a1a0c)" stroke-width="2"/></g>
 <g id="effect"><rect x="12" y="158" width="176" height="46" rx="8" fill="#fff" stroke="var(--card-edge,#3a1a0c)" stroke-width="2" opacity=".92"/></g>
 <g id="spend"><rect x="12" y="208" width="176" height="22" rx="8" fill="#3c1204" fill-opacity=".18" stroke="var(--card-edge,#3a1a0c)" stroke-width="1.5" stroke-dasharray="4 3"/></g>
-<g id="band"><rect x="12" y="236" width="176" height="32" rx="8" fill="var(--kind-color,#0072b2)" stroke="var(--card-edge,#3a1a0c)" stroke-width="2"/>
+<g id="band"><rect x="12" y="236" width="176" height="32" rx="8" fill="var(--kind-color,#6b6f78)" stroke="var(--card-edge,#3a1a0c)" stroke-width="2"/>
 <!-- Kind shape+icon (public/art/kinds/*.svg) goes at x=18,y=238,28x28; kind label text to its right. -->
 <rect x="18" y="238" width="28" height="28" rx="14" fill="#fff" opacity=".85"/></g>
 </svg>
