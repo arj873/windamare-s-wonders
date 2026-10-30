@@ -31,11 +31,15 @@ Agent names are `ww-<lane>`; status and inbox files use the bare lane name.
 | design | Opus 5.5 | `docs/RULES.md`, `docs/design/**` except research/UX/ART files, `src/content/**` (card data, once rules are approved) |
 | platform | Sonnet 5.5 | `package.json`, `pnpm-*`, `tsconfig*`, `vite.config.ts`, `vitest.config.ts`, `eslint.config.js`, `.prettier*`, `.github/**`, `scripts/gate.sh`, `index.html`, `src/shared/**`, `docs/ARCHITECTURE.md`, `docs/REUSE.md`, `LICENSE` |
 | engine | Opus 5.5 | `src/engine/**`, `docs/ENGINE.md` |
-| ui | Opus 5.5 | `src/main.ts`, `src/app.ts`, `src/ui/**` except theme, `src/render/**`, `src/game/**`, `docs/design/UX.md` |
+| ui | Opus 5.5 | `src/main.ts`, `src/app.ts`, `src/ui/**` except theme/online/fx/tutorial/help, `src/render/**`, `src/game/**` except online, `docs/design/UX.md` |
+| online | Opus 5.5 | `src/ui/online/**`, `src/game/online/**` |
+| fx | Sonnet 5.5 | `src/ui/fx/**`, `src/audio/**`, `public/audio/**` |
+| tutorial | Sonnet 5.5 | `src/ui/tutorial/**`, `src/ui/help/**`, `docs/HOWTOPLAY.md` |
 | art | Sonnet 5.5 | `src/ui/theme/**`, `public/**`, `docs/design/ART.md`, `art-dev.html` |
 | net | Sonnet 5.5 | `src/net/**`, `src/server/**`, `wrangler.jsonc`, `docs/MULTIPLAYER.md` |
-| bots | Sonnet 5.5 | `src/bots/**`, `scripts/sim*` (later) |
-| qa | Sonnet 5.5 | `src/**/*.audit.test.ts`, `docs/AUDIT.md`, `playtest/**` (later) |
+| bots | Sonnet 5.5 | `src/bots/**`, `scripts/sim*` |
+| balance | Opus 5.5 | `docs/BALANCE.md`, `docs/balance/**`, `scripts/balance*` |
+| qa | Sonnet 5.5 | `src/**/*.audit.test.ts`, `docs/AUDIT.md`, `playtest/**` |
 
 Root files not listed (`README.md`, `AGENTS.md`, `KANBAN.md`, `.gitignore`) belong to the
 orchestrator. Need a dependency? Ask platform under `Needs:`.
