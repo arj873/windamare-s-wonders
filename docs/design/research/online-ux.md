@@ -150,6 +150,9 @@ the physical game because setup, passing and scoring are free.
 3. **net:** per-pick clock and shorter grace (15-20 s) differ from Catan's per-turn 90 s / 60 s
    defaults; per-seat hand redaction for spectators and neighbours (N0).
 4. **ui:** live score estimate on by default, or a toggle for players who prefer hidden scores?
+   Evidence for on: BGA players asked for coins and guilds in 7 Wonders' live total (report
+   #24999), and a popular userscript (Pythia) adds forecast totals and a leader flag
+   (`balance-targets.md` §1).
 5. **bots:** three difficulty levels from the start; reviewers punish a single level.
 
 ---
