@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+pnpm-workspace.yaml
+KANBAN.md
+CLAUDE.md
+.claude/
+.orchestra/
+.scratch/
+AGENTS.md
