@@ -119,7 +119,8 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
 
 - **R7.1** A built card stays in the town for the rest of the game, in build order, unless it is
   covered (R7.9).
-- **R7.2** **Holding**: has a `yield` (goods, labour or coins at each Yield).
+- **R7.2** **Holding**: produces, through a `yield` (gains at each Yield) or a `seasonEnd`
+  effect (gains at each Season end).
 - **R7.3** **Hall**: worth printed Renown.
 - **R7.4** **Market**: coins, Exchanges and Caravans.
 - **R7.5** **Watch**: adds Guard (R9).
@@ -144,8 +145,9 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
 - **R8.3** **Great Work check**: while the town's labour is at or above the threshold of its next
   tier, that tier completes and its reward applies at once. Several tiers may complete in one
   check, in order. The check runs after step 2 and after step 4 of every turn (R4.5).
-- **R8.4** Rewards are Renown (scored at the end), one-off gains (goods, coins), or a lasting
-  effect from R13 (e.g. Guard), which counts from the moment the tier completes.
+- **R8.4** Rewards are R13 effects: Renown (scored at the end), one-off gains (an `onBuild` on a
+  tier pays when the tier completes), or a lasting effect (e.g. `guard`, `yield`, `lore`), which
+  counts from the moment the tier completes.
 - **R8.5** Labour beyond the tier IV threshold does nothing.
 - **R8.6** Completed tiers count for the tie-break (R12.4) and the Master Builder Honour.
 
@@ -167,9 +169,10 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
 
 ## R10. Lore
 
-- **R10.1** Each Lore card has one rank from 1 to 6.
-- **R10.2** Take the set of distinct ranks among a town's Lore cards. A **run** is a longest
-  possible block of consecutive ranks in that set.
+- **R10.1** Each Lore card has one rank from 1 to 6. A completed tier may also give a rank (R13
+  `lore`); it counts like a Lore card for R10 only (not as a card or a kind).
+- **R10.2** Take the set of distinct ranks among a town's uncovered Lore cards and completed
+  tiers. A **run** is a longest possible block of consecutive ranks in that set.
 - **R10.3** Each run scores by its length: 1 → 1, 2 → 3, 3 → 6, 4 → 10, 5 → 14, 6 → 18† Renown.
 - **R10.4** A second card of a rank the town already has adds nothing to any run.
 - **R10.5** Example: ranks 1, 2, 4, 5, 6, 5 → set {1, 2, 4, 5, 6} → runs {1, 2} and {4, 5, 6} →
@@ -221,7 +224,7 @@ chosen by the town). `kind` is one of the six kinds. **When** says when the effe
 | `onBuildPerKind` | `kind`, `gains`            | step 2, once           | Gain `gains` once per uncovered card of `kind` in the town, this card included if it matches. |
 | `renown`         | `amount`                   | end (R12.2a)           | Worth `amount` Renown.                                                                        |
 | `guard`          | `amount`                   | Season end (R9)        | Adds `amount` Guard.                                                                          |
-| `lore`           | `rank` (1-6)               | end (R10)              | This card's Lore rank.                                                                        |
+| `lore`           | `rank` (1-6)               | end (R10)              | This card's (or tier's) Lore rank.                                                            |
 | `exchange`       | `good`                     | paying (R6.3)          | Pay 2† `good` in place of one missing good of another type.                                   |
 | `discount`       | `kind`, `amount`           | paying (R6.1)          | Cards of `kind` cost `amount` fewer goods (the town picks which goods; default: goods order). |
 | `caravan`        | `kind` (optional), `coins` | step 3                 | Gain `coins` for each neighbour that Built a card (of `kind`, if given) this turn.            |
