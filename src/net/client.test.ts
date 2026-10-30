@@ -269,7 +269,7 @@ describe('RoomClient over the loopback room', () => {
   it('the turn clock counts down from the arrival time', () => {
     const { ann } = game();
     const t = ann.c.game!.timer!;
-    expect(t.totalMs).toBe(90_000);
+    expect(t.totalMs).toBe(45_000);
     expect(ann.c.timerLeftMs(ann.c.game!.receivedAt + 1500)).toBe(t.remainingMs - 1500);
     expect(ann.c.timerLeftMs(ann.c.game!.receivedAt + 10 ** 7)).toBe(0);
   });
