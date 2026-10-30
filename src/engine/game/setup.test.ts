@@ -56,7 +56,9 @@ describe('setup (R2) and what is public (R1.11)', () => {
     toSeason(s, 2);
     expect(s.table.raids.map((r) => r.revealed)).toEqual([true, true, true, false]);
     expect(
-      s.log.filter((e) => e.kind === 'raid').map((e) => (e.data as { season: number }).season),
+      s.log
+        .filter((e) => e.kind === 'raidRevealed')
+        .map((e) => (e.data as { season: number }).season),
     ).toEqual([0, 1, 2]);
   });
 

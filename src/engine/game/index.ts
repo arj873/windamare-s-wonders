@@ -21,6 +21,14 @@ export { nextThreshold } from './greatWork';
 export { currentRaid, type RaidOutcome } from './raid';
 export { buildCost, checkBuildRules, COVERED } from './build';
 export { honourScore, honourStandings, type HonourStanding } from './honours';
+export {
+  EVENT_TYPES,
+  eventsOf,
+  latestEvents,
+  type WwEvent,
+  type WwEventEntry,
+  type WwEventType,
+} from './events';
 export { CATEGORIES, scoreTown, tiebreakOf, type Category } from './score';
 export { RULESET_ID, RULESET_VERSION, windamereRuleset } from './ruleset';
 export {

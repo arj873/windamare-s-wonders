@@ -59,7 +59,17 @@ describe('playouts (R3, R4, R12)', () => {
       upgrades += end.seats.reduce((n, s) => n + s.data.covers.length, 0);
     }
     expect(kinds.get('glean')).toBe(8 * 4 * 4); // one a town each Season (R3.5)
-    for (const k of ['spend', 'build', 'sale', 'toll', 'raidHeld', 'raidPlundered']) {
+    for (const k of [
+      'spend',
+      'pay',
+      'build',
+      'trade',
+      'toll',
+      'yield',
+      'raid',
+      'bounty',
+      'honour',
+    ]) {
       expect(kinds.get(k) ?? 0, k).toBeGreaterThan(0);
     }
     expect(upgrades).toBeGreaterThan(0);

@@ -2,7 +2,7 @@
  * Windamere's Wonders: content and state types (docs/RULES.md, data spec in docs/design/CARDS.md
  * §1). Goods are data: their ids come from `WwContent.goods`, never from code.
  */
-import type { CardDef, CardDefId, CardId, DraftState, EffectSpec } from '../core';
+import type { CardDef, CardDefId, CardId, DraftState, EffectSpec, SeatId } from '../core';
 
 export type GoodId = string;
 
@@ -151,6 +151,8 @@ export interface WwSeat {
 export interface WwTable {
   /** The Honours revealed at setup (R2.3); public. */
   honours: string[];
+  /** R11.3: each Honour's leaders as of the last update (end of a turn, Season end); public. */
+  leaders: SeatId[][];
   /** One Raid per Season, by Season index (R2.6). Unrevealed ones are masked in views. */
   raids: { id: string; revealed: boolean }[];
 }

@@ -1,8 +1,9 @@
 /** R11 Honours. Measures are public (R1.11), so these work on views too (R11.3). */
-import type { SeatId } from '../core';
+import type { Ctx, SeatId } from '../core';
 import type { WwRules } from './content';
-import { measure } from './town';
-import type { WwState } from './types';
+import { emit } from './events';
+import { measure, townOf } from './town';
+import type { WwSeat, WwState, WwTable } from './types';
 
 export interface HonourStanding {
   honour: string;
@@ -31,4 +32,29 @@ export function honourScore(rules: WwRules, state: WwState, seat: SeatId): numbe
     if (!h.leaders.includes(seat)) return sum;
     return sum + (h.leaders.length === 1 ? t.honourSole : t.honourTied);
   }, 0);
+}
+
+const sameSeats = (a: readonly SeatId[], b: readonly SeatId[]) =>
+  a.length === b.length && a.every((s, i) => s === b[i]);
+
+/**
+ * R11.3: store each Honour's current leaders in `table.leaders`, and record an `honour` event for
+ * each one that changed. Called after every turn, the Great Work reveal and every Season end.
+ */
+export function updateHonourLeaders(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): void {
+  const table = ctx.state.table;
+  honourStandings(rules, ctx.state).forEach((h, i) => {
+    const was = table.leaders[i] ?? [];
+    if (sameSeats(was, h.leaders)) return;
+    table.leaders[i] = h.leaders;
+    const name = rules.honour(h.honour).name;
+    const who = h.leaders.map((s) => townOf(ctx.state, s).name).join(' and ');
+    emit(
+      ctx,
+      { type: 'honour', honour: h.honour, leaders: h.leaders, was, best: h.best },
+      who
+        ? `${who} ${h.leaders.length > 1 ? 'share' : 'leads'} ${name} (${h.best}).`
+        : `Nobody leads ${name}.`,
+    );
+  });
 }

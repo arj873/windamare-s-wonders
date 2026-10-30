@@ -106,10 +106,8 @@ export function makeEffects(rules: WwRules): Record<string, Handler> {
       validate: (spec) => (kindOk(spec.kind) ? gainsCheck()(spec) : 'kind must be a kind'),
     },
     // R3.6: at the end of each Season, after the Raid, in seat order (the core's round end).
-    seasonEnd: {
-      validate: gainsCheck(),
-      onRoundEnd: (ctx, seat, spec) => addGains(townOf(ctx.state, seat).data, spec.gains as Gains),
-    },
+    // Applied by the ruleset's Season end, after the Raid (raid.ts seasonEndEffects).
+    seasonEnd: { validate: gainsCheck() },
     // R12.2a-b scoring effects.
     scorePerKind: {
       validate: perKind,

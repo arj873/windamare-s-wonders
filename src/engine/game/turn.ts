@@ -10,17 +10,22 @@
  *   3  Tolls      (R13 `toll`)
  *   4  Yield      `yield` and `income`, not in Winter (R3.7)
  *      Check      the Great Work check again
+ *      Honours    the Honours' leaders, once all towns have resolved (R11.3)
+ *
+ * Each step records what it did as events (events.ts).
  */
 import type { Card, CardDefId, Ctx, Pick, ResolveStep, RoundSpec, SeatId } from '../core';
 import { neighboursOf } from '../core';
 import { placeBuild } from './build';
 import { countsIndex, type WwRules } from './content';
+import { emit, gained, holdings, isEmpty } from './events';
 import { COINS, addGains } from './gains';
 import { greatWorkCheck } from './greatWork';
+import { updateHonourLeaders } from './honours';
 import { BUILD, SPEND, argsOf, buildCostAfterDiscount, spendGains, type WwPickArgs } from './pick';
 import { marketPrice, type Payment } from './pay';
 import { activeEffects, townOf } from './town';
-import { SEASONS, type Gains, type WwSeat, type WwState, type WwTable } from './types';
+import { SEASONS, type Gains, type GoodId, type WwSeat, type WwState, type WwTable } from './types';
 
 /** The hidden seat zone that holds a town's glean between the reveal and step 1 (R3.5). */
 export const GLEAN = 'glean';
@@ -80,41 +85,61 @@ export function resolveSteps(rules: WwRules): Step[] {
       const gains = spendGains(rules, ctx.state, seat, def, args.any ?? []);
       addGains(town.data, gains);
       ctx.toDiscard(card); // R5.3
-      ctx.log(seat, 'spend', `${town.name} spends ${def.name}.`, {
-        data: { card: card.def, gains },
-      });
+      emit(ctx, { type: 'spend', seat, card, gains }, `${town.name} spends ${def.name}.`);
     }
     for (const g of [...(town.zones[GLEAN] ?? [])]) {
       const def = rules.card(g.def);
       const gains = spendGains(rules, ctx.state, seat, def, args.glean ?? []);
       addGains(town.data, gains);
       ctx.toDiscard(ctx.take(g.id));
-      ctx.log(seat, 'glean', `${town.name} gleans a card.`, { data: { gains } });
+      emit(ctx, { type: 'glean', seat, gains }, `${town.name} gleans a card.`);
     }
     // R14.2, R14.3: the burned card leaves the hand face down, with no effect (before the pass).
     if (args.burn !== undefined) {
       ctx.toDiscard(ctx.take(args.burn));
-      ctx.log(seat, 'burn', `${town.name} burns a card.`);
+      emit(ctx, { type: 'burn', seat }, `${town.name} burns a card.`);
     }
   };
 
   // 2a. Pay (R6.2-R6.5): own goods first, then Exchanges; coins for the cost, purchases and bank.
   const pay: Step = (ctx, seat, pick, card) => {
     if (pick.use !== BUILD) return;
-    const town = townOf(ctx.state, seat).data;
+    const owner = townOf(ctx.state, seat);
+    const town = owner.data;
     const due = cost(rules, ctx, seat, pick, card);
     const plan = argsOf(pick).pay ?? [];
-    for (const g of rules.goods)
-      town.store[g] = (town.store[g] ?? 0) - Math.min(town.store[g] ?? 0, due[g] ?? 0);
+    const price = marketPrice(rules, ctx.state);
+    const goods: Gains = {};
+    for (const g of rules.goods) {
+      const own = Math.min(town.store[g] ?? 0, due[g] ?? 0);
+      if (own > 0) goods[g] = own;
+      town.store[g] = (town.store[g] ?? 0) - own;
+    }
     let coins = due[COINS] ?? 0;
+    const exchanges: { give: GoodId; for: GoodId }[] = [];
+    const bank: GoodId[] = [];
+    const buys: { from: SeatId; good: GoodId; price: number }[] = [];
     for (const p of plan) {
-      if (p.via === 'exchange') town.store[p.give] = (town.store[p.give] ?? 0) - t.exchangeRate;
-      else coins += p.via === 'buy' ? marketPrice(rules, ctx.state) : t.bankPrice;
+      if (p.via === 'exchange') {
+        town.store[p.give] = (town.store[p.give] ?? 0) - t.exchangeRate;
+        exchanges.push({ give: p.give, for: p.good });
+      } else if (p.via === 'buy') {
+        coins += price;
+        buys.push({ from: p.from, good: p.good, price });
+      } else {
+        coins += t.bankPrice;
+        bank.push(p.good);
+      }
     }
     town.coins -= coins;
     if (town.coins < 0 || Object.values(town.store).some((n) => n < 0)) {
       throw new Error(`seat ${seat}: a checked Build could not be paid (R4.7)`);
     }
+    emit(
+      ctx,
+      { type: 'pay', seat, card, goods, exchanges, bank, buys, coins },
+      `${owner.name} pays for ${rules.card(card.def).name}.`,
+    );
   };
 
   // 2b. Sell (R6.6, R6.7), run for each seller: fill its neighbours' purchases from what its own
@@ -154,15 +179,12 @@ export function resolveSteps(rules: WwRules): Step[] {
           seller.data.coins += price + bonus;
         }
         const name = townOf(ctx.state, buyer).name;
-        ctx.log(
-          seat,
-          filled ? 'sale' : 'saleShort',
+        emit(
+          ctx,
+          { type: 'trade', seller: seat, buyer, good, price, filled, bonus: filled ? bonus : 0 },
           filled
             ? `${seller.name} sells 1 ${good} to ${name} for ${price}.`
             : `${seller.name} is out of ${good}: ${name} buys it from the bank for ${price}.`,
-          {
-            data: { good, buyer, price, filled, ...(filled && bonus > 0 ? { bonus } : {}) },
-          },
         );
       }
     }
@@ -173,12 +195,15 @@ export function resolveSteps(rules: WwRules): Step[] {
     if (pick.use !== BUILD) return;
     const town = townOf(ctx.state, seat);
     const def = rules.card(card.def);
-    placeBuild(rules, ctx, seat, card, argsOf(pick).cover ?? null, pick.args);
+    const before = holdings(town.data);
+    const cover = argsOf(pick).cover ?? null;
+    placeBuild(rules, ctx, seat, card, cover, pick.args);
     for (const e of activeEffects(rules, ctx.state, seat, 'buildBonus')) {
       const self = e.source.kind === 'card' && e.source.card.id === card.id;
       if (!self && e.spec.kind === def.kind) addGains(town.data, e.spec.gains as Gains);
     }
-    ctx.log(seat, 'build', `${town.name} builds ${def.name}.`, { data: { card: card.def } });
+    const gains = gained(before, holdings(town.data));
+    emit(ctx, { type: 'build', seat, card, cover, gains }, `${town.name} builds ${def.name}.`);
   };
 
   const check: Step = (ctx, seat) => {
@@ -194,30 +219,45 @@ export function resolveSteps(rules: WwRules): Step[] {
     );
     const neighbours = neighboursOf(ctx.state, seat);
     let coins = 0;
+    const from = new Set<SeatId>();
     for (const e of activeEffects(rules, ctx.state, seat, 'toll')) {
       const kind = e.spec.kind;
-      const n = neighbours.filter(
+      const paying = neighbours.filter(
         (s) => built.has(s) && (kind === undefined || built.get(s) === kind),
-      ).length;
-      coins += n * (e.spec.coins as number);
+      );
+      paying.forEach((s) => from.add(s));
+      coins += paying.length * (e.spec.coins as number);
     }
     if (coins > 0) {
-      townOf(ctx.state, seat).data.coins += coins;
-      ctx.log(seat, 'toll', `${townOf(ctx.state, seat).name} collects ${coins} in tolls.`, {
-        data: { coins },
-      });
+      const town = townOf(ctx.state, seat);
+      town.data.coins += coins;
+      emit(
+        ctx,
+        { type: 'toll', seat, coins, from: neighbours.filter((s) => from.has(s)) },
+        `${town.name} collects ${coins} in tolls.`,
+      );
     }
   };
 
   // 4. Yield (R4.5.4, R17.3), not in Winter (R3.7).
   const yieldStep: Step = (ctx, seat) => {
     if (isWinter(ctx.state)) return;
-    const town = townOf(ctx.state, seat).data;
-    for (const e of activeEffects(rules, ctx.state, seat, 'yield'))
-      addGains(town, e.spec.gains as Gains);
-    for (const e of activeEffects(rules, ctx.state, seat, 'income'))
-      town.coins += e.spec.coins as number;
+    const town = townOf(ctx.state, seat);
+    const before = holdings(town.data);
+    for (const e of activeEffects(rules, ctx.state, seat, 'yield')) {
+      addGains(town.data, e.spec.gains as Gains);
+    }
+    for (const e of activeEffects(rules, ctx.state, seat, 'income')) {
+      town.data.coins += e.spec.coins as number;
+    }
+    const gains = gained(before, holdings(town.data));
+    if (!isEmpty(gains)) emit(ctx, { type: 'yield', seat, gains }, `${town.name} yields.`);
   };
 
-  return [spend, pay, sell, build, check, toll, yieldStep, check];
+  // R11.3: once every town has resolved the turn (the last seat in resolve order).
+  const honours: Step = (ctx, seat) => {
+    if (seat === ctx.state.seats.length - 1) updateHonourLeaders(rules, ctx);
+  };
+
+  return [spend, pay, sell, build, check, toll, yieldStep, check, honours];
 }

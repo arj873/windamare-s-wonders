@@ -9,7 +9,8 @@ export function setupTable(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): WwTable {
   const honours = ctx.rng
     .shuffle(rules.content.honours.map((h) => h.id))
     .slice(0, rules.tunables.honoursPerGame);
-  return { honours, raids: drawRaids(rules, ctx.rng) };
+  // Nobody leads at the start: every measure is 0 (R11.2).
+  return { honours, leaders: honours.map(() => []), raids: drawRaids(rules, ctx.rng) };
 }
 
 /** R2.2: starting coins, an empty store of every good, no labour, no Great Work yet. */
