@@ -6,19 +6,12 @@
  * wording and flow problems before the browser layer exists.
  */
 import { pickFor, type BotLevel } from '../src/bots';
-import { windamere, windamereRules } from '../src/bots/windamere';
 import {
   BUILD,
   SPEND,
-  currentRaid,
-  guardOf,
-  marketPrice,
   neighboursOf,
-  nextThreshold,
-  scoreTown,
   type DraftAction,
   type DraftState,
-  type DraftView,
   type Json,
   type Payment,
   type Pick,
@@ -27,17 +20,25 @@ import {
   type WwSeat,
   type WwTable,
 } from '../src/engine';
-import { windamerePresenter } from '../src/game/windamere/present';
-import { effectsText, gainsText } from '../src/game/windamere/text';
+import {
+  at,
+  cardsText,
+  engine,
+  goodNameOf,
+  isOver,
+  isWaiting,
+  nameOf,
+  presenter,
+  resultText,
+  rules,
+  statusText,
+  waitingNames,
+  type View,
+} from './render';
 import { matchChoice, parseSeat } from './text';
 
 type State = DraftState<WwSeat, WwTable>;
-type View = DraftView<WwSeat, WwTable>;
 
-const rules = windamereRules;
-const engine = windamere;
-const presenter = windamerePresenter(rules, engine);
-const ROMAN = ['I', 'II', 'III', 'IV'];
 const USES: Record<string, string> = { build: BUILD, spend: SPEND };
 
 export interface TextGameOptions {
@@ -74,7 +75,7 @@ export class TextGame {
   }
 
   get over(): boolean {
-    return this.state.phase.kind === 'gameOver';
+    return isOver(this.view(0));
   }
 
   private view(seat: SeatId): View {
@@ -82,7 +83,7 @@ export class TextGame {
   }
 
   private name(seat: SeatId): string {
-    return this.state.seats[seat]?.name ?? `Seat${seat + 1}`;
+    return nameOf(this.view(seat), seat);
   }
 
   /** Bots act for every bot seat the table waits on, until only humans (or nobody) are left. */
@@ -105,7 +106,7 @@ export class TextGame {
 
   /** Does this seat have to act now? */
   waiting(seat: SeatId): boolean {
-    return this.over || engine.waitingOn(this.state).includes(seat);
+    return isWaiting(this.view(seat), seat);
   }
 
   probe(seat: SeatId): Reply {
@@ -115,8 +116,7 @@ export class TextGame {
   }
 
   private waitingNames(seat: SeatId): string {
-    const names = engine.waitingOn(this.state).map((s) => (s === seat ? 'you' : this.name(s)));
-    return names.join(', ') || 'the table';
+    return waitingNames(this.view(seat), seat);
   }
 
   /** One command from a human seat. Never throws on bad input: the reply says what to do. */
@@ -148,129 +148,15 @@ export class TextGame {
   // ---------------------------------------------------------------------------------------------
 
   status(seat: SeatId): string {
-    const v = this.view(seat);
-    const lines: string[] = [];
-    if (this.over) lines.push('GAME OVER', this.result());
-    const me = at(v.seats, seat);
-    const season = presenter.roundName(v.round, 4);
-    lines.push(
-      `${season}, turn ${v.turn + 1} of ${v.roundPicks} · hands pass ${v.passDirection} · ` +
-        `market ${marketPrice(rules, v)}g, bank ${rules.tunables.bankPrice}g`,
-    );
-    const raid = currentRaid(rules, v);
-    lines.push(`Raid this Season: ${raid ? `${raid.name}, strength ${raid.strength}` : 'hidden'}`);
-    lines.push(
-      'Honours: ' +
-        (presenter.banner?.(v) ?? [])
-          .filter((b) => b.id.startsWith('honour-'))
-          .map((b) => b.value)
-          .join(' · '),
-    );
-    lines.push('', `YOU (${me.name}): ${townLine(v, seat)}`);
-    lines.push(`  Great Work: ${greatWorkLine(v, seat)}`);
-    lines.push(`  Town: ${tableauText(v, seat)}`);
-    for (const n of neighboursOf(v, seat)) {
-      const side = n === (seat + 1) % v.seats.length ? 'left' : 'right';
-      lines.push(
-        `${side.toUpperCase()} NEIGHBOUR seat ${n + 1} (${this.name(n)}): ${townLine(v, n)}`,
-        `  Great Work: ${greatWorkLine(v, n)}`,
-        `  Town: ${tableauText(v, n)}`,
-      );
-    }
-    for (let s = 0; s < v.seats.length; s++) {
-      if (s === seat || neighboursOf(v, seat).includes(s)) continue;
-      lines.push(`seat ${s + 1} (${this.name(s)}): ${townLine(v, s)}`);
-    }
-    lines.push('');
-    lines.push(this.todo(seat, v));
-    const happened = presenter.happenings?.(v) ?? [];
-    if (happened.length) lines.push('', 'Just happened:', ...happened.map((h) => `  ${h}`));
-    const tail = v.log.slice(-6).map((e) => `  ${e.text}`);
-    if (tail.length) lines.push('', 'Log:', ...tail);
-    return lines.join('\n');
-  }
-
-  /** What the seat has to do, in one block. */
-  private todo(seat: SeatId, v: View): string {
-    if (this.over) return '';
-    const prompt = v.prompts.find((p) => p.seat === seat && !p.answered);
-    if (prompt) {
-      const info = presenter.prompt(prompt);
-      const offers = Array.isArray((prompt.data as { offers?: Json[] } | null)?.offers)
-        ? ((prompt.data as { offers: string[] }).offers ?? [])
-        : [];
-      return [
-        `YOUR MOVE: ${info.title}`,
-        info.hint ? `  (${info.hint})` : '',
-        ...offers.map(
-          (o, i) => `  ${i + 1}. ${info.answer(o)}\n${indent(info.detail?.(o) ?? '', 6)}`,
-        ),
-        `Answer with: choose <number>`,
-      ]
-        .filter(Boolean)
-        .join('\n');
-    }
-    const mine = v.prompts.find((p) => p.seat === seat && p.answered);
-    if (mine) return `You answered; waiting for ${this.waitingNames(seat)}.`;
-    const picked = at(v.seats, seat).pick;
-    if (picked) {
-      const c = at(v.seats, seat).hand.find((x) => x.id === picked.card);
-      const what = c ? rules.card(c.def).name : 'a card';
-      return `You picked ${what} (${picked.use}). Waiting for ${this.waitingNames(seat)}. (unpick to change)`;
-    }
-    if (this.waiting(seat)) return `YOUR MOVE: pick a card.\n${this.cards(seat)}`;
-    return `Waiting for ${this.waitingNames(seat)}.`;
+    return statusText(this.view(seat), seat);
   }
 
   cards(seat: SeatId): string {
-    const v = this.view(seat);
-    const hand = at(v.seats, seat).hand;
-    if (hand.length === 0) return 'Your hand is empty.';
-    const lines = [
-      `Hand (${hand.length}); pick with: pick <n> build|spend` +
-        (v.seats.length === 2 && v.turn < v.roundPicks - 1 ? ' [--burn <n>]' : ''),
-    ];
-    hand.forEach((c, i) => {
-      const d = rules.card(c.def);
-      const cost = gainsText(rules, d.cost) || 'free';
-      lines.push(
-        `${i + 1}. ${d.name} [${d.kind}] cost ${cost} · ${effectsText(rules, d.effects)} · Spend +${gainsText(rules, d.spend) || 'nothing'}`,
-      );
-      for (const [label, use] of [
-        ['Build', BUILD],
-        ['Spend', SPEND],
-      ] as const) {
-        const p = engine.ruleset.normalizePick?.(v, seat, { card: c.id, use }) ?? {
-          card: c.id,
-          use,
-        };
-        const err = engine.ruleset.validatePick(v, seat, p);
-        lines.push(
-          err
-            ? `     ${label}: not possible — ${presenter.whyNot?.(v, seat, p, err) ?? err}`
-            : `     ${label}: ${presenter.describe?.(v, seat, p) ?? 'ok'}`,
-        );
-      }
-    });
-    return lines.join('\n');
+    return cardsText(this.view(seat), seat);
   }
 
   result(): string {
-    const r = this.state.result;
-    if (!r) return '';
-    const lines = ['Final scores (Renown):'];
-    for (const group of r.ranking) {
-      for (const s of group) {
-        const sc = at(r.scores, s);
-        const parts = Object.entries(sc.categories).map(
-          ([k, n]) => `${presenter.scoreLabel(k)} ${n}`,
-        );
-        lines.push(
-          `  ${r.winners.includes(s) ? '★ ' : '  '}${this.name(s)}: ${sc.total} (${parts.join(', ')})`,
-        );
-      }
-    }
-    return lines.join('\n');
+    return resultText(this.view(0));
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -442,50 +328,8 @@ export class TextGame {
   }
 }
 
-/** `list[i]`, or a clear error instead of `undefined`. */
-function at<T>(list: readonly T[], i: number): T {
-  const x = list[i];
-  if (x === undefined) throw new Error(`index ${i} out of range`);
-  return x;
-}
-
-function goodNameOf(id: string): string {
-  return rules.content.goods.find((g) => g.id === id)?.name ?? id;
-}
-
-function indent(text: string, n: number): string {
-  return text
-    .split('\n')
-    .map((l) => ' '.repeat(n) + l)
-    .join('\n');
-}
-
 function hashString(s: string): number {
   let h = 0x811c9dc5;
   for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193) >>> 0;
   return h;
-}
-
-function townLine(v: View, seat: SeatId): string {
-  const d = at(v.seats, seat).data;
-  const store = rules.goods
-    .filter((g) => (d.store[g] ?? 0) > 0)
-    .map((g) => `${d.store[g]} ${goodNameOf(g)}`)
-    .join(', ');
-  const score = Object.values(scoreTown(rules, v, seat)).reduce((a, b) => a + b, 0);
-  return `${d.coins} coins · store: ${store || 'empty'} · labour ${d.labour} · Guard ${guardOf(rules, v, seat)} · ~${score} Renown`;
-}
-
-function greatWorkLine(v: View, seat: SeatId): string {
-  const d = at(v.seats, seat).data;
-  if (!d.greatWork) return 'not chosen yet';
-  const gw = rules.greatWork(d.greatWork);
-  const next = nextThreshold(rules, d);
-  return `${gw.name}: ${d.tiers === 0 ? 'no tier done' : `tier ${ROMAN[d.tiers - 1]} done`}, ${next === null ? 'complete' : `next at ${next} labour`}`;
-}
-
-function tableauText(v: View, seat: SeatId): string {
-  const t = at(v.seats, seat).tableau;
-  if (t.length === 0) return '(nothing yet)';
-  return t.map((c) => rules.card(c.def).name).join(', ');
 }

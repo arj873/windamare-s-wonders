@@ -89,6 +89,26 @@ the fixture). **Open findings: none.**
   uncovered): all caught. Sources restored.
 - Not tested: `scoreBeat` as a Great Work effect (The Ring of Oaths, Guard); the First-game clock default (R19.5, net/ui), the guided first game (tutorial T3).
 
+## Q2b — browser layer of the playtest harness (main 0bf1efe; run by hand, not in the gate)
+
+`pnpm pt:serve --browser` (playtest/README.md) plays the real UI in system Chrome through the
+UX.md §18 hooks. **Run:** two whole 3-seat games with `autoplay` (seeds b2, b3; 63 moves each) reached the final
+scores with no UI problem and no console error or warning; a 4-seat game (seed b4) was played about
+45 moves by `autoplay` and by hand (not to the end). `check` found the Build/Spend buttons equal to
+the engine's legality and reasons on the hands I looked at (12 of 12 buttons, seat 3, seed b4);
+`pick` with `--pay bank`, `--pay buy:<seat>` and `--cover none` went through the choice buttons and
+the recorded pick matched. **Open findings (all low):**
+
+| ID    | Sev | Owner | Finding                                                                                                                                                                                                                                                       |
+| ----- | --- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q2b-1 | low | ui    | `?debug=1&seats=2` starts 3 seats (`MIN_PLAYERS` = 3 in `src/ui/setup/model.ts`): the engine's 2-player variant (R14) cannot be played or tested in the UI. Is that intended?                                                                                 |
+| Q2b-2 | low | ui    | The Season-end dialog (`.dt-season-scrim`, `data-act="season-ok"`) has no `data-pt-role`; it covers the table and a script's click on a card times out until it closes. Harness presses Continue by `data-act`; a `data-pt-role="season-ok"` would be stable. |
+| Q2b-3 | low | ui    | `?debug=1` has no way to start a First game (R19) or a clock; the UI path for a First game can only be tried from the setup screen.                                                                                                                           |
+
+Not tested: online (one page per seat), 2-seat Burn flow and `--any`/`--glean`/`--burn` in the UI
+(no hooks), the pass-cover hotseat flow (debug has no covers), visual quality (screenshots are for
+a human), headed mode.
+
 ## Checked and fine (tests pass, keep them green)
 
 Engine (`src/engine/core/engine.audit.test.ts`):

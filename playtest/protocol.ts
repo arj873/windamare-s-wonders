@@ -6,13 +6,14 @@ export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const PLAYTEST_DIR = join(REPO_ROOT, 'playtest');
 export const SESSION_FILE = join(PLAYTEST_DIR, 'session.json');
 export const BUGS_DIR = join(PLAYTEST_DIR, 'bugs');
+export const SHOTS_DIR = join(PLAYTEST_DIR, 'shots');
 
 /** Written by `pt:serve`, read by every `pt` call. */
 export interface SessionInfo {
   port: number;
   pid: number;
-  /** `text`: the engine in-process, no browser (layer 1). */
-  mode: 'text';
+  /** `text`: the engine in-process (layer 1). `browser`: clicks in a real page (layer 2). */
+  mode: 'text' | 'browser';
   /** Number of seats, 2..7. */
   seats: number;
   /** 1-based seats played by hand. */
