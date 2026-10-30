@@ -139,9 +139,9 @@ Hurdle Fence, Beacon Hill, Tally Hut and Toll Bridge cost 2 coins, so most openi
 | `bee-garth`          | Bee Garth          | Holding  | 2R 1S    | Heather Hives (1R 1S)   | yield 1lab                                      | 2W 1c      | 0   | 1   | 1   | 1   | 2   |
 | `high-fell-herd`     | High Fell Herd     | Holding  | 1R 2P 1S | Fell Pasture (1R 1P 1S) | yield 1lab                                      | 2H         | 1   | 1   | 1   | 1   | 2   |
 | `crofters-plot`      | Crofters' Plot     | Holding  | 1R 1P    |                         | yield 1S 1W                                     | 1S 1W 1c   | 1   | 1   | 2   | 2   | 2   |
-| `moot-hall`          | Moot Hall          | Hall     | 1R 2P 1S | Moot Stone (1P 1S)      | renown 3                                        | 2lab 1c    | 1   | 2   | 2   | 2   | 3   |
-| `boathouse`          | Boathouse          | Hall     | 2R 1W 1H | Ferry Steps (1R 1H)     | renown 4                                        | 2lab 1c    | 1   | 1   | 1   | 2   | 2   |
-| `hearth-hall`        | Hearth Hall        | Hall     | 2R 1W    |                         | renown 2                                        | 6c         | 1   | 1   | 2   | 2   | 2   |
+| `moot-hall`          | Moot Hall          | Hall     | 1R 2P 1S | Moot Stone (1P 1S)      | renown 2                                        | 2lab 1c    | 1   | 2   | 2   | 2   | 3   |
+| `boathouse`          | Boathouse          | Hall     | 2R 1W 1H | Ferry Steps (1R 1H)     | renown 3                                        | 2lab 1c    | 1   | 1   | 1   | 2   | 2   |
+| `hearth-hall`        | Hearth Hall        | Hall     | 2R 1W    |                         | renown 1                                        | 6c         | 1   | 1   | 2   | 2   | 2   |
 | `drovers-market`     | Drovers' Market    | Market   | 1S 1W    |                         | per holding 2c                                  | 5c         | 0   | 0   | 1   | 1   | 1   |
 | `rival-stalls`       | Rival Stalls       | Market   | 1S 1W    |                         | income 1, score 3/neighbour beaten on markets   | 4c         | 1   | 1   | 1   | 1   | 1   |
 | `salt-weigh-house`   | Salt Weigh-house   | Market   | 1P 1S    |                         | exchange S, income 1                            | 2S 1c      | 1   | 1   | 1   | 1   | 1   |
@@ -155,15 +155,15 @@ Hurdle Fence, Beacon Hill, Tally Hut and Toll Bridge cost 2 coins, so most openi
 | `almanac-house`      | Almanac House      | Lore     | 1W 1c    |                         | lore 2                                          | 2lab       | 1   | 1   | 1   | 2   | 2   |
 | `star-chamber`       | Star Chamber       | Lore     | 1W 1H    |                         | lore 3                                          | 2lab 1c    | 1   | 2   | 3   | 3   | 3   |
 | `map-room`           | Map Room           | Lore     | 1W 1H    |                         | lore 4                                          | 2lab 1c    | 1   | 2   | 2   | 3   | 3   |
-| `wayfarers-cross`    | Wayfarers' Cross   | Landmark | 1R 1P 1S |                         | score 2/Season with a hall                      | 1lab 3c    | 1   | 1   | 1   | 1   | 2   |
-| `mustering-stone`    | Mustering Stone    | Landmark | 1P 1H    |                         | score 6 if watches ≥ 3                          | 2lab 1c    | 0   | 1   | 1   | 1   | 1   |
+| `wayfarers-cross`    | Wayfarers' Cross   | Landmark | 1R 1P 1S |                         | score 1/Season with a hall                      | 1lab 3c    | 1   | 1   | 1   | 1   | 2   |
+| `mustering-stone`    | Mustering Stone    | Landmark | 1P 1H    |                         | score 5 if watches ≥ 3                          | 2lab 1c    | 0   | 1   | 1   | 1   | 1   |
 
 Intent: each Spring Holding has a Summer upgrade named for a place (R4 O8) that **trades its good
 for 1 labour a Yield** (not a doubled good). Upgrading spends a Build and 2 goods to turn up to 10
 goods into up to 10 labour over Summer and Autumn. (D9: the first version kept the good and added
 labour; bots measured Holding-only towns winning about 2x fair with it.) Two Hall lines: Moot Stone → Moot Hall → Wend Council House →
-High Hall (1 → 3 → 5 → 8), and Ferry Steps → Boathouse → Ice Fair Hall (1 → 4 → 6), which skips
-Autumn (R4 O6; values since D9c, §14).
+High Hall (1 → 2 → 4 → 6), and Ferry Steps → Boathouse → Ice Fair Hall (1 → 3 → 6), which skips
+Autumn (R4 O6; values since L3, §15).
 
 ## 5. Autumn (Season 3)
 
@@ -171,10 +171,10 @@ Autumn (R4 O6; values since D9c, §14).
 | --------------------- | ------------------- | -------- | -------- | -------------------- | -------------------------------------------- | ---------- | --- | --- | --- | --- | --- |
 | `orchard-terraces`    | Orchard Terraces    | Holding  | 1R 1P 1W |                      | yield 1S 1lab                                | 2S 1lab    | 1   | 1   | 2   | 3   | 3   |
 | `root-cellar`         | Root Cellar         | Holding  | 1R 2P    |                      | season end 1R 1P 1S 1W 1H                    | 2any       | 1   | 2   | 2   | 2   | 3   |
-| `wend-council-house`  | Wend Council House  | Hall     | 2P 2S 1H | Moot Hall (2S 1H)    | renown 5                                     | 2lab 3c    | 1   | 2   | 2   | 3   | 3   |
-| `players-green`       | Players' Green      | Hall     | 1R 1S 2W |                      | renown 3                                     | 2lab 3c    | 1   | 2   | 2   | 2   | 3   |
-| `clock-house`         | Clock House         | Hall     | 1R 1P 2H |                      | renown 3                                     | 2H 1lab    | 1   | 1   | 2   | 2   | 2   |
-| `bell-tower`          | Bell Tower          | Hall     | 2P 1H    |                      | renown 3                                     | 1H 1lab 1c | 1   | 1   | 1   | 1   | 1   |
+| `wend-council-house`  | Wend Council House  | Hall     | 2P 2S 1H | Moot Hall (2S 1H)    | renown 4                                     | 2lab 3c    | 1   | 2   | 2   | 3   | 3   |
+| `players-green`       | Players' Green      | Hall     | 1R 1S 2W |                      | renown 2                                     | 2lab 3c    | 1   | 2   | 2   | 2   | 3   |
+| `clock-house`         | Clock House         | Hall     | 1R 1P 2H |                      | renown 2                                     | 2H 1lab    | 1   | 1   | 2   | 2   | 2   |
+| `bell-tower`          | Bell Tower          | Hall     | 2P 1H    |                      | renown 2                                     | 1H 1lab 1c | 1   | 1   | 1   | 1   | 1   |
 | `merchants-row`       | Merchants' Row      | Market   | 1R 1W 1H |                      | toll 1, income 1                             | 6c         | 0   | 0   | 1   | 1   | 1   |
 | `peat-staithe`        | Peat Staithe        | Market   | 1P 1S    |                      | exchange P, income 1                         | 2P 2c      | 1   | 1   | 1   | 1   | 2   |
 | `pilgrims-inn`        | Pilgrims' Inn       | Market   | 1R 1S 1W |                      | toll hall 2                                  | 6c         | 1   | 1   | 1   | 1   | 1   |
@@ -186,11 +186,11 @@ Autumn (R4 O6; values since D9c, §14).
 | `skywatch-loft`       | Skywatch Loft       | Lore     | 1W 1H    |                      | lore 4                                       | 3lab       | 0   | 0   | 1   | 2   | 2   |
 | `disputation-house`   | Disputation House   | Lore     | 1W 1H    |                      | lore 4, score 3/neighbour beaten on loreRun  | 2lab 1c    | 1   | 1   | 1   | 1   | 1   |
 | `chronicle-house`     | Chronicle House     | Lore     | 1P 1W 1H |                      | lore 5                                       | 2lab 1any  | 1   | 2   | 2   | 3   | 3   |
-| `hall-of-banners`     | Hall of Banners     | Landmark | 1R 1W 2H |                      | score 6 if valour ≥ 3                        | 2lab 3c    | 1   | 1   | 1   | 1   | 1   |
-| `keystone-arch`       | Keystone Arch       | Landmark | 1P 1S 2H |                      | score 8 if tiers ≥ 3                         | 3lab       | 0   | 0   | 0   | 0   | 1   |
+| `hall-of-banners`     | Hall of Banners     | Landmark | 1R 1W 2H |                      | score 5 if valour ≥ 3                        | 2lab 3c    | 1   | 1   | 1   | 1   | 1   |
+| `keystone-arch`       | Keystone Arch       | Landmark | 1P 1S 2H |                      | score 6 if tiers ≥ 3                         | 3lab       | 0   | 0   | 0   | 0   | 1   |
 | `commons-of-the-wend` | Commons of the Wend | Landmark | 1R 1P 1S |                      | score 2 per holdings of the weaker neighbour | 3any       | 0   | 1   | 1   | 1   | 1   |
 | `brokers-arcade`      | Brokers' Arcade     | Landmark | 1P 1S 1W |                      | score 2/3 goods sold                         | 1lab 3c    | 1   | 1   | 1   | 1   | 1   |
-| `harvest-home`        | Harvest Home        | Landmark | 1R 1P 2S |                      | score 2/Season with a holding                | 3any       | 1   | 1   | 1   | 2   | 2   |
+| `harvest-home`        | Harvest Home        | Landmark | 1R 1P 2S |                      | score 1/Season with a holding                | 3any       | 1   | 1   | 1   | 2   | 2   |
 
 Intent: Root Cellar is the "lay in stores" card: it pays out at Autumn's end, just before the
 Winter with no Yield (and at Winter's end, when goods are worth nothing unless the town has
@@ -201,12 +201,12 @@ the Spring Peddlers' Cart reward selling: a full store earns more as neighbours 
 
 | id                  | Name                   | Kind     | Cost           | Upgrades (cost)            | Effects                                             | Spend      | 3   | 4   | 5   | 6   | 7   |
 | ------------------- | ---------------------- | -------- | -------------- | -------------------------- | --------------------------------------------------- | ---------- | --- | --- | --- | --- | --- |
-| `high-hall`         | High Hall of Windamere | Hall     | 2P 2W 2H       | Wend Council House (2W 1H) | renown 8                                            | 3lab 3c    | 1   | 2   | 2   | 3   | 3   |
+| `high-hall`         | High Hall of Windamere | Hall     | 2P 2W 2H       | Wend Council House (2W 1H) | renown 6                                            | 3lab 3c    | 1   | 2   | 2   | 3   | 3   |
 | `ice-fair-hall`     | Ice Fair Hall          | Hall     | 2R 1S 2W       | Boathouse (1R 1S)          | renown 6                                            | 3R 2c      | 1   | 1   | 2   | 2   | 2   |
-| `snowlight-hall`    | Snowlight Hall         | Hall     | 2S 2W 1H       |                            | renown 4                                            | 3any       | 0   | 1   | 1   | 2   | 2   |
-| `kinsfolk-hall`     | Kinsfolk Hall          | Hall     | 2S 1W 1H       |                            | renown 2, score 1 per halls of the weaker neighbour | 3any       | 1   | 1   | 1   | 1   | 1   |
-| `long-barrow`       | Long Barrow            | Hall     | 3P 1H          |                            | renown 3                                            | 2P 1lab 1c | 1   | 2   | 2   | 2   | 3   |
-| `mere-gate-hall`    | Mere Gate Hall         | Hall     | 3R 2P 1W       |                            | renown 4                                            | 3R 2c      | 1   | 1   | 1   | 2   | 2   |
+| `snowlight-hall`    | Snowlight Hall         | Hall     | 2S 2W 1H       |                            | renown 3                                            | 3any       | 0   | 1   | 1   | 2   | 2   |
+| `kinsfolk-hall`     | Kinsfolk Hall          | Hall     | 2S 1W 1H       |                            | renown 1, score 1 per halls of the weaker neighbour | 3any       | 1   | 1   | 1   | 1   | 1   |
+| `long-barrow`       | Long Barrow            | Hall     | 3P 1H          |                            | renown 2                                            | 2P 1lab 1c | 1   | 2   | 2   | 2   | 3   |
+| `mere-gate-hall`    | Mere Gate Hall         | Hall     | 3R 2P 1W       |                            | renown 3                                            | 3R 2c      | 1   | 1   | 1   | 2   | 2   |
 | `midwinter-fair`    | Midwinter Fair         | Market   | 1S 2W          |                            | per market 3c                                       | 8c         | 1   | 1   | 2   | 2   | 2   |
 | `strongroom`        | Strongroom             | Market   | 1P 2H          |                            | renown 1, on build 6c                               | 2H 2c      | 1   | 1   | 1   | 2   | 2   |
 | `ice-road-traders`  | Ice Road Traders       | Market   | 1R 1S 1W       |                            | sell +2c                                            | 6c         | 1   | 1   | 1   | 1   | 2   |
@@ -215,11 +215,11 @@ the Spring Peddlers' Cart reward selling: a full store earns more as neighbours 
 | `ice-moat`          | Ice Moat               | Watch    | 2R 1H          |                            | guard 2, renown 2                                   | 2R 1c      | 1   | 1   | 1   | 2   | 2   |
 | `sealed-archive`    | Sealed Archive         | Lore     | 1S 1W 1H       |                            | lore 5                                              | 3lab 1c    | 1   | 1   | 2   | 2   | 3   |
 | `orrery`            | Orrery of Windamere    | Lore     | 1P 1W 2H       |                            | lore 6                                              | 3lab 2c    | 2   | 3   | 3   | 4   | 5   |
-| `long-table`        | The Long Table         | Landmark | 2R 2S 2W       |                            | score 2/hall                                        | 3any       | 0   | 0   | 1   | 1   | 1   |
+| `long-table`        | The Long Table         | Landmark | 2R 2S 2W       |                            | score 1/hall                                        | 3any       | 0   | 0   | 1   | 1   | 1   |
 | `victors-oak`       | The Victors' Oak       | Landmark | 1R 2P 1H       |                            | score 4/neighbour beaten on valour                  | 3any       | 1   | 1   | 1   | 1   | 1   |
-| `market-cross`      | Market Cross           | Landmark | 2R 2P 1H       |                            | score 8 if markets ≥ 3                              | 3any       | 0   | 1   | 1   | 1   | 1   |
-| `watchers-cairn`    | Watchers' Cairn        | Landmark | 3P 2H          |                            | score 2/Season with a watch                         | 3any       | 1   | 1   | 1   | 1   | 1   |
-| `ancestors-walk`    | Ancestors' Walk        | Landmark | 1R 1P 1S 1W 1H |                            | score 4/set                                         | 3any       | 1   | 1   | 1   | 1   | 2   |
+| `market-cross`      | Market Cross           | Landmark | 2R 2P 1H       |                            | score 6 if markets ≥ 3                              | 3any       | 0   | 1   | 1   | 1   | 1   |
+| `watchers-cairn`    | Watchers' Cairn        | Landmark | 3P 2H          |                            | score 1/Season with a watch                         | 3any       | 1   | 1   | 1   | 1   | 1   |
+| `ancestors-walk`    | Ancestors' Walk        | Landmark | 1R 1P 1S 1W 1H |                            | score 3/set                                         | 3any       | 1   | 1   | 1   | 1   | 2   |
 | `winter-larder`     | Winter Larder          | Landmark | 1R 1P 2S       |                            | score 1/2 goods                                     | 4any       | 0   | 0   | 1   | 1   | 1   |
 | `pride-of-the-wend` | Pride of the Wend      | Landmark | 1S 2W 2H       |                            | score 3/neighbour beaten on halls                   | 3any       | 1   | 1   | 1   | 1   | 1   |
 
@@ -491,10 +491,11 @@ measure, so your payoff follows whichever neighbour lags, and you want both to d
 | Wend Fair           | Summer Market   | on build, 2 coins per Holding of the weaker one | Counting House (0/0/0/1/1) |
 | Commons of the Wend | Autumn Landmark | 2 per Holding of the weaker one                 | Keystone Arch (0/0/0/0/1)  |
 | Brokers' Arcade     | Autumn Landmark | 2 per 3 goods sold to neighbours                | Merchants' Row (0/0/1/1/1) |
-| Kinsfolk Hall       | Winter Hall     | 2 Renown, plus 1 per Hall of the weaker one     | Snowlight Hall (0/1/1/2/2) |
+| Kinsfolk Hall       | Winter Hall     | 1 Renown, plus 1 per Hall of the weaker one     | Snowlight Hall (0/1/1/2/2) |
 
 Brokers' Arcade takes a Market's copies, so at 4 seats Markets go 15 → 14 and Landmarks 10 → 11
-(§2). Kinsfolk Hall was staged at 3 Renown; it ships at 2 with D9c's "every Hall −1" (§14).
+(§2). Kinsfolk Hall was staged at 3 Renown; it shipped at 2 with D9c's "every Hall −1" (§14) and is 1
+since L3 (§15).
 
 **Measured** (bots' `scripts/balance.ts`, greedy level 1, 1000 games, seed 1, 2-7 seats; D9b
 before). First version paid 2/2/2/3: I1 4.4-8.8%. A 500-game probe at 3/3/3/4 raised it further
@@ -605,3 +606,40 @@ of level-2 games (balance proposes L3); level-1 blowouts at every count (16-59%)
 under 20% at level 1 (2-3 seats) and over 50% at level 2, so no threshold change fixes both (open
 with research: which level the targets judge); Great Work as level-1 top source at 7 seats is 57%
 (was 48%); level-2 Spends and Lore runs.
+
+## 15. L3: a Town lever (2026-10-30)
+
+Balance's `l3-combo` (`docs/BALANCE.md` §7.1), on top of D9c and D10b. Town (R12.2a) adds three
+of the eight sources together (Holdings' and Halls' printed Renown, Landmarks, card effects), so
+it was the winner's top group in most games.
+
+1. **Halls −1 again** (−2 from before D9c), never below 1: Moot Hall 2, Boathouse 3, Hearth Hall
+   1, Wend Council House 4, Players' Green 2, Clock House 2, Bell Tower 2, Snowlight Hall 3, Long
+   Barrow 2, Mere Gate Hall 3, Kinsfolk Hall 1 (not in balance's list; same rule). Moot Stone and
+   Ferry Steps stay 1. Ice Fair Hall stays 6 (balance's target; D9c already set it). **High Hall 8
+   → 6**, not balance's 7 (no printed 7, R4 O15).
+2. **Landmark scores −1**, except the neighbour cards (`scoreBeat`, `scoreNeighbourMin`,
+   `scoreSales`, which carry I1) and Winter Larder (already 1): Wayfarers' Cross, Harvest Home and
+   Watchers' Cairn 2 → 1 per Season; Mustering Stone and Hall of Banners 6 → 5; The Long Table 2 →
+   1 per Hall; Ancestors' Walk 4 → 3 per set. **Keystone Arch and Market Cross 8 → 6**, not 7
+   (O15). The O15 test now checks every number on a card's effects, not only Renown.
+
+**Measured** (`balance.ts`, 1000 games, seed 1, section 1, 2-7 seats; before = D9c + D10b, after
+= L3; I1 with D10b counted is the scratch metric of §12, 500 games, 3-7 seats; bot play):
+
+| Metric (target)                      | Level 1                                | Level 2                             |
+| ------------------------------------ | -------------------------------------- | ----------------------------------- |
+| Town as winner's top group (≤ 55%)   | 47-64% → **43-52%** (passes)           | 77-89% → 53-75% (passes at 2 seats) |
+| Groups reaching 10% of winners (≥ 4) | 2-4 → 3-4                              | 1-2 → 2                             |
+| Winner's top of 8 sources (≤ 55%)    | 34-52% → 39-54%                        | 38-44% → 45-57% (GW over at 2, 4)   |
+| Hall share of all Renown             | 10-15% → 8-12%                         | 16-20% → 11-14%                     |
+| Blowouts, 2-7 seats (≤ 10%)          | 54/35/29/22/17/13 → 56/37/30/24/19/15% | 33/14/11/7/5/4 → 34/17/12/9/6/6%    |
+| I1 with D10b, 3-7 seats (≥ 10%)      | 16.0-8.7% → **16.8-9.1%**              | 16.1-8.8% → **17.5-9.2%**           |
+| Level-2 Autumn Spends, 3-7 seats     |                                        | 35-43% → 41-49%                     |
+| Winning score median                 | 40-49 → 39-47                          | 63-69 → 59-65                       |
+
+Level 1 passes the Town target at every count. At level 2, as balance warned, cutting Town lifts
+the Great Work (over 55% of winners at 2 and 4 seats) and winners still draw from two groups (Town
+and Great Work): S1 at level 2 needs a third group that pays a level-2 player (Raids, Lore or
+Purse). I1 with D10b now passes at 3-6 seats at both levels (6 seats 10.5 / 10.7%); 7 seats is
+9.1-9.2%. Costs: blowouts +1 to +3 points, level-2 Autumn Spends +4 to +6.

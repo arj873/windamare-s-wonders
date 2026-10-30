@@ -261,7 +261,7 @@ export const SUMMER: readonly WwCardDef[] = [
     cost: g('1R 2P 1S'),
     upgrade: { of: ['moot-stone'], cost: g('1P 1S') },
     spend: g('2lab 1c'),
-    effects: [fx.renown(3)],
+    effects: [fx.renown(2)],
     counts: [1, 2, 2, 2, 3],
   },
   {
@@ -272,7 +272,7 @@ export const SUMMER: readonly WwCardDef[] = [
     cost: g('2R 1W 1H'),
     upgrade: { of: ['ferry-steps'], cost: g('1R 1H') },
     spend: g('2lab 1c'),
-    effects: [fx.renown(4)],
+    effects: [fx.renown(3)],
     counts: [1, 1, 1, 2, 2],
   },
   {
@@ -282,7 +282,7 @@ export const SUMMER: readonly WwCardDef[] = [
     season: 'summer',
     cost: g('2R 1W'),
     spend: g('6c'),
-    effects: [fx.renown(2)],
+    effects: [fx.renown(1)],
     counts: [1, 1, 2, 2, 2],
   },
   // Markets.
@@ -430,7 +430,7 @@ export const SUMMER: readonly WwCardDef[] = [
     season: 'summer',
     cost: g('1R 1P 1S'),
     spend: g('1lab 3c'),
-    effects: [fx.scoreSeasons('hall', 2)],
+    effects: [fx.scoreSeasons('hall', 1)],
     counts: [1, 1, 1, 1, 2],
   },
   {
@@ -440,7 +440,7 @@ export const SUMMER: readonly WwCardDef[] = [
     season: 'summer',
     cost: g('1P 1H'),
     spend: g('2lab 1c'),
-    effects: [fx.scoreThreshold('watches', 3, 6)],
+    effects: [fx.scoreThreshold('watches', 3, 5)],
     counts: [0, 1, 1, 1, 1],
   },
 ];
@@ -476,7 +476,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     cost: g('2P 2S 1H'),
     upgrade: { of: ['moot-hall'], cost: g('2S 1H') },
     spend: g('2lab 3c'),
-    effects: [fx.renown(5)],
+    effects: [fx.renown(4)],
     counts: [1, 2, 2, 3, 3],
   },
   {
@@ -486,7 +486,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     season: 'autumn',
     cost: g('1R 1S 2W'),
     spend: g('2lab 3c'),
-    effects: [fx.renown(3)],
+    effects: [fx.renown(2)],
     counts: [1, 2, 2, 2, 3],
   },
   {
@@ -496,7 +496,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     season: 'autumn',
     cost: g('1R 1P 2H'),
     spend: g('1lab 2H'),
-    effects: [fx.renown(3)],
+    effects: [fx.renown(2)],
     counts: [1, 1, 2, 2, 2],
   },
   {
@@ -506,7 +506,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     season: 'autumn',
     cost: g('2P 1H'),
     spend: g('1lab 1H 1c'),
-    effects: [fx.renown(3)],
+    effects: [fx.renown(2)],
     counts: [1, 1, 1, 1, 1],
   },
   // Markets.
@@ -633,7 +633,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     season: 'autumn',
     cost: g('1R 1W 2H'),
     spend: g('2lab 3c'),
-    effects: [fx.scoreThreshold('valour', 3, 6)],
+    effects: [fx.scoreThreshold('valour', 3, 5)],
     counts: [1, 1, 1, 1, 1],
   },
   {
@@ -643,7 +643,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     season: 'autumn',
     cost: g('1P 1S 2H'),
     spend: g('3lab'),
-    effects: [fx.scoreThreshold('tiers', 3, 8)],
+    effects: [fx.scoreThreshold('tiers', 3, 6)],
     counts: [0, 0, 0, 0, 1],
   },
   {
@@ -673,7 +673,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     season: 'autumn',
     cost: g('1R 1P 2S'),
     spend: g('3any'),
-    effects: [fx.scoreSeasons('holding', 2)],
+    effects: [fx.scoreSeasons('holding', 1)],
     counts: [1, 1, 1, 2, 2],
   },
 ];
@@ -688,7 +688,7 @@ export const WINTER: readonly WwCardDef[] = [
     cost: g('2P 2W 2H'),
     upgrade: { of: ['wend-council-house'], cost: g('2W 1H') },
     spend: g('3lab 3c'),
-    effects: [fx.renown(8)],
+    effects: [fx.renown(6)],
     counts: [1, 2, 2, 3, 3],
   },
   {
@@ -709,7 +709,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('2S 2W 1H'),
     spend: g('3any'),
-    effects: [fx.renown(4)],
+    effects: [fx.renown(3)],
     counts: [0, 1, 1, 2, 2],
   },
   {
@@ -719,7 +719,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('2S 1W 1H'),
     spend: g('3any'),
-    effects: [fx.renown(2), fx.scoreNeighbourMin('halls', 1)],
+    effects: [fx.renown(1), fx.scoreNeighbourMin('halls', 1)],
     counts: [1, 1, 1, 1, 1],
   },
   {
@@ -729,7 +729,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('3P 1H'),
     spend: g('1lab 2P 1c'),
-    effects: [fx.renown(3)],
+    effects: [fx.renown(2)],
     counts: [1, 2, 2, 2, 3],
   },
   {
@@ -739,7 +739,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('3R 2P 1W'),
     spend: g('3R 2c'),
-    effects: [fx.renown(4)],
+    effects: [fx.renown(3)],
     counts: [1, 1, 1, 2, 2],
   },
   // Markets.
@@ -834,7 +834,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('2R 2S 2W'),
     spend: g('3any'),
-    effects: [fx.scorePerKind('hall', 2)],
+    effects: [fx.scorePerKind('hall', 1)],
     counts: [0, 0, 1, 1, 1],
   },
   // D10 rivalry.
@@ -855,7 +855,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('2R 2P 1H'),
     spend: g('3any'),
-    effects: [fx.scoreThreshold('markets', 3, 8)],
+    effects: [fx.scoreThreshold('markets', 3, 6)],
     counts: [0, 1, 1, 1, 1],
   },
   {
@@ -865,7 +865,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('3P 2H'),
     spend: g('3any'),
-    effects: [fx.scoreSeasons('watch', 2)],
+    effects: [fx.scoreSeasons('watch', 1)],
     counts: [1, 1, 1, 1, 1],
   },
   {
@@ -875,7 +875,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('1R 1P 1S 1W 1H'),
     spend: g('3any'),
-    effects: [fx.scoreSets(4)],
+    effects: [fx.scoreSets(3)],
     counts: [1, 1, 1, 1, 2],
   },
   {

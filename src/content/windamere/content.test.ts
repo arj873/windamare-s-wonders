@@ -257,10 +257,14 @@ describe('cards (R1.6, R7, R13)', () => {
     }
   });
 
-  it('no card prints Renown 7 (research R4 O15)', () => {
+  it('no card effect prints a 7 (research R4 O15)', () => {
     for (const c of [...CARDS, ...PENDING_CARDS]) {
-      const renown = c.effects.filter((e) => e.type === 'renown').map((e) => e.amount);
-      expect(renown, c.id).not.toContain(7);
+      const numbers = c.effects.flatMap((e) =>
+        Object.values(e).flatMap((v) =>
+          typeof v === 'number' ? [v] : typeof v === 'object' && v ? Object.values(v) : [],
+        ),
+      );
+      expect(numbers, c.id).not.toContain(7);
     }
   });
 });
