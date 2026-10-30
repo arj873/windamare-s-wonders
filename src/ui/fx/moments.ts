@@ -6,6 +6,7 @@
  */
 import './fx.css';
 import { prefersReducedMotion } from './reveal';
+import { fxSpeed } from './speed';
 
 export interface MomentOptions {
   /** Skip motion (also forced by prefers-reduced-motion). */
@@ -14,8 +15,9 @@ export interface MomentOptions {
   speed?: number;
 }
 
-const isInstant = (o: MomentOptions) => o.instant ?? prefersReducedMotion();
-const speedOf = (o: MomentOptions) => (o.speed && o.speed > 0 ? o.speed : 1);
+// The setting Off always wins; otherwise `instant` (reduced motion) or the OS preference.
+const isInstant = (o: MomentOptions) => (o.instant ?? prefersReducedMotion()) || fxSpeed.off;
+const speedOf = (o: MomentOptions) => (o.speed && o.speed > 0 ? o.speed : fxSpeed.factor);
 const EASE = 'cubic-bezier(.2,.7,.2,1)';
 
 async function run(el: HTMLElement, frames: Keyframe[], ms: number, keep = false): Promise<void> {
@@ -89,6 +91,8 @@ export function countUp(
     ms?: number;
     format?: (n: number) => string;
     onTick?: (n: number) => void;
+    /** When it returns true the count jumps to its end and stops. */
+    cancelled?: () => boolean;
   } = {},
 ): Promise<void> {
   const fmt = opts.format ?? String;
@@ -102,6 +106,11 @@ export function countUp(
     let shown = from;
     el.textContent = fmt(from);
     const frame = (now: number) => {
+      if (opts.cancelled?.()) {
+        el.textContent = fmt(to);
+        resolve();
+        return;
+      }
       const t = (now - t0) / ms;
       const n = countAt(from, to, t);
       if (n !== shown) {
@@ -125,18 +134,48 @@ export interface ScoreRow {
 
 /**
  * The end-game reveal: every town's total counts up from 0, lowest total first so the winner
- * lands last. Resolves when the last one is done; each count is a little longer than the
- * one before.
+ * lands last; each count is a little longer than the one before. Resolves true when it ran, false
+ * when `once` says this game already counted (the totals are then just shown, so a re-render or a
+ * second onAction call cannot restart it). A cancel jumps the rest to their totals.
  */
 export async function countUpScores(
   rows: readonly ScoreRow[],
-  opts: MomentOptions & { onTick?: (n: number) => void } = {},
-): Promise<void> {
+  opts: MomentOptions & {
+    onTick?: (n: number) => void;
+    /** A key for this game (its seed): the same key counts up only once per page. */
+    once?: string;
+    cancelled?: () => boolean;
+  } = {},
+): Promise<boolean> {
+  const showAll = () => {
+    for (const r of rows) r.el.textContent = String(r.total);
+  };
+  if (opts.once !== undefined) {
+    if (counted.has(opts.once)) {
+      showAll();
+      return false;
+    }
+    counted.add(opts.once);
+  }
+  if (isInstant(opts)) {
+    showAll();
+    return true;
+  }
+  // Nothing is spoiled: every total waits at 0 until its turn.
+  for (const r of rows) r.el.textContent = '0';
   const order = [...rows].sort((a, b) => a.total - b.total);
   for (const [i, r] of order.entries()) {
+    if (opts.cancelled?.()) break;
     await countUp(r.el, 0, r.total, { ...opts, ms: 700 + i * 150 });
   }
+  showAll();
+  return true;
 }
+
+const counted = new Set<string>();
+
+/** For tests: forget which games have counted up. */
+export const resetCountedScores = (): void => counted.clear();
 
 /**
  * Great Work tier-complete: a ring blooms from `target` with a few sparks. All sprites are

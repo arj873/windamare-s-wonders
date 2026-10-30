@@ -4,6 +4,7 @@ import {
   countAt,
   countUp,
   countUpScores,
+  resetCountedScores,
   easeOut,
   seasonTransition,
   selectPulse,
@@ -91,5 +92,28 @@ describe('moments', () => {
     const card = frames(document.createElement('div'));
     await selectPulse(card, { instant: false });
     expect(animate).toHaveBeenCalledTimes(11);
+  });
+});
+
+describe('countUpScores once and cancel', () => {
+  const row = (total: number) => ({ el: document.createElement('span'), total });
+
+  it('the same game key counts up once; later calls just show the totals', async () => {
+    resetCountedScores();
+    const a = row(12);
+    expect(await countUpScores([a], { instant: true, once: 'g1' })).toBe(true);
+    const b = row(12);
+    b.el.textContent = '3';
+    expect(await countUpScores([b], { instant: false, once: 'g1' })).toBe(false);
+    expect(b.el.textContent).toBe('12');
+    expect(await countUpScores([row(1)], { instant: true, once: 'g2' })).toBe(true);
+  });
+
+  it('totals wait at 0 and a cancel jumps every row to its total', async () => {
+    resetCountedScores();
+    const rows = [row(30), row(10)];
+    const done = await countUpScores(rows, { instant: false, cancelled: () => true });
+    expect(done).toBe(true);
+    expect(rows.map((r) => r.el.textContent)).toEqual(['30', '10']);
   });
 });

@@ -11,6 +11,7 @@
 import './fx.css';
 import type { SeatId } from '../../engine/core';
 import type { WwEventEntry } from '../../engine/game/events';
+import { fxSpeed } from './speed';
 import { planReveal, type Beat, type BeatCue, type PlanOptions, type Step } from './plan';
 
 export interface RevealAnchors {
@@ -35,27 +36,29 @@ export interface CardLook {
 export interface RevealOptions extends PlanOptions {
   /** Look up the art and kind of a card def. Without it sprites show just the name. */
   face?: (def: string) => CardLook | null;
-  /** Skip all motion (also forced by prefers-reduced-motion). */
+  /** Skip all motion (default: prefers-reduced-motion; the setting Off also skips). */
   instant?: boolean;
   /** Called as each beat starts with its sound id and the seat it is about. */
   onCue?: (cue: BeatCue, seat: SeatId | null) => void;
-  /** Speed multiplier (bots at fast speed). Default 1. */
+  /** Speed multiplier. Default: the player's setting (`fxSpeed`: Fast 2, Normal 1). */
   speed?: number;
   /** Abort: when this returns true the rest of the reveal is skipped. */
   cancelled?: () => boolean;
 }
 
-/** Milliseconds each step lasts at speed 1. */
+/** Milliseconds each step lasts at speed 1 ("Normal"). Tuned so a typical turn is ~1.8 s (F6). */
 export const STEP_MS = {
-  flip: 360,
-  build: 520,
-  chip: 780,
-  fly: 600,
-  tier: 640,
-  raid: 760,
-  notice: 1100,
+  flip: 240,
+  build: 340,
+  chip: 520,
+  fly: 400,
+  tier: 440,
+  raid: 520,
+  notice: 800,
 } as const;
-const BEAT_GAP_MS = 90;
+/** The next beat starts when this much of the current beat's longest step has played. */
+export const BEAT_OVERLAP = 0.5;
+const BEAT_GAP_MS = 30;
 
 export function prefersReducedMotion(): boolean {
   try {
@@ -67,15 +70,27 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
-/** Total ms the reveal would take (beats play in sequence, steps of a beat together). */
-export function revealDuration(beats: readonly Beat[], speed = 1): number {
-  let ms = 0;
-  for (const b of beats)
-    ms += Math.max(0, ...b.steps.map((s) => STEP_MS[kindTime(s)])) + BEAT_GAP_MS;
-  return ms / speed;
+const kindTime = (s: Step): keyof typeof STEP_MS => (s.kind === 'chip' ? 'chip' : s.kind);
+const beatLength = (b: Beat): number => Math.max(0, ...b.steps.map((s) => STEP_MS[kindTime(s)]));
+
+/** When each beat starts (ms from the reveal's start, speed 1) and the total length. */
+export function schedule(beats: readonly Beat[]): { starts: number[]; total: number } {
+  const starts: number[] = [];
+  let at = 0;
+  let total = 0;
+  for (const b of beats) {
+    starts.push(at);
+    const len = beatLength(b);
+    total = Math.max(total, at + len);
+    at += len * BEAT_OVERLAP + BEAT_GAP_MS;
+  }
+  return { starts, total };
 }
 
-const kindTime = (s: Step): keyof typeof STEP_MS => (s.kind === 'chip' ? 'chip' : s.kind);
+/** Total ms the reveal would take. Beats overlap: the next starts while the last still fades. */
+export function revealDuration(beats: readonly Beat[], speed = 1): number {
+  return schedule(beats).total / speed;
+}
 
 export async function playReveal(
   events: readonly WwEventEntry[],
@@ -83,17 +98,24 @@ export async function playReveal(
   opts: RevealOptions = {},
 ): Promise<void> {
   const beats = planReveal(events, opts);
-  const instant = opts.instant ?? prefersReducedMotion();
-  const speed = opts.speed && opts.speed > 0 ? opts.speed : 1;
-  for (const beat of beats) {
-    if (opts.cancelled?.()) return;
+  // The setting Off always wins, even when ui passes `instant: false`.
+  const instant = (opts.instant ?? prefersReducedMotion()) || fxSpeed.off;
+  const speed = opts.speed && opts.speed > 0 ? opts.speed : fxSpeed.factor;
+  const { starts } = schedule(beats);
+  const t0 = Date.now();
+  const running: Promise<unknown>[] = [];
+  for (const [i, beat] of beats.entries()) {
+    if (!instant) {
+      const due = (starts[i] ?? 0) / speed - (Date.now() - t0);
+      if (due > 0) await wait(due);
+    }
+    if (opts.cancelled?.()) break;
     if (beat.cue) opts.onCue?.(beat.cue, beat.seat);
     if (instant) continue;
-    await Promise.all(
-      beat.steps.map((s) => playStep(s, anchors, speed, opts.face).catch(() => undefined)),
-    );
-    await wait(BEAT_GAP_MS / speed);
+    for (const s of beat.steps)
+      running.push(playStep(s, anchors, speed, opts.face).catch(() => undefined));
   }
+  await Promise.all(running);
 }
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -110,6 +132,15 @@ function centre(el: HTMLElement | null, layer: HTMLElement): Pt | null {
   return { x: a.left - l.left + a.width / 2, y: a.top - l.top + a.height / 2 };
 }
 
+/** Keep a sprite of width `w` centred on `x` inside the layer (a wide chip near an edge). */
+function clampX(layer: HTMLElement, w: number, x: number): number {
+  const max = layer.clientWidth;
+  if (!max || !w) return x;
+  const half = Math.min(w, max) / 2 + EDGE_PAD;
+  return Math.min(Math.max(x, half), Math.max(half, max - half));
+}
+const EDGE_PAD = 2;
+
 function sprite(layer: HTMLElement, cls: string, text: string, at: Pt): HTMLElement {
   const el = document.createElement('div');
   el.className = `fx-sprite ${cls}`;
@@ -118,8 +149,15 @@ function sprite(layer: HTMLElement, cls: string, text: string, at: Pt): HTMLElem
   // Positioned once; all motion below is transform/opacity.
   el.style.cssText = `position:absolute;left:${at.x}px;top:${at.y}px;pointer-events:none;will-change:transform,opacity;`;
   layer.append(el);
+  // One layout read per sprite: slide it back inside the layer if it would cross an edge.
+  const x = clampX(layer, el.offsetWidth, at.x);
+  if (x !== at.x) el.style.left = `${x}px`;
+  el.dataset.x = String(x);
   return el;
 }
+
+/** The layer x a sprite really sits at (after clamping), for travel maths. */
+const spriteX = (el: HTMLElement, fallback: number): number => Number(el.dataset.x ?? fallback);
 
 /** Run keyframes on `el`, remove it after. Without Web Animations, resolves at once. */
 async function run(el: HTMLElement, frames: Keyframe[], ms: number): Promise<void> {
@@ -192,7 +230,7 @@ async function playStep(
       const to = centre(a.town(step.seat), layer);
       if (!from || !to) return;
       const el = cardSprite(layer, from, step.card, step.name, face);
-      const dx = to.x - from.x;
+      const dx = clampX(layer, el.offsetWidth, to.x) - spriteX(el, from.x);
       const dy = to.y - from.y;
       return run(
         el,
@@ -224,7 +262,7 @@ async function playStep(
       const to = centre(a.town(step.to), layer);
       if (!from || !to) return;
       const el = sprite(layer, 'fx-chip fx-coin', step.text, from);
-      const dx = to.x - from.x;
+      const dx = clampX(layer, el.offsetWidth, to.x) - spriteX(el, from.x);
       const dy = to.y - from.y;
       return run(
         el,
