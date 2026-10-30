@@ -1,0 +1,5 @@
+{
+  "name": "market-cheaper-2",
+  "hypothesis": "market-cheaper (1/2/3/4) cut Summer Spends 3-5 points and blowouts 1-5 points but left Autumn at 33-35%. A steeper cut, 1/2/2/3, brings Autumn Spends under 30% and blowouts down further, because towns that drew poorly can still buy their way into Builds.",
+  "tunables": { "marketPrice": [1, 2, 2, 3] }
+}

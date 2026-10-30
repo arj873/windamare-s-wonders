@@ -72,6 +72,16 @@ const ROWS: [string, string, (r: Record<string, number | string>) => string][] =
         ? 'n/a'
         : `${num(r.gapBuilds as number)} / ${pct(r.winnerMostBuilds as number)}`,
   ],
+  [
+    'Builds per town / coins paid per Build / bank goods per town',
+    'report',
+    (r) =>
+      r.bankGoodsPerTown === undefined
+        ? 'n/a'
+        : [r.buildsPerTown, r.coinsPerBuild, r.bankGoodsPerTown]
+            .map((x) => num(x as number))
+            .join(' / '),
+  ],
   ['I1 neighbour share median', '>= 10%', (r) => pct(r.nbrShareMedian as number)],
   ['F1 max seat deviation', '<= 3 pts', (r) => `${num((r.seatMaxDev as number) * 100)}`],
   ['winning score median', 'report', (r) => num(r.winScoreMedian as number)],

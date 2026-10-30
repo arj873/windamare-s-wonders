@@ -102,6 +102,19 @@ function observe(s: WwState): Record<string, number[]> {
     if (e.kind === 'build' && e.seat !== null) builds[e.seat] = (builds[e.seat] ?? 0) + 1;
   (m['gap.builds'] ??= []).push((builds[w] ?? 0) - (builds[ru] ?? 0));
   (m.winnerMostBuilds ??= []).push((builds[w] ?? 0) >= Math.max(...builds) ? 1 : 0);
+  // Payment (R6): goods bought from the bank per town, and coins paid per Build.
+  let bank = 0;
+  let paid = 0;
+  let pays = 0;
+  for (const e of s.log) {
+    if (e.kind !== 'pay') continue;
+    const d = e.data as { bank?: string[]; coins?: number } | undefined;
+    bank += d?.bank?.length ?? 0;
+    paid += d?.coins ?? 0;
+    pays += 1;
+  }
+  (m.bankGoodsPerTown ??= []).push(bank / s.seats.length);
+  if (pays > 0) (m.coinsPerBuild ??= []).push(paid / pays);
   return m;
 }
 
@@ -321,6 +334,9 @@ if (sections.has('1')) {
       ...Object.fromEntries(SRCS.map((c) => [`gap.${c}`, mean(m[`gap.${c}`])])),
       gapBuilds: mean(m['gap.builds']),
       winnerMostBuilds: mean(m.winnerMostBuilds),
+      bankGoodsPerTown: mean(m.bankGoodsPerTown),
+      coinsPerBuild: mean(m.coinsPerBuild),
+      buildsPerTown: mean(m.builtPerTown),
       s1Top: top[0],
       s1TopShare: top[1],
       s1Sources10: largest.filter(([, v]) => v >= 0.1).length,

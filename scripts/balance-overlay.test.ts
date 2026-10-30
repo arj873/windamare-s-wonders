@@ -53,6 +53,15 @@ describe('balance overlays', () => {
     }
   });
 
+  it('adds coins to the Spend bands of the chosen kinds only', () => {
+    const c = applyOverlay(base, { cardSpend: { coinsDelta: 1, kinds: ['market'] } });
+    for (const [i, card] of c.cards.entries()) {
+      const was = base.cards[i]?.spend ?? {};
+      if (card.kind !== 'market') expect(card.spend).toEqual(was);
+      else expect(card.spend).toEqual({ ...was, coins: (was.coins ?? 0) + 1 });
+    }
+  });
+
   it('rejects unknown ids', () => {
     expect(() => applyOverlay(base, { greatWorks: { 'no-such-work': {} } })).toThrow(/unknown/);
     expect(() => applyOverlay(base, { cards: { 'no-such-card': {} } })).toThrow(/unknown/);

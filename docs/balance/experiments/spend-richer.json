@@ -1,0 +1,5 @@
+{
+  "name": "spend-richer",
+  "hypothesis": "Blowouts come from economy luck: the winner makes 1.1-1.5 more Builds than the runner-up and leads by a little in every source. Greedy Spends only when it cannot Build, so a richer Spend is a catch-up for the town that drew badly. Every Spend band +1 coin cuts blowouts by more than the 1-5 points any price change gave. Side effect to watch: Spends become worth more for humans too (P3 is a dead-turn measure).",
+  "cardSpend": { "coinsDelta": 1 }
+}
