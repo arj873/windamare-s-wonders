@@ -215,6 +215,7 @@ export function playLocal<S, T>(
   game.start();
   // Tutorial's tooltips (delegated: they survive re-renders), '?' key and rules overlay.
   const help = binding.help?.attach(table.element);
+  fx?.attach?.(table.anchors);
   return {
     element: table.element,
     game,

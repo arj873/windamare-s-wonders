@@ -20,6 +20,8 @@ export interface RevealMoment<S, T> {
 }
 
 export interface RevealHook<S, T> {
+  /** Once, when the table is created (fx opts the root into its motion styles). */
+  attach?(anchors: TableAnchors): void;
   /** A new action resolved and the table shows its result: animate and sound it. */
   onAction(moment: RevealMoment<S, T>): void;
   /** Skip whatever is playing (the player clicked or pressed a key). */

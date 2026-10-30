@@ -24,6 +24,8 @@ export interface TableAnchors {
   monument(seat: SeatId): HTMLElement | null;
   /** A built card in a seat's tableau, when that tableau is on screen. */
   built(seat: SeatId, id: CardId): HTMLElement | null;
+  /** The final scores' total per town, best first (empty until the game is over). */
+  scoreTotals(): { seat: SeatId; el: HTMLElement }[];
 }
 
 export function tableAnchors(root: HTMLElement, layer: HTMLElement): TableAnchors {
@@ -43,5 +45,10 @@ export function tableAnchors(root: HTMLElement, layer: HTMLElement): TableAnchor
     stat: (seat, id) => q(town(seat), `.dt-stat.is-${id}`),
     monument: (seat) => q(town(seat), '.dt-monument-art'),
     built: (seat, id) => q(town(seat), `.dt-mini[data-card="${id}"]`),
+    scoreTotals: () =>
+      [...root.querySelectorAll<HTMLElement>('.dt-band-card[data-seat]')].flatMap((card) => {
+        const el = q(card, '.dt-band-total');
+        return el ? [{ seat: Number(card.dataset.seat), el }] : [];
+      }),
   };
 }

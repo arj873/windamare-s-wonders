@@ -1191,7 +1191,10 @@ export class DraftTable {
               {
                 class: `dt-band-card${c.winner ? ' is-winner' : ''}`,
                 style: { '--seat': c.color },
-                attrs: { 'aria-label': `${c.rank}. ${c.you ? 'You' : c.name}: ${c.total}` },
+                attrs: {
+                  'aria-label': `${c.rank}. ${c.you ? 'You' : c.name}: ${c.total}`,
+                  'data-seat': String(c.seat),
+                },
               },
               h(
                 'div',
