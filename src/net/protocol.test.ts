@@ -25,11 +25,14 @@ describe('picks on the wire', () => {
 
 describe('clock presets (R15.3)', () => {
   it('follows the turn table, the multipliers and rounds up', () => {
-    expect([0, 1, 2, 3, 4].map((t) => clockMs('normal', 'pick', t))).toEqual([
-      90_000, 70_000, 55_000, 40_000, 40_000,
+    expect([0, 1, 2, 3, 4, 5].map((t) => clockMs('normal', 'pick', t))).toEqual([
+      45_000, 40_000, 35_000, 30_000, 25_000, 25_000,
     ]);
-    expect([0, 1, 2, 3].map((t) => clockMs('fast', 'pick', t))).toEqual([
-      45_000, 35_000, 28_000, 20_000,
+    expect([0, 1, 2, 3, 4].map((t) => clockMs('relaxed', 'pick', t))).toEqual([
+      68_000, 60_000, 53_000, 45_000, 38_000,
+    ]);
+    expect([0, 1, 2, 3, 4].map((t) => clockMs('fast', 'pick', t))).toEqual([
+      23_000, 20_000, 18_000, 15_000, 13_000,
     ]);
     expect(clockMs('relaxed', 'prompt', 0)).toBe(90_000);
     expect(clockMs('off', 'pick', 0)).toBeNull();

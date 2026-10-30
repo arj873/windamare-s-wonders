@@ -297,7 +297,7 @@ yet changed). `RoomCore` gets the engine through `RoomPlatform.engine`.
   they get `awayWaitMs` (15 s) more, never past the clock, and it applies with the clock off too.
   `autoPickAway` is gone. After `graceMs` (60 s) a bot plays the seat, as before.
 - **Clock (R15.3)** is a room preset `timer: off | relaxed | normal | fast` (replaces
-  `roundTimerSec`), per stage: pick clock by turn 90/70/55/40 s × preset, 60 s for an `answer`
+  `roundTimerSec`), per stage: pick clock by turn 45/40/35/30/25 s × preset, 60 s for an `answer`
   stage. Lengths live in `CLOCK_SECONDS` (`protocol.ts`); R15.3 marks them provisional (†).
 - **Timeout pick (R15.6)** and bot seats use `pickFor(engine, view, seat, {level:'easy', salt})`
   from `src/bots`, from the seat's own view; the engine's `defaultAction` is the fallback.

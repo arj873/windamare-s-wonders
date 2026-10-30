@@ -50,7 +50,7 @@ export const SEAT_RANGE = { min: 2, max: 8 } as const; // guess: RULES.md will d
 export const TIMER_PRESETS = ['off', 'relaxed', 'normal', 'fast'] as const;
 export type TimerPreset = (typeof TIMER_PRESETS)[number];
 /** Normal pick-clock seconds by turn of a Season (the last repeats), and the prompt clock. */
-export const CLOCK_SECONDS = { pickByTurn: [90, 70, 55, 40], prompt: 60 } as const;
+export const CLOCK_SECONDS = { pickByTurn: [45, 40, 35, 30, 25], prompt: 60 } as const;
 const CLOCK_FACTOR = { relaxed: 1.5, normal: 1, fast: 0.5 } as const;
 
 /** Clock length in ms for a stage, or null when the clock is off. */

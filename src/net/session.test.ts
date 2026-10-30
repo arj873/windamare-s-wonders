@@ -225,15 +225,15 @@ describe('clock', () => {
   it('plays the engine default for slow seats when the clock runs out', () => {
     const { net } = started();
     net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
-    expect(game(net, 'c1').timer).toEqual({ remainingMs: 90_000, totalMs: 90_000 });
-    net.advance(89_999);
+    expect(game(net, 'c1').timer).toEqual({ remainingMs: 45_000, totalMs: 45_000 });
+    net.advance(44_999);
     expect(view(net, 'c1').turn).toBe(0);
     net.advance(1);
     expect(view(net, 'c1').turn).toBe(1);
     expect(net.messages('c1', 'chat').some((c) => c.entry.text === 'Bob ran out of time')).toBe(
       true,
     );
-    expect(game(net, 'c1').timer!.totalMs).toBe(70_000); // turn 2's clock is shorter (R15.3)
+    expect(game(net, 'c1').timer!.totalMs).toBe(40_000); // turn 2's clock is shorter (R15.3)
   });
 
   it('waits for humans when the timer is off', () => {
@@ -262,7 +262,7 @@ describe('disconnects and reconnects', () => {
     const { net } = started({ awayWaitMs: 1_000_000, graceMs: 1_000_000 });
     net.disconnect('c2');
     net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
-    net.advance(89_999);
+    net.advance(44_999);
     expect(view(net, 'c1').turn).toBe(0);
     net.advance(1);
     expect(view(net, 'c1').turn).toBe(1);
@@ -331,7 +331,7 @@ describe('disconnects and reconnects', () => {
     net.connect('c1b');
     net.send('c1b', { type: 'hello', token: hostToken });
     expect(view(net, 'c1b').turn).toBe(0);
-    expect(game(net, 'c1b').timer!.remainingMs).toBe(70_000);
+    expect(game(net, 'c1b').timer!.remainingMs).toBe(25_000);
   });
 
   it('expires an empty room after the idle period', () => {
