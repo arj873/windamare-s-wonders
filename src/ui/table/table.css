@@ -760,15 +760,12 @@
 .dt-cover-card .ww-dialog-actions {
   justify-content: center;
 }
-.dt-kind-icon {
-  width: 16px;
-  height: 16px;
+/* Art A8's kind badge (kinds.css draws the shape and colour); this only sizes and aligns it. */
+.dt-kind {
   flex: none;
-  vertical-align: -3px;
-}
-.dt-card-band .dt-kind-icon {
-  width: 18px;
-  height: 18px;
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
 }
 .dt-art {
   display: block;
@@ -891,7 +888,7 @@
 }
 .dt-card-afford.is-warn {
   background: var(--bad);
-  color: var(--warn-ink, #9b1c0c);
+  color: var(--warn-ink);
 }
 .dt-card-afford.is-no {
   color: var(--ink-dark);
@@ -918,12 +915,16 @@
   font-size: 11.5px;
   font-weight: 800;
 }
-.dt-use-purse.is-warn,
+/* Art: --warn-ink only on light grounds (never on terracotta), and with a word ("bank"). */
+.dt-use-purse.is-warn {
+  color: var(--warn-ink);
+}
 .dt-choice .seg-btn.is-warn {
-  color: var(--warn-ink, #9b1c0c);
+  color: var(--warn-ink);
+  background: var(--bad);
 }
 .dt-choice .seg-btn.is-warn.is-on {
-  box-shadow: 0 0 0 2px var(--warn-edge, #d9480f);
+  box-shadow: 0 0 0 2px var(--warn-edge);
 }
 .dt-choice {
   display: flex;

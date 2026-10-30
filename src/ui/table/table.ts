@@ -26,6 +26,7 @@ import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
 import type { FacePart, KindInfo, MonumentInfo, SeasonEndInfo, SeatStat } from './present';
 import '../shell.css';
+import '../theme/kinds.css';
 import './table.css';
 
 export interface DraftTableHandlers {
@@ -744,7 +745,7 @@ export class DraftTable {
       {
         class: `dt-mini${c.fresh ? ' is-fresh' : ''}`,
         title: `${c.face.name}: ${c.face.text}`,
-        attrs: { 'data-card': String(c.id) },
+        attrs: { 'data-card': String(c.id), 'data-kind': c.kind.id },
       },
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
@@ -764,15 +765,19 @@ export class DraftTable {
     );
   }
 
-  /** The kind's icon from art, or its text mark until there is one. Never colour alone. */
+  /**
+   * Art A8's kind badge: a CSS shape in the kind's colour (kinds.css), so kinds differ by
+   * silhouette at 12-14 px; the kind's name is always printed nearby. Never colour alone.
+   */
   private kindMark(kind: KindInfo): HTMLElement {
-    const term: Record<string, string> = kind.term ? { 'data-term': kind.term } : {};
-    return kind.icon
-      ? h('img', {
-          class: 'dt-kind-icon',
-          attrs: { src: kind.icon, alt: '', 'aria-hidden': 'true', ...term },
-        })
-      : h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true', ...term } }, kind.mark);
+    return h('span', {
+      class: 'kind-badge dt-kind',
+      attrs: {
+        'data-kind': kind.id,
+        'aria-hidden': 'true',
+        ...(kind.term ? { 'data-term': kind.term } : {}),
+      },
+    });
   }
 
   /** Inline SVG art; with `tiers`, the layers above that many completed tiers fade. */
@@ -869,8 +874,8 @@ export class DraftTable {
         },
         h(
           'span',
-          { class: 'dt-card-band' },
-          this.kindMark(c.kind),
+          // Art A8: the header band takes the kind's colour.
+          { class: 'dt-card-band kind-head', attrs: { 'data-kind': c.kind.id } },
           h('span', { class: 'dt-card-name' }, c.face.name),
         ),
         c.face.art &&
@@ -898,7 +903,7 @@ export class DraftTable {
             { class: `dt-card-afford is-${c.badge.tone}`, attrs: { 'aria-hidden': 'true' } },
             c.badge.text,
           ),
-        h('span', { class: 'dt-card-kind' }, c.kind.label),
+        h('span', { class: 'dt-card-kind' }, this.kindMark(c.kind), ` ${c.kind.label}`),
         h(
           'span',
           { class: 'dt-card-badge', attrs: { 'aria-hidden': 'true' } },
