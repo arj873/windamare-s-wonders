@@ -27,6 +27,7 @@ export function setupSeat(rules: WwRules): WwSeat {
     tiers: 0,
     valour: [],
     covers: [],
+    sold: 0,
   };
 }
 

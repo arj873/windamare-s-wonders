@@ -18,6 +18,7 @@ describe('setup (R2) and what is public (R1.11)', () => {
         tiers: 0,
         valour: [],
         covers: [],
+        sold: 0, // scoreSales (R13 pending)
       });
     }
   });
