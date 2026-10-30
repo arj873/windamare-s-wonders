@@ -249,3 +249,19 @@ dependencies, `tsconfig` that allows `src/server` Worker types, a `dev:server` s
   Catan's 1–2k. Free-plan limits not rechecked.
 - **Sub-second bot staggering** via alarms is fine for pacing, not for precise timing (as Catan).
 - Nothing here has been run. No code written, no tests, no Cloudflare access used.
+
+## 8. N1 progress (as built so far)
+
+Built in `src/net` (gate passes, 20 session tests with a toy engine; `src/server` not started):
+
+- `engineApi.ts`: `DraftEngine<State, View, Pick>`, the seam §6 asks the engine lane to satisfy.
+  Net's requirement, **not** the real engine API (ENGINE.md did not exist yet).
+- `protocol.ts`, `guard.ts` (copied), `session.ts` (`GameSession`, generic over the engine),
+  `testHarness.ts` (`LocalNet`, `fakeDeps`, toy engine).
+- Decisions made where §2 left a choice: a pick can be changed or withdrawn until the reveal;
+  `autoPickAway` (default on) resolves as soon as every connected seat has picked, giving away
+  seats their default pick; one round clock; bots pick `botDelayMs` after a round opens from
+  their own `viewFor`; an empty room freezes its clock.
+- Not done: `src/server` (blocked on platform P5), host succession, seat colours, bot levels,
+  `api.ts`/`client.ts` ports, a leak test against the real engine's `viewFor`.
+- Known gap: the leak checks use the toy engine; the real guarantee depends on the engine's `viewFor`.
