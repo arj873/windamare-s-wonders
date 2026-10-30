@@ -128,6 +128,45 @@ Not tested: more than 3 seats online, a host leaving (succession is covered at s
 a kick, chat, Rematch (net's e2e covers it), bots in a room, a deployed Worker (only local `wrangler
 dev`), real-network latency, two tabs for one seat.
 
+## Q5 — online with 5-7 seats, bots, kick, host-leave; narrow screens (main 86c28af; run by hand)
+
+**Online (`playtest/online.ts`, one Chrome per human, `wrangler dev`).** All passed, no open
+findings; the same per-frame leak audit as Q4 on every frame of every tab, and every browser still
+in the room ended on the same `seq` and result:
+
+| Run     | Seats / bots | Browsers | Extra steps                                                                                                                  |
+| ------- | ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 3 seats | 3 / 0        | 3        | network drop 6 s, reconnect, reload of one player                                                                            |
+| 5 seats | 5 / 2        | 3        | same drop / reconnect / reload                                                                                               |
+| 6 seats | 6 / 2        | 4 to 1   | kick in the lobby; host Leave in the lobby; host's browser closed mid-game; drop / reload of a player (1080 clicks, seq 126) |
+| 7 seats | 7 / 3        | 4        | same drop / reconnect / reload (2856 clicks, seq 147)                                                                        |
+
+Kick: the removed tab got the `kicked` error, its member and seat vanished, the seat count stayed and
+the seat is open for a bot. Host Leave in the lobby: another player became host and started the game.
+Host browser closed mid-game: the room chose a new host (within the 2 s test grace) and finished.
+Bots filled the open seats and the game reached the scores each time.
+
+**Correction to Q4.** A new room has **4** seats, and Q4's script never asserted the seat count, so
+the Q4 "3-seat game" most likely had 4 seats with one bot (the browsers were 3). `online.ts` now sets
+the seat count with "+ Add bot" / "Remove seat" and asserts the game has the requested seats and bots;
+a real 3-seat, 3-browser game passes too. The Q4 leak and reconnect results stand (they do not depend
+on the count). Harness bug fixed on the way: a table re-render between checking and clicking made
+Playwright wait 30 s and abort one run; clicks now treat that as "not now".
+
+**Narrow screens (`playtest/widths.ts`, Chrome at 360 x 740 and 390 x 844).** Home, setup, the table
+with each clock (Off, Relaxed, Normal, Fast, reached through the real setup screen), the Season card
+and the final scores: the page never scrolls sideways (`scrollWidth` = viewport everywhere) and no
+visible element sticks out of the viewport. Findings (both low):
+
+| ID   | Sev | Owner | Finding                                                                                                                                                                                                                                                              |
+| ---- | --- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q5-1 | low | ui    | The closed "Table · hands pass" drawer (`aside.dt-side`) sits wholly off-screen to the right but its **Close button is still reachable by Tab** (not `inert` / `aria-hidden` / `visibility: hidden`) at both widths: a keyboard user tabs into an invisible control. |
+| Q5-2 | low | fx    | At 360 px on the final scores an animated `fx-sprite fx-chip` ("+1 labour, +2 Peat, +1 coin") reaches 1 px past the left edge (-1..185). Transient, within the 2 px tolerance of the check.                                                                          |
+
+Not tested: widths below 360 or above 390, landscape, desktop widths, the online table and lobby at
+narrow widths, the pass-cover hotseat screen, text zoom, the Season card at the 3 clocks (it was
+measured with the clock off), a real phone (this is desktop Chrome with a mobile viewport and touch).
+
 ## Checked and fine (tests pass, keep them green)
 
 Engine (`src/engine/core/engine.audit.test.ts`):

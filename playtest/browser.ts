@@ -290,10 +290,11 @@ export class BrowserGame {
    * engine allows, else a Spend; Great Work choice 1. Returns what went wrong, if anything. A
    * smoke test of the whole table, not a player.
    */
-  private async autoplay(moves: number): Promise<string> {
+  async autoplay(moves: number, tick?: () => Promise<void>): Promise<string> {
     const problems: string[] = [];
     let done = 0;
     for (; done < moves; done++) {
+      await tick?.();
       const shown = await this.shown();
       if (shown.viewer === null) {
         problems.push(`move ${done}: the table shows no seat (phase ${shown.phase ?? '?'})`);

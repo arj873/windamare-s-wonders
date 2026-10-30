@@ -44,18 +44,39 @@ AUDIT.md Q2b.
 ## Layer 3: online (`playtest/online.ts`)
 
 ```
-nice -n 19 pnpm exec tsx playtest/online.ts [--seats 3..7] [--headed] [--out shots-dir]
+nice -n 19 pnpm exec tsx playtest/online.ts [--seats 3..7] [--bots B] [--kick] [--host-leave] [--host-drop] [--no-drop] [--headed] [--out dir]
 ```
 
-One Chrome context per seat against `wrangler dev` (app and room server on one origin; reuses net's
-`src/server/e2e/support.ts` for the build, wrangler and the basic leak canary). The seats create and
-join a room through the lobby, start with the Fast clock, and play to the final scores by clicking.
-It checks every `game` frame each tab gets (net's canary, the seed and rng are the masks, other
-seats' prompt data and glean zone hidden, later Raids and other towns' Great Work hidden, `seq`
-never goes back, every frame parses), drops one tab's network and restores it, reloads that tab
-(same member, same seat, views flowing), and at the end all tabs must hold the same result.
-About 3 to 6 minutes, heavy (build + workerd + one Chrome per seat); not in the gate. It is a
-script, not a `pt` mode: there are no per-seat CLI commands online yet.
+One Chrome context per human seat against `wrangler dev` (app and room server on one origin; reuses
+net's `src/server/e2e/support.ts` for the build, wrangler and the basic leak canary). The humans
+create and join a room through the lobby; the host sets the seat count with "+ Add bot" / "Remove
+seat" (a room starts with **4** seats, so the script always checks the game has `--seats` seats and
+`--bots` bot seats); start with the Fast clock; play to the final scores by clicking.
+
+- every `game` frame each tab gets: net's canary, seed and rng are the masks, other seats' prompt
+  data and glean zone hidden, later Raids and other towns' Great Work hidden, `seq` never goes
+  back, every frame parses;
+- `--kick`: in the lobby the host removes the last player (confirm dialog "Remove"): that tab gets
+  the `kicked` error, the member and its seat are gone, the seat count is unchanged;
+- `--host-leave`: in the lobby the host presses Leave: another player becomes host and starts;
+- `--host-drop`: mid-game the host's browser is closed: the room picks a new host and finishes;
+- unless `--no-drop`: one non-host loses its network for 6 s, gets it back, then reloads: same
+  member, same seat, views flowing;
+- at the end every browser still in the room holds the same result and `seq`.
+
+3 to 8 minutes, heavy (build + workerd + one Chrome per human); not in the gate. It is a script,
+not a `pt` mode: there are no per-seat CLI commands online.
+
+## Layer 4: narrow screens (`playtest/widths.ts`)
+
+```
+nice -n 19 pnpm exec tsx playtest/widths.ts [--widths 360,390] [--out shots-dir] [--no-build]
+```
+
+At each width: no sideways scroll and no visible element past the viewport (unless clipped or
+scrollable on purpose by an ancestor that fits) on the home screen, the setup screen, the table
+with each turn clock (reached through the real setup screen), the Season-end card and the final
+scores (`?debug=1`, played by `autoplay`). Lists the offending elements. Not in the gate.
 
 ## Original plan (kept for reference)
 
