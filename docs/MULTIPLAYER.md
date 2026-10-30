@@ -358,3 +358,15 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
 - **Season card time (R7 net #1):** `SessionOptions.openingBonusMs` (default 0 in `GameSession`,
   8 400 ms set by the server in `sessionOptionsFrom`) is added to the pick clock of turn 0 of each
   Season; `timer.totalMs` includes it. The in-page/SharedWorker dev backends use the default 0.
+
+## 12. N5: host wake after game over, 2-tab browser e2e
+
+- `nextWakeAt()` no longer returns null in `over` while the host is gone: the host-grace due time
+  stays, so a room whose host dropped at final scores passes the role on without a message.
+- `src/server/e2e/browserE2e.ts` (`pnpm exec tsx src/server/e2e/browserE2e.ts [--headed] [--out dir]`):
+  rebuilds `dist/`, starts `wrangler dev` (app + room server, one origin), opens two isolated
+  Chromium contexts. Ann: Play online, invite link; Bob: join card from the link; Ann picks Fast and
+  starts; both tabs play to final scores by clicking their own legal choices; every `game` frame a tab
+  receives is leak-checked; Ann's Rematch returns both to the lobby. Passed (64 game frames per tab).
+  Shared helpers (wrangler lifecycle, leak canary) are in `e2e/support.ts`. Not checked: that the
+  Fast clock really applied, phone layout, reconnect in a browser.
