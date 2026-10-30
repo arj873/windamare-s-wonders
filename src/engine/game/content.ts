@@ -18,6 +18,7 @@ import {
   type Season,
   type WwCardDef,
   type WwContent,
+  type WwFirstGame,
   type WwSeat,
   type WwTable,
   type WwTunables,
@@ -53,9 +54,18 @@ export const DEFAULT_TUNABLES: WwTunables = {
   coinsPerRenown: 4,
 };
 
+/** R19 (the R16 table's First game rows). */
+export const DEFAULT_FIRST_GAME: WwFirstGame = {
+  honoursPerGame: 0,
+  greatWorksOffered: 1,
+  upgrades: false,
+};
+
 export interface WwRules {
   readonly content: WwContent;
   readonly tunables: WwTunables;
+  /** What the First game option changes (R19), when a game turns it on. */
+  readonly firstGame: WwFirstGame;
   /** Good ids in goods order (R1.3). */
   readonly goods: readonly GoodId[];
   readonly effects: Record<string, EffectHandler<WwSeat, WwTable>>;
@@ -81,6 +91,7 @@ function buildRules(content: WwContent): WwRules {
   const rules: WwRules = {
     content,
     tunables: { ...DEFAULT_TUNABLES, ...content.tunables },
+    firstGame: { ...DEFAULT_FIRST_GAME, ...content.firstGame },
     goods: content.goods.map((g) => g.id),
     effects,
     card: lookup('card', content.cards),
@@ -222,10 +233,20 @@ export function checkContent(content: WwContent): string[] {
   }
   if (t.marketPrice.length !== SEASONS.length) errors.push('marketPrice needs one per Season');
   const maxSeats = SEAT_COUNTS[SEAT_COUNTS.length - 1] ?? 7;
-  if (t.greatWorksOffered < 1 || content.greatWorks.length < t.greatWorksOffered * maxSeats) {
-    errors.push(
-      `${content.greatWorks.length} Great Works: ${maxSeats} towns need ${t.greatWorksOffered * maxSeats} (R2.4)`,
-    );
+  const fg = rules.firstGame;
+  if (!isCount(fg.honoursPerGame) || !isCount(fg.greatWorksOffered)) {
+    errors.push('firstGame honoursPerGame and greatWorksOffered must be counts (R19)');
+  }
+  if (typeof fg.upgrades !== 'boolean') errors.push('firstGame upgrades must be true or false');
+  for (const [offered, rule] of [
+    [t.greatWorksOffered, 'R2.4'],
+    [fg.greatWorksOffered, 'R19.4'],
+  ] as const) {
+    if (offered < 1 || content.greatWorks.length < offered * maxSeats) {
+      errors.push(
+        `${content.greatWorks.length} Great Works: ${maxSeats} towns need ${offered * maxSeats} (${rule})`,
+      );
+    }
   }
   if (t.turnsPerSeason < 1 || t.handSize !== t.turnsPerSeason + 1) {
     errors.push('handSize must be turnsPerSeason + 1 (the last turn gleans one card, R3.5)');
@@ -249,6 +270,11 @@ export function checkContent(content: WwContent): string[] {
   if (t.coinsPerRenown < 1) errors.push('coinsPerRenown must be >= 1');
   if (content.honours.length < t.honoursPerGame) {
     errors.push(`${content.honours.length} Honours, fewer than honoursPerGame ${t.honoursPerGame}`);
+  }
+  if (content.honours.length < fg.honoursPerGame) {
+    errors.push(
+      `${content.honours.length} Honours, fewer than firstGame honoursPerGame ${fg.honoursPerGame}`,
+    );
   }
   return errors;
 }

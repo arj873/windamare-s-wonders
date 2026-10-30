@@ -19,6 +19,7 @@ import {
   type Payment,
   type Purse,
 } from './pay';
+import { upgradesAllowed } from './options';
 import { activeEffects, townOf, uncovered } from './town';
 import type { Gains, GoodId, WwCardDef, WwState } from './types';
 
@@ -121,9 +122,17 @@ const onBuildAny = (def: WwCardDef) =>
     .filter((e) => e.type === 'onBuild')
     .reduce((n, e) => n + anyCount(e.gains as Gains), 0);
 
-/** R15.7 upgrade default: the first uncovered card in town order that this card upgrades. */
-export function defaultCover(state: WwState, seat: SeatId, def: WwCardDef): CardId | null {
-  if (!def.upgrade) return null;
+/**
+ * R15.7 upgrade default: the first uncovered card in town order that this card upgrades. None in
+ * a First game (R19.3).
+ */
+export function defaultCover(
+  rules: WwRules,
+  state: WwState,
+  seat: SeatId,
+  def: WwCardDef,
+): CardId | null {
+  if (!def.upgrade || !upgradesAllowed(rules, state)) return null;
   const of = def.upgrade.of;
   return uncovered(state, seat).find((c) => of.includes(c.def))?.id ?? null;
 }
@@ -163,7 +172,7 @@ export function normalizePick(rules: WwRules, state: WwState, seat: SeatId, pick
         args.glean ??= defaultAny(rules, after, [], anyCount(gleanDef.spend));
       }
     } else if (pick.use === BUILD) {
-      if (!('cover' in args)) args.cover = defaultCover(state, seat, def);
+      if (!('cover' in args)) args.cover = defaultCover(rules, state, seat, def);
       const cover = args.cover ?? null;
       const cost = buildCost(rules, def.id, cover);
       args.discount ??= defaultDiscount(rules, cost, discountFor(rules, state, seat, def.kind));

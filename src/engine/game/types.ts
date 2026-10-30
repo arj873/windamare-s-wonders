@@ -129,6 +129,18 @@ export interface WwContent {
   raids: readonly RaidDef[];
   honours: readonly HonourDef[];
   tunables?: Partial<WwTunables>;
+  /** R19: what the First game option changes (defaults: `DEFAULT_FIRST_GAME`). */
+  firstGame?: Partial<WwFirstGame>;
+}
+
+/** R19, the First game option: two R16 numbers it replaces, and whether upgrades stay on. */
+export interface WwFirstGame {
+  /** R19.2 (R2.3's 3 becomes 0). */
+  honoursPerGame: number;
+  /** R19.4 (R2.4's 2 becomes 1); with 1, each town keeps it and nobody chooses (R2.5 skipped). */
+  greatWorksOffered: number;
+  /** R19.3: false = upgrade cards only at full cost, nothing is covered. */
+  upgrades: boolean;
 }
 
 /** A town's public data (R1.11: all of it is public). */
