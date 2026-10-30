@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Windamere's Wonders: art preview</title>
+<link rel="stylesheet" href="/src/ui/theme/tokens.css" />
+<style>
+  body { margin: 0; padding: 24px; background: var(--page-bg); color: var(--ink); font-family: var(--font-ui); }
+  h1, h2 { font-family: var(--font-display); letter-spacing: var(--display-tracking); font-weight: 400; }
+  section { margin-bottom: 32px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+  .cell { text-align: center; font-size: 12px; }
+  .cell img, .cell svg { display: block; margin: 0 auto 4px; }
+  .sw { width: 64px; height: 40px; border-radius: 6px; border: 2px solid #1e0c04; margin: 0 auto 4px; }
+  .card { position: relative; width: 200px; height: 280px; filter: drop-shadow(var(--card-shadow)); color: var(--ink-dark); }
+  .card svg.frame { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .card .t { position: absolute; font-weight: 700; }
+  .card .name { left: 60px; top: 18px; width: 120px; color: var(--type-ink); font-family: var(--font-display); font-size: 15px; }
+  .card .eff { left: 20px; top: 166px; width: 160px; font-size: 12px; }
+  .card .band { left: 54px; top: 244px; color: var(--type-ink); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+  .card img.ti { position: absolute; left: 18px; top: 238px; width: 28px; height: 28px; }
+  .card .cost { left: 18px; top: 18px; display: flex; flex-direction: column; gap: 4px; }
+  .card .cost img { width: 22px; height: 22px; }
+</style>
+</head>
+<body>
+<h1>Windamere's Wonders: art preview</h1>
+<p>Static preview of every asset in <code>public/art/</code>. Types are provisional (ww-design owns the final list).</p>
+
+<section><h2>Card types (colour + shape + icon)</h2><div class="row" id="types"></div></section>
+<section><h2>Resources, coin, points</h2><div class="row" id="icons"></div></section>
+<section><h2>Sample cards (frame is inline SVG, type colour via CSS vars)</h2><div class="row" id="cards"></div></section>
+<section><h2>Monument frame</h2><div class="row"><img src="/art/monument-frame.svg" width="480" alt="monument frame" /></div></section>
+
+<script>
+const TYPES = ['raw', 'craft', 'civic', 'trade', 'military', 'science', 'guild'];
+const ICONS = ['timber', 'stone', 'clay', 'grain', 'glass', 'cloth', 'coin', 'points'];
+const cell = (src, label) => `<div class="cell"><img src="${src}" width="48" height="48" alt="${label}" />${label}</div>`;
+document.getElementById('types').innerHTML = TYPES.map(
+  (t) => `<div class="cell"><div class="sw" style="background:var(--type-${t})"></div>${cell(`/art/types/${t}.svg`, t)}</div>`).join('');
+document.getElementById('icons').innerHTML = ICONS.map((i) => cell(`/art/icons/${i}.svg`, i)).join('');
+
+const SAMPLES = [
+  ['raw', 'Timber Camp', '+1 timber each round.', ['coin']],
+  ['craft', 'Kiln', 'Makes 1 clay or glass.', ['clay', 'clay']],
+  ['civic', 'Town Hall', '3 points.', ['stone', 'stone', 'cloth']],
+  ['trade', 'Market Row', '+1 coin per neighbour.', ['coin', 'coin']],
+  ['military', 'Watchtower', '+2 strength.', ['timber', 'stone']],
+  ['science', 'Observatory', 'Choose a lore symbol.', ['glass', 'cloth']],
+  ['guild', "Weavers' Guild", '1 point per cloth card.', ['cloth', 'cloth', 'grain']],
+];
+fetch('/art/card-frame.svg').then((r) => r.text()).then((svg) => {
+  const frame = svg.replace('<svg ', '<svg class="frame" ');
+  document.getElementById('cards').innerHTML = SAMPLES.map(([t, n, e, c]) => `
+    <div class="card" style="--type-color: var(--type-${t}); --type-ink: var(--type-${t}-ink)">
+      ${frame}
+      <div class="t cost">${c.map((i) => `<img src="/art/icons/${i}.svg" alt="${i}" />`).join('')}</div>
+      <div class="t name">${n}</div>
+      <div class="t eff">${e}</div>
+      <img class="ti" src="/art/types/${t}.svg" alt="${t}" /><div class="t band">${t}</div>
+    </div>`).join('');
+});
+</script>
+</body>
+</html>
