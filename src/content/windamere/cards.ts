@@ -185,16 +185,17 @@ export const SPRING: readonly WwCardDef[] = [
 ];
 
 export const SUMMER: readonly WwCardDef[] = [
-  // Holdings: each Spring Holding has an upgrade that adds labour (R4 O8), not a double yield.
+  // Holdings: each Spring Holding has an upgrade that trades its good for labour (R4 O8: not a
+  // double yield; D9: the "good + labour" version made Holding-only towns win 2x fair).
   {
     id: 'long-mere-reedbeds',
     name: 'Long Mere Reedbeds',
     kind: 'holding',
     season: 'summer',
     cost: g('2P 1W'),
-    upgrade: { of: ['reed-shallows'], cost: g('1P') },
+    upgrade: { of: ['reed-shallows'], cost: g('1P 1S') },
     spend: g('2R 1c'),
-    effects: [fx.yield('1R 1lab')],
+    effects: [fx.yield('1lab')],
     counts: [1, 1, 2, 2, 2],
   },
   {
@@ -203,9 +204,9 @@ export const SUMMER: readonly WwCardDef[] = [
     kind: 'holding',
     season: 'summer',
     cost: g('2R 1H'),
-    upgrade: { of: ['peat-hags'], cost: g('1R') },
+    upgrade: { of: ['peat-hags'], cost: g('1R 1W') },
     spend: g('2P 1c'),
-    effects: [fx.yield('1P 1lab')],
+    effects: [fx.yield('1lab')],
     counts: [1, 1, 1, 2, 2],
   },
   {
@@ -214,9 +215,9 @@ export const SUMMER: readonly WwCardDef[] = [
     kind: 'holding',
     season: 'summer',
     cost: g('2P 1R'),
-    upgrade: { of: ['brine-springs'], cost: g('1R') },
+    upgrade: { of: ['brine-springs'], cost: g('1R 1P') },
     spend: g('2S 1c'),
-    effects: [fx.yield('1S 1lab')],
+    effects: [fx.yield('1lab')],
     counts: [0, 1, 1, 1, 2],
   },
   {
@@ -225,9 +226,9 @@ export const SUMMER: readonly WwCardDef[] = [
     kind: 'holding',
     season: 'summer',
     cost: g('2R 1S'),
-    upgrade: { of: ['heather-hives'], cost: g('1S') },
+    upgrade: { of: ['heather-hives'], cost: g('1S 1R') },
     spend: g('2W 1c'),
-    effects: [fx.yield('1W 1lab')],
+    effects: [fx.yield('1lab')],
     counts: [0, 1, 1, 1, 2],
   },
   {
@@ -236,9 +237,9 @@ export const SUMMER: readonly WwCardDef[] = [
     kind: 'holding',
     season: 'summer',
     cost: g('1R 2P 1S'),
-    upgrade: { of: ['fell-pasture'], cost: g('1R 1P') },
+    upgrade: { of: ['fell-pasture'], cost: g('1R 1P 1S') },
     spend: g('2H'),
-    effects: [fx.yield('1H 1lab')],
+    effects: [fx.yield('1lab')],
     counts: [1, 1, 1, 1, 2],
   },
   {
@@ -440,7 +441,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     name: 'Wend Council House',
     kind: 'hall',
     season: 'autumn',
-    cost: g('3P 2S 1H'),
+    cost: g('2P 2S 1H'),
     upgrade: { of: ['moot-hall'], cost: g('2S 1H') },
     spend: g('2lab 3c'),
     effects: [fx.renown(6)],
@@ -451,9 +452,9 @@ export const AUTUMN: readonly WwCardDef[] = [
     name: "Players' Green",
     kind: 'hall',
     season: 'autumn',
-    cost: g('1R 2S 2W'),
+    cost: g('1R 1S 2W'),
     spend: g('2lab 3c'),
-    effects: [fx.renown(5)],
+    effects: [fx.renown(4)],
     counts: [1, 2, 2, 2, 3],
   },
   {
@@ -461,9 +462,9 @@ export const AUTUMN: readonly WwCardDef[] = [
     name: 'Clock House',
     kind: 'hall',
     season: 'autumn',
-    cost: g('1R 2P 2H'),
+    cost: g('1R 1P 2H'),
     spend: g('1lab 2H'),
-    effects: [fx.renown(5)],
+    effects: [fx.renown(4)],
     counts: [1, 1, 2, 2, 2],
   },
   {
@@ -645,7 +646,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('2S 2W 1H'),
     spend: g('3any'),
-    effects: [fx.renown(6)],
+    effects: [fx.renown(5)],
     counts: [1, 2, 2, 3, 3],
   },
   {
@@ -655,7 +656,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('3P 1H'),
     spend: g('1lab 2P 1c'),
-    effects: [fx.renown(5)],
+    effects: [fx.renown(4)],
     counts: [1, 2, 2, 2, 3],
   },
   {
@@ -665,7 +666,7 @@ export const WINTER: readonly WwCardDef[] = [
     season: 'winter',
     cost: g('3R 2P 1W'),
     spend: g('3R 2c'),
-    effects: [fx.renown(6)],
+    effects: [fx.renown(5)],
     counts: [1, 1, 1, 2, 2],
   },
   // Markets.

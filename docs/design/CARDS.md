@@ -129,33 +129,34 @@ Roadside Stall is free on purpose. Peddlers' Cart pays when neighbours buy from 
 
 ## 4. Summer (Season 2)
 
-| id                   | Name               | Kind     | Cost     | Upgrades (cost)      | Effects                    | Spend      | 3   | 4   | 5   | 6   | 7   |
-| -------------------- | ------------------ | -------- | -------- | -------------------- | -------------------------- | ---------- | --- | --- | --- | --- | --- |
-| `long-mere-reedbeds` | Long Mere Reedbeds | Holding  | 2P 1W    | Reed Shallows (1P)   | yield 1R 1lab              | 2R 1c      | 1   | 1   | 2   | 2   | 2   |
-| `blackmoss-cuttings` | Blackmoss Cuttings | Holding  | 2R 1H    | Peat Hags (1R)       | yield 1P 1lab              | 2P 1c      | 1   | 1   | 1   | 2   | 2   |
-| `saltcote-flats`     | Saltcote Flats     | Holding  | 1R 2P    | Brine Springs (1R)   | yield 1S 1lab              | 2S 1c      | 0   | 1   | 1   | 1   | 2   |
-| `bee-garth`          | Bee Garth          | Holding  | 2R 1S    | Heather Hives (1S)   | yield 1W 1lab              | 2W 1c      | 0   | 1   | 1   | 1   | 2   |
-| `high-fell-herd`     | High Fell Herd     | Holding  | 1R 2P 1S | Fell Pasture (1R 1P) | yield 1H 1lab              | 2H         | 1   | 1   | 1   | 1   | 2   |
-| `crofters-plot`      | Crofters' Plot     | Holding  | 1R 1P    |                      | yield 1S 1W                | 1S 1W 1c   | 1   | 1   | 2   | 2   | 2   |
-| `moot-hall`          | Moot Hall          | Hall     | 1R 2P 1S | Moot Stone (1P 1S)   | renown 4                   | 2lab 1c    | 1   | 2   | 2   | 2   | 3   |
-| `boathouse`          | Boathouse          | Hall     | 2R 1W 1H | Ferry Steps (1R 1H)  | renown 5                   | 2lab 1c    | 1   | 1   | 1   | 2   | 2   |
-| `hearth-hall`        | Hearth Hall        | Hall     | 2R 1W    |                      | renown 3                   | 6c         | 1   | 1   | 2   | 2   | 2   |
-| `drovers-market`     | Drovers' Market    | Market   | 1S 1W    |                      | per holding 2c             | 5c         | 1   | 1   | 2   | 2   | 2   |
-| `salt-weigh-house`   | Salt Weigh-house   | Market   | 1P 1S    |                      | exchange S, income 1       | 2S 1c      | 1   | 1   | 1   | 1   | 1   |
-| `counting-house`     | Counting House     | Market   | 1P 2S    |                      | income 2                   | 6c         | 1   | 1   | 1   | 2   | 2   |
-| `fairground`         | Fairground         | Market   | 1R 2W    |                      | toll 1                     | 5c         | 1   | 1   | 1   | 1   | 1   |
-| `gatehouse`          | Gatehouse          | Watch    | 1R 2P    |                      | guard 2                    | 2P 1c      | 1   | 1   | 1   | 2   | 2   |
-| `militia-yard`       | Militia Yard       | Watch    | 1R 2H    | Hurdle Fence (1R 1H) | guard 3                    | 1H 1lab 1c | 1   | 1   | 2   | 2   | 2   |
-| `watchfire-ridge`    | Watchfire Ridge    | Watch    | 1R 1S 1H | Beacon Hill (1H)     | guard 2, held +1c          | 1S 1H 1c   | 1   | 1   | 1   | 1   | 2   |
-| `almanac-house`      | Almanac House      | Lore     | 1W 2c    |                      | lore 2                     | 2lab       | 1   | 1   | 1   | 2   | 2   |
-| `star-chamber`       | Star Chamber       | Lore     | 1S 1W 1H |                      | lore 3                     | 2lab 1c    | 1   | 2   | 3   | 3   | 3   |
-| `map-room`           | Map Room           | Lore     | 2W 1H    |                      | lore 4                     | 2lab 1c    | 1   | 2   | 2   | 3   | 3   |
-| `wayfarers-cross`    | Wayfarers' Cross   | Landmark | 2R 1P 1S |                      | score 2/Season with a hall | 1lab 3c    | 1   | 1   | 1   | 1   | 2   |
-| `mustering-stone`    | Mustering Stone    | Landmark | 2P 1H    |                      | score 6 if watches ≥ 3     | 2lab 1c    | 0   | 1   | 1   | 1   | 1   |
+| id                   | Name               | Kind     | Cost     | Upgrades (cost)         | Effects                    | Spend      | 3   | 4   | 5   | 6   | 7   |
+| -------------------- | ------------------ | -------- | -------- | ----------------------- | -------------------------- | ---------- | --- | --- | --- | --- | --- |
+| `long-mere-reedbeds` | Long Mere Reedbeds | Holding  | 2P 1W    | Reed Shallows (1P 1S)   | yield 1lab                 | 2R 1c      | 1   | 1   | 2   | 2   | 2   |
+| `blackmoss-cuttings` | Blackmoss Cuttings | Holding  | 2R 1H    | Peat Hags (1R 1W)       | yield 1lab                 | 2P 1c      | 1   | 1   | 1   | 2   | 2   |
+| `saltcote-flats`     | Saltcote Flats     | Holding  | 1R 2P    | Brine Springs (1R 1P)   | yield 1lab                 | 2S 1c      | 0   | 1   | 1   | 1   | 2   |
+| `bee-garth`          | Bee Garth          | Holding  | 2R 1S    | Heather Hives (1R 1S)   | yield 1lab                 | 2W 1c      | 0   | 1   | 1   | 1   | 2   |
+| `high-fell-herd`     | High Fell Herd     | Holding  | 1R 2P 1S | Fell Pasture (1R 1P 1S) | yield 1lab                 | 2H         | 1   | 1   | 1   | 1   | 2   |
+| `crofters-plot`      | Crofters' Plot     | Holding  | 1R 1P    |                         | yield 1S 1W                | 1S 1W 1c   | 1   | 1   | 2   | 2   | 2   |
+| `moot-hall`          | Moot Hall          | Hall     | 1R 2P 1S | Moot Stone (1P 1S)      | renown 4                   | 2lab 1c    | 1   | 2   | 2   | 2   | 3   |
+| `boathouse`          | Boathouse          | Hall     | 2R 1W 1H | Ferry Steps (1R 1H)     | renown 5                   | 2lab 1c    | 1   | 1   | 1   | 2   | 2   |
+| `hearth-hall`        | Hearth Hall        | Hall     | 2R 1W    |                         | renown 3                   | 6c         | 1   | 1   | 2   | 2   | 2   |
+| `drovers-market`     | Drovers' Market    | Market   | 1S 1W    |                         | per holding 2c             | 5c         | 1   | 1   | 2   | 2   | 2   |
+| `salt-weigh-house`   | Salt Weigh-house   | Market   | 1P 1S    |                         | exchange S, income 1       | 2S 1c      | 1   | 1   | 1   | 1   | 1   |
+| `counting-house`     | Counting House     | Market   | 1P 2S    |                         | income 2                   | 6c         | 1   | 1   | 1   | 2   | 2   |
+| `fairground`         | Fairground         | Market   | 1R 2W    |                         | toll 1                     | 5c         | 1   | 1   | 1   | 1   | 1   |
+| `gatehouse`          | Gatehouse          | Watch    | 1R 2P    |                         | guard 2                    | 2P 1c      | 1   | 1   | 1   | 2   | 2   |
+| `militia-yard`       | Militia Yard       | Watch    | 1R 2H    | Hurdle Fence (1R 1H)    | guard 3                    | 1H 1lab 1c | 1   | 1   | 2   | 2   | 2   |
+| `watchfire-ridge`    | Watchfire Ridge    | Watch    | 1R 1S 1H | Beacon Hill (1H)        | guard 2, held +1c          | 1S 1H 1c   | 1   | 1   | 1   | 1   | 2   |
+| `almanac-house`      | Almanac House      | Lore     | 1W 2c    |                         | lore 2                     | 2lab       | 1   | 1   | 1   | 2   | 2   |
+| `star-chamber`       | Star Chamber       | Lore     | 1S 1W 1H |                         | lore 3                     | 2lab 1c    | 1   | 2   | 3   | 3   | 3   |
+| `map-room`           | Map Room           | Lore     | 2W 1H    |                         | lore 4                     | 2lab 1c    | 1   | 2   | 2   | 3   | 3   |
+| `wayfarers-cross`    | Wayfarers' Cross   | Landmark | 2R 1P 1S |                         | score 2/Season with a hall | 1lab 3c    | 1   | 1   | 1   | 1   | 2   |
+| `mustering-stone`    | Mustering Stone    | Landmark | 2P 1H    |                         | score 6 if watches ≥ 3     | 2lab 1c    | 0   | 1   | 1   | 1   | 1   |
 
-Intent: each Spring Holding has a Summer upgrade named for a place (R4 O8) that keeps its good
-and adds 1 labour a Yield, instead of doubling the good. Upgrading trades a Build for up to 10
-labour over Summer and Autumn. Two Hall lines: Moot Stone → Moot Hall → Wend Council House →
+Intent: each Spring Holding has a Summer upgrade named for a place (R4 O8) that **trades its good
+for 1 labour a Yield** (not a doubled good). Upgrading spends a Build and 2 goods to turn up to 10
+goods into up to 10 labour over Summer and Autumn. (D9: the first version kept the good and added
+labour; bots measured Holding-only towns winning about 2x fair with it.) Two Hall lines: Moot Stone → Moot Hall → Wend Council House →
 High Hall (2 → 4 → 6 → 9), and Ferry Steps → Boathouse → Ice Fair Hall (2 → 5 → 8), which skips
 Autumn (R4 O6).
 
@@ -165,9 +166,9 @@ Autumn (R4 O6).
 | -------------------- | ------------------ | -------- | -------- | -------------------- | ----------------------------- | ---------- | --- | --- | --- | --- | --- |
 | `orchard-terraces`   | Orchard Terraces   | Holding  | 1R 1P 1W |                      | yield 1S 1lab                 | 2S 1lab    | 1   | 1   | 2   | 3   | 3   |
 | `root-cellar`        | Root Cellar        | Holding  | 1R 2P    |                      | season end 1R 1P 1S 1W 1H     | 2any       | 1   | 2   | 2   | 2   | 3   |
-| `wend-council-house` | Wend Council House | Hall     | 3P 2S 1H | Moot Hall (2S 1H)    | renown 6                      | 2lab 3c    | 1   | 2   | 2   | 3   | 3   |
-| `players-green`      | Players' Green     | Hall     | 1R 2S 2W |                      | renown 5                      | 2lab 3c    | 1   | 2   | 2   | 2   | 3   |
-| `clock-house`        | Clock House        | Hall     | 1R 2P 2H |                      | renown 5                      | 2H 1lab    | 1   | 1   | 2   | 2   | 2   |
+| `wend-council-house` | Wend Council House | Hall     | 2P 2S 1H | Moot Hall (2S 1H)    | renown 6                      | 2lab 3c    | 1   | 2   | 2   | 3   | 3   |
+| `players-green`      | Players' Green     | Hall     | 1R 1S 2W |                      | renown 4                      | 2lab 3c    | 1   | 2   | 2   | 2   | 3   |
+| `clock-house`        | Clock House        | Hall     | 1R 1P 2H |                      | renown 4                      | 2H 1lab    | 1   | 1   | 2   | 2   | 2   |
 | `bell-tower`         | Bell Tower         | Hall     | 2P 1H    |                      | renown 4                      | 1H 1lab 1c | 1   | 1   | 1   | 1   | 1   |
 | `merchants-row`      | Merchants' Row     | Market   | 2R 1W 1H |                      | toll 1, income 1              | 6c         | 1   | 1   | 2   | 2   | 2   |
 | `peat-staithe`       | Peat Staithe       | Market   | 1R 1P 1S |                      | exchange P, income 1          | 2P 2c      | 1   | 1   | 1   | 1   | 2   |
@@ -194,9 +195,9 @@ the Spring Peddlers' Cart reward selling: a full store earns more as neighbours 
 | ------------------- | ---------------------- | -------- | -------------- | -------------------------- | --------------------------------- | ---------- | --- | --- | --- | --- | --- |
 | `high-hall`         | High Hall of Windamere | Hall     | 2P 2W 2H       | Wend Council House (2W 1H) | renown 9                          | 3lab 3c    | 1   | 2   | 2   | 3   | 3   |
 | `ice-fair-hall`     | Ice Fair Hall          | Hall     | 2R 1S 2W       | Boathouse (1R 1S)          | renown 8                          | 3R 2c      | 1   | 1   | 2   | 2   | 2   |
-| `snowlight-hall`    | Snowlight Hall         | Hall     | 2S 2W 1H       |                            | renown 6                          | 3any       | 1   | 2   | 2   | 3   | 3   |
-| `long-barrow`       | Long Barrow            | Hall     | 3P 1H          |                            | renown 5                          | 2P 1lab 1c | 1   | 2   | 2   | 2   | 3   |
-| `mere-gate-hall`    | Mere Gate Hall         | Hall     | 3R 2P 1W       |                            | renown 6                          | 3R 2c      | 1   | 1   | 1   | 2   | 2   |
+| `snowlight-hall`    | Snowlight Hall         | Hall     | 2S 2W 1H       |                            | renown 5                          | 3any       | 1   | 2   | 2   | 3   | 3   |
+| `long-barrow`       | Long Barrow            | Hall     | 3P 1H          |                            | renown 4                          | 2P 1lab 1c | 1   | 2   | 2   | 2   | 3   |
+| `mere-gate-hall`    | Mere Gate Hall         | Hall     | 3R 2P 1W       |                            | renown 5                          | 3R 2c      | 1   | 1   | 1   | 2   | 2   |
 | `midwinter-fair`    | Midwinter Fair         | Market   | 1S 2W          |                            | per market 3c                     | 8c         | 1   | 1   | 2   | 2   | 2   |
 | `strongroom`        | Strongroom             | Market   | 1P 2H          |                            | renown 1, on build 6c             | 2H 2c      | 1   | 1   | 1   | 2   | 2   |
 | `ice-road-traders`  | Ice Road Traders       | Market   | 1R 1S 1W       |                            | sell +2c                          | 6c         | 1   | 1   | 1   | 1   | 2   |
@@ -220,32 +221,36 @@ on any card (R4 O15).
 
 ## 7. Great Works (pool of 14)
 
-Thresholds are the standard 3 / 6 / 10 / 15 labour (R8.1) unless the row says otherwise. Each
+Thresholds are the standard 4 / 9 / 15 / 22 labour (R8.1; D9 raised them from 3 / 6 / 10 / 15)
+unless the row says otherwise. Each
 tier lists its reward; `on build` in a tier means "when the tier completes" (R8.4). Every tier
 pays some Renown, no tier pays a plain 3 or 7, and no tier gives a Lore rank (R4 O7; a test
 enforces all three).
 
 | id                       | Name                    | Perk                              | Tier I                   | Tier II                   | Tier III                | Tier IV                  | Thresholds |
 | ------------------------ | ----------------------- | --------------------------------- | ------------------------ | ------------------------- | ----------------------- | ------------------------ | ---------- |
-| `the-mere-bridge`        | The Mere Bridge         | toll holding 1                    | renown 1, on build 4c    | renown 2, income 1        | renown 4                | renown 8                 | 3/6/10/15  |
-| `the-wind-organ`         | The Wind Organ          | spend lore: +1lab                 | renown 2                 | renown 2, on build 2W     | renown 5                | renown 2, score 2/lore   | 3/6/10/15  |
-| `the-beacon-crown`       | The Beacon Crown        | guard 1                           | renown 1, guard 1        | renown 2, held +2c        | renown 4, guard 1       | renown 6                 | 3/6/10/15  |
-| `the-salt-stair`         | The Salt Stair          | yield 1S                          | renown 1, on build 2W    | renown 2, yield 1W        | renown 4                | renown 8                 | 3/6/10/15  |
-| `the-stonewrights-spire` | The Stonewright's Spire | yield 1lab                        | renown 2                 | renown 4                  | renown 6                | renown 9                 | 4/8/13/19  |
-| `the-hall-of-echoes`     | The Hall of Echoes      | build hall: +2c                   | renown 1, on build 3c    | renown 2, discount hall 1 | renown 4                | renown 2, score 2/hall   | 3/6/10/15  |
-| `the-harvest-wheel`      | The Harvest Wheel       | discount holding 1                | renown 1, on build 1R 1P | renown 2, score 1/holding | renown 5                | renown 6                 | 3/6/10/15  |
-| `the-ice-lantern`        | The Ice Lantern         | season end 1W 1H                  | renown 2                 | renown 2, score 1/3 goods | renown 4                | renown 8                 | 3/6/10/15  |
-| `the-wolf-gate`          | The Wolf Gate           | held +2c                          | renown 1, guard 1        | renown 2, guard 1         | renown 4                | renown 2, score 2/Valour | 3/6/10/15  |
-| `the-tide-mill`          | The Tide Mill           | exchange S                        | renown 1, yield 1S       | renown 2, exchange H      | renown 4                | renown 8                 | 3/6/10/15  |
-| `the-lantern-market`     | The Lantern Market      | income 1                          | renown 1, on build 3c    | renown 2, sell +1c        | renown 4, toll market 2 | renown 6                 | 3/6/10/15  |
-| `the-ring-of-oaths`      | The Ring of Oaths       | score 2/neighbour beaten on guard | renown 1, guard 1        | renown 2                  | renown 4, guard 1       | renown 8                 | 3/6/10/15  |
-| `the-coinwell`           | The Coinwell            | spend market: +2c                 | renown 2                 | renown 2, income 1        | renown 4                | renown 8                 | 3/6/10/15  |
-| `the-fourfold-gate`      | The Fourfold Gate       | score 2/set                       | renown 1, on build 3c    | renown 2                  | renown 5                | renown 4, score 1/set    | 3/6/10/15  |
+| `the-mere-bridge`        | The Mere Bridge         | toll holding 1                    | renown 1, on build 4c    | renown 2, income 1        | renown 4                | renown 8                 | 4/9/15/22  |
+| `the-wind-organ`         | The Wind Organ          | spend lore: +1lab                 | renown 2                 | renown 2, on build 2W     | renown 6                | renown 4, score 2/lore   | 4/9/15/22  |
+| `the-beacon-crown`       | The Beacon Crown        | guard 1                           | renown 1, guard 1        | renown 2, held +2c        | renown 4, guard 1       | renown 6                 | 4/9/15/22  |
+| `the-salt-stair`         | The Salt Stair          | yield 1S                          | renown 1, on build 2W    | renown 2, yield 1W        | renown 4                | renown 6                 | 4/9/15/22  |
+| `the-stonewrights-spire` | The Stonewright's Spire | yield 1lab                        | renown 2                 | renown 4                  | renown 5                | renown 8                 | 6/12/19/27 |
+| `the-hall-of-echoes`     | The Hall of Echoes      | build hall: +2c                   | renown 1, on build 3c    | renown 2, discount hall 1 | renown 4                | renown 4, score 2/hall   | 4/9/15/22  |
+| `the-harvest-wheel`      | The Harvest Wheel       | discount holding 1                | renown 1, on build 1R 1P | renown 2, score 1/holding | renown 4                | renown 5                 | 4/9/15/22  |
+| `the-ice-lantern`        | The Ice Lantern         | season end 1W 1H                  | renown 2                 | renown 2, score 1/3 goods | renown 4                | renown 6                 | 4/9/15/22  |
+| `the-wolf-gate`          | The Wolf Gate           | held +2c                          | renown 1, guard 1        | renown 2, guard 1         | renown 4                | renown 2, score 2/Valour | 4/9/15/22  |
+| `the-tide-mill`          | The Tide Mill           | exchange S, income 1              | renown 1, yield 1S       | renown 2, exchange H      | renown 4                | renown 8                 | 4/9/15/22  |
+| `the-lantern-market`     | The Lantern Market      | income 1                          | renown 1, on build 3c    | renown 2, sell +1c        | renown 4, toll market 2 | renown 6                 | 4/9/15/22  |
+| `the-ring-of-oaths`      | The Ring of Oaths       | score 2/neighbour beaten on guard | renown 1, guard 1        | renown 2                  | renown 4, guard 1       | renown 8                 | 4/9/15/22  |
+| `the-coinwell`           | The Coinwell            | spend market: +2c, income 1       | renown 2                 | renown 2, income 1        | renown 4                | renown 8                 | 4/9/15/22  |
+| `the-fourfold-gate`      | The Fourfold Gate       | score 2/set                       | renown 1, on build 3c    | renown 2                  | renown 6                | renown 5, score 2/set    | 4/9/15/22  |
 
 Intent: each Great Work points at one way to play (Holdings, Lore, Guard, yield, labour, Halls,
 Winter stores, Valour, exchange, selling, beating neighbours, coins, sets). A full track is worth
-about 13 to 21 Renown plus the Perk and effects. The Stonewright's Spire gets labour every Yield,
-so its thresholds are higher.
+about 13 to 19 Renown plus the Perk and effects. The Stonewright's Spire gets labour every Yield,
+so its thresholds are higher (6 / 12 / 19 / 27). D9 per-work changes, from bots' win ratios
+(BALANCE.md 1b, fair = 1.0): Harvest Wheel 1.46 and Stonewright's Spire 1.36 lowered; Coinwell
+0.59, Fourfold Gate 0.51, Tide Mill 0.68, Wind Organ 0.61, Hall of Echoes 0.71 raised; Salt
+Stair and Ice Lantern tier IV 8 → 6 (both above 1.15).
 
 ## 8. Raids and Honours
 
@@ -330,30 +335,86 @@ Not checked (needs B1 bots and qa playtests):
 
 ## 10. Research R4 findings: what was done
 
-| Id  | Finding (short)                             | Status                                                                                                                                                              |
-| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| O1  | Card-type colours are 7W's map              | Art lane (Needs). ORIGINALITY row 8 waits for art's final map.                                                                                                      |
-| O2  | Glass and cloth icons                       | Art lane (Needs): icons for reed, peat, salt, wax, horn (RULES.md goods table).                                                                                     |
-| O3  | Monument frame with stage sockets           | Art lane (Needs): a 4-tier track.                                                                                                                                   |
-| O4  | UX placeholders on 7W cadence               | UI lane (Needs): hand 6, one card with a role, purchase picker.                                                                                                     |
-| O5  | `palisade`                                  | **Fixed**: Hurdle Fence.                                                                                                                                            |
-| O6  | Shrine → Chapel → Cathedral (2 → 4 → 7)     | **Fixed**: Ferry Steps → Boathouse → Ice Fair Hall (2 → 5 → 8), lakeside, skips Autumn. The Moot line is 2 → 4 → 6 → 9.                                             |
-| O7  | Great Work "3, special, 7"                  | **Fixed**: Renown in every tier, no 3 or 7, no Lore rank (tested).                                                                                                  |
-| O8  | Single → double producers, industry names   | **Fixed**: upgrades named by place and add labour, not a doubled good.                                                                                              |
-| O9  | Rampart; Guard = Season number              | **Fixed**: Ring Dyke; Guard varies inside each Season (§2).                                                                                                         |
-| O10 | Moneylender's, Harbour, Stargazers', Timber | **Fixed**: removed or renamed (Peat Staithe, Skywatch Loft).                                                                                                        |
-| O11 | "Caravan"                                   | **Fixed**: `toll` (R13).                                                                                                                                            |
-| O12 | Seven score categories, "Treasury"          | **Fixed** in rules: six groups, Purse (R12.2). UI tally: ui lane.                                                                                                   |
-| O13 | One Landmark per kind                       | **Fixed**: varied conditions, Landmarks from Summer.                                                                                                                |
-| O14 | Deck curve                                  | **Partly**: Summer Landmarks. **Kept** no Winter Holdings: Winter has no Yield (R3.7), so a Holding there would do nothing.                                         |
-| O15 | Printed 7s                                  | **Fixed** on cards and tiers. **Kept** 7 seats (the player count).                                                                                                  |
-| O16 | Discard last card, alternating passes       | **Kept** passes (genre-common); the last card is now a glean, not a discard.                                                                                        |
-| D1  | Multiplayer solitaire                       | **Fixed (estimate)**: neighbour trade, bounty paid by the plundered town, sale bonuses. RULES.md design note: 20-35% of score (arithmetic, untested). Bots measure. |
-| D2  | One Watch a Season doesn't hold the Raids   | **Fixed**: new strengths (§8), tested.                                                                                                                              |
-| D3  | Pair-pick option count                      | **Obsolete**: single pick (at most 6 cards × 2 roles, plus payment choices).                                                                                        |
-| D4  | Dominated builds (Holdings, weak Lore)      | **Partly**: Spring Holdings 3c, cheaper Autumn/Winter Lore. Lore scores unchanged. Bots measure.                                                                    |
-| D5  | Runaway engine                              | **Partly**: neighbours can now buy a leader's stock. No store cap yet. Bots measure.                                                                                |
-| D6  | Dead Winter turns                           | **Measure** (bots): Spends per Season.                                                                                                                              |
-| D7  | 2-player Burn is deducible                  | **Noted** in R14.3 and ORIGINALITY row 16.                                                                                                                          |
-| D8  | Honour ties at 5-7 seats                    | **Measure** (bots).                                                                                                                                                 |
-| D9  | Teach load                                  | **Kept** for now; "first game" option proposed (§9.7).                                                                                                              |
+| Id  | Finding (short)                             | Status                                                                                                                                                                                       |
+| --- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O1  | Card-type colours are 7W's map              | Art lane (Needs). ORIGINALITY row 8 waits for art's final map.                                                                                                                               |
+| O2  | Glass and cloth icons                       | Art lane (Needs): icons for reed, peat, salt, wax, horn (RULES.md goods table).                                                                                                              |
+| O3  | Monument frame with stage sockets           | Art lane (Needs): a 4-tier track.                                                                                                                                                            |
+| O4  | UX placeholders on 7W cadence               | UI lane (Needs): hand 6, one card with a role, purchase picker.                                                                                                                              |
+| O5  | `palisade`                                  | **Fixed**: Hurdle Fence.                                                                                                                                                                     |
+| O6  | Shrine → Chapel → Cathedral (2 → 4 → 7)     | **Fixed**: Ferry Steps → Boathouse → Ice Fair Hall (2 → 5 → 8), lakeside, skips Autumn. The Moot line is 2 → 4 → 6 → 9.                                                                      |
+| O7  | Great Work "3, special, 7"                  | **Fixed**: Renown in every tier, no 3 or 7, no Lore rank (tested).                                                                                                                           |
+| O8  | Single → double producers, industry names   | **Fixed**: upgrades named by place and add labour, not a doubled good.                                                                                                                       |
+| O9  | Rampart; Guard = Season number              | **Fixed**: Ring Dyke; Guard varies inside each Season (§2).                                                                                                                                  |
+| O10 | Moneylender's, Harbour, Stargazers', Timber | **Fixed**: removed or renamed (Peat Staithe, Skywatch Loft).                                                                                                                                 |
+| O11 | "Caravan"                                   | **Fixed**: `toll` (R13).                                                                                                                                                                     |
+| O12 | Seven score categories, "Treasury"          | **Fixed** in rules: six groups, Purse (R12.2). UI tally: ui lane.                                                                                                                            |
+| O13 | One Landmark per kind                       | **Fixed**: varied conditions, Landmarks from Summer.                                                                                                                                         |
+| O14 | Deck curve                                  | **Partly**: Summer Landmarks. **Kept** no Winter Holdings: Winter has no Yield (R3.7), so a Holding there would do nothing.                                                                  |
+| O15 | Printed 7s                                  | **Fixed** on cards and tiers. **Kept** 7 seats (the player count).                                                                                                                           |
+| O16 | Discard last card, alternating passes       | **Kept** passes (genre-common); the last card is now a glean, not a discard.                                                                                                                 |
+| D1  | Multiplayer solitaire                       | **Not fixed (measured)**: bots measure the net neighbour share at 1.2-2.0% (I1 target ≥ 10%): purchases and sales cancel. My 20-35% estimate counted gross coins. Open design question, §11. |
+| D2  | One Watch a Season doesn't hold the Raids   | **Fixed**: new strengths (§8), tested.                                                                                                                                                       |
+| D3  | Pair-pick option count                      | **Obsolete**: single pick (at most 6 cards × 2 roles, plus payment choices).                                                                                                                 |
+| D4  | Dominated builds (Holdings, weak Lore)      | **Partly**: Spring Holdings 3c, cheaper Autumn/Winter Lore. Lore scores unchanged. Bots measure.                                                                                             |
+| D5  | Runaway engine                              | **Partly**: neighbours can now buy a leader's stock. No store cap yet. Bots measure.                                                                                                         |
+| D6  | Dead Winter turns                           | **Measure** (bots): Spends per Season.                                                                                                                                                       |
+| D7  | 2-player Burn is deducible                  | **Noted** in R14.3 and ORIGINALITY row 16.                                                                                                                                                   |
+| D8  | Honour ties at 5-7 seats                    | **Measure** (bots).                                                                                                                                                                          |
+| D9  | Teach load                                  | **Kept** for now; "first game" option proposed (§9.7).                                                                                                                                       |
+
+## 11. D9 re-tune (2026-10-30)
+
+Input: bots' balance report (`agent/bots:docs/BALANCE.md`, run on main `b50fccd`, greedy level-1
+bots, 1000 games per row). Measured here by running bots' `scripts/balance.ts` (from
+`agent/bots`, exported to the design scratch folder) on this data. "After" is one run of 1000
+games, seed 1, all seat counts. Greedy is a weak bot (BALANCE.md §0), so these describe the
+cards under that bot, not under good play.
+
+**Changes, each with what it was for and what it did** (the 300- and 500-game probes have about
+2.5 points of noise on a win share):
+
+| #   | Change                                                                                                            | Expected                    | Measured                                                                                                  |
+| --- | ----------------------------------------------------------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1   | Great Work thresholds 3/6/10/15 → **4/9/15/22**; Stonewright's Spire 4/8/13/19 → **6/12/19/27**                   | fewer tier IVs              | 4 seats, 300 games: tier IV 79% → 49%; Great Work as winner's top source 66% → 57%                        |
+| 2   | Per-work Renown and Perks (§7 note): the two strongest down, the five weakest up                                  | win ratios nearer 1.0       | with 1: winner's top source 57% → 45%. Per-work ratios not re-measured (need pooled 1000s)                |
+| 3   | Valour 1/2/3/4 → **2/3/4/5**                                                                                      | Watches and Raids matter    | Watch-only 0.23x → 0.42x (4 seats); Valour as winner's top 0.3% → 9%. Reverting it: Holding-only 2.2-2.4x |
+| 4   | Fresh Halls −1 Renown: Players' Green, Clock House 5 → 4; Snowlight Hall, Mere Gate Hall 6 → 5; Long Barrow 5 → 4 | Hall-only under 1.5x        | with 3: Hall-only 1.41x → 0.78x (4 seats)                                                                 |
+| 5   | Summer upgrades **trade the good for labour** (yield 1 labour, not good + labour), upgrade cost +1 good           | Holding-only under 1.5x     | 3 / 7 seats, 500 games: Holding-only 2.00x / 1.89x → 1.53x / 1.23x                                        |
+| 6   | Autumn Halls −1 good: Wend Council House 3P → 2P, Players' Green 2S → 1S, Clock House 2P → 1P                     | fewer Autumn Spends after 5 | not isolated; in the final run                                                                            |
+
+**Tried and dropped**: Lore run scores 1/3/7/11/16/20 and bounty 2 (no measurable change under
+greedy: Lore run ≥ 3 22.8% → 21.9%, I1 1.8% → 1.2%; kept the old values rather than ship untested
+inflation); Spring Holdings 3c → 4c (Holding-only 1.96x → 1.88x, Spring Spends 21% → 29%).
+
+**Before and after** (ranges over 2-7 seats):
+
+| Target (balance-targets.md)          | Before                 | After D9               | Status                                   |
+| ------------------------------------ | ---------------------- | ---------------------- | ---------------------------------------- |
+| S4 tier IV, 20-50% of towns          | 63-79%                 | 31-47%                 | **pass**                                 |
+| S1 Great Work as winner's top, ≤ 55% | 63-73%                 | 40-56%                 | pass except 7 seats (56%)                |
+| S1 sources that top ≥ 10% of winners | 2                      | 3 (4 at 2 seats)       | better, target 4                         |
+| Great Work share of all Renown       | 32-38%                 | 24-33%                 |                                          |
+| S2 Hall-only, 0.6-1.5x               | 1.37-2.04x             | 1.11-1.19x             | **pass**                                 |
+| S2 Holding-only                      | 0.89-1.48x             | 0.97-1.48x             | **pass**                                 |
+| S2 Watch-only                        | 0.24-0.94x             | 0.58-1.12x             | nearly (5 seats 0.58x)                   |
+| S2 Market-only                       | 0.19-0.74x             | 0.20-0.70x             | fail (unchanged)                         |
+| S2 Lore-only                         | 0.05-0.54x             | 0.10-0.41x             | fail                                     |
+| S3 Lore run ≥ 3, ≥ 25%               | 20-26%                 | 17-22%                 | fail (greedy does not plan runs)         |
+| R3 blowouts, ≤ 10%                   | 15-54%                 | 17-58%                 | fail, **slightly worse**                 |
+| P3 Spends, Spring / Summer / Autumn  | 34-37 / 18-31 / 18-28% | 19-22 / 21-34 / 26-36% | Spring fixed; Summer-Autumn now over 25% |
+| I1 net neighbour share, ≥ 10%        | 1.2-2.0%               | 1.5-2.0%               | fail (unchanged)                         |
+| K1 greedy vs random                  | 1.31-1.81x             | 1.38-2.20x             | better, still under target               |
+
+**Still open (D9b, next):**
+
+1. **Summer-Autumn Spends 26-36%**: the labour upgrades take goods out of the economy. Next
+   lever: Summer/Autumn Spend bands +1 good on Holdings and Markets, or 1 more good on Crofters'
+   Plot and Orchard Terraces yields.
+2. **Blowouts** went up a little: before, nearly every town reached tier IV, which flattened
+   scores. Bots' R1/R2 snapshots would tell skill from snowball.
+3. **Market and Lore cannot carry a plan alone.** Possibly fine (support kinds, BALANCE.md §4.8);
+   Lore needs the level-2 bot before any change.
+4. **I1 neighbour interaction stays at ~2%.** Trade moves goods, not score. A real fix is a new
+   design element (e.g. Honours or Landmarks scored against each neighbour), which is a question
+   for the human, not a tunable.
