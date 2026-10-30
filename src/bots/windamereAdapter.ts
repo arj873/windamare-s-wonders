@@ -31,6 +31,8 @@ const ALWAYS = new Set([
   'scoreBeat',
   'scoreThreshold',
   'scoreSeasons',
+  'scoreNeighbourMin',
+  'scoreSales',
 ]);
 const WINTER = 3;
 const CONTENT = windamereContent();

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createGreedyBot, createRandomBot, createWindamereBot, pickFor, runSim } from './index';
 import { SEARCH } from './windamereBots';
+import { valueOf } from './windamereEval';
+import { PENDING_CARDS } from '../content/windamere';
 import { windamere, windamereRules } from './windamere';
 import { rateGreatWork, windamereAdapter } from './windamereAdapter';
 import { observeWindamere, SOURCES, sourcesOf } from './windamereMetrics';
-import { scoreTown } from '../engine';
+import { compileContent, scoreTown } from '../engine';
 import { windamereContent } from '../engine';
 import type { WwSeat, WwTable } from '../engine';
 
@@ -133,5 +135,56 @@ describe('bots on the Windamere ruleset', () => {
     const { summary } = runSim({ engine: windamere, bots: bot, seats: 3 }, 1, 5);
     expect(summary.violations).toEqual([]);
     expect(summary.finished).toBe(1);
+  });
+
+  it('the evaluator prices the D10b types: weaker-neighbour gains and future sales', () => {
+    let state = windamere.createGame({
+      seed: 3,
+      seats: [{ name: 'a' }, { name: 'b' }, { name: 'c' }],
+    });
+    while (state.phase.kind !== 'pick') {
+      const w = windamere.waitingOn(state)[0] as number;
+      const act = windamere.legalActions(windamere.viewFor(state, w), w)[0];
+      const r = windamere.applyAction(state, act as never);
+      if (!r.ok) throw new Error(r.error);
+      state = r.state;
+    }
+    const withHoldings = (n: number) =>
+      ({
+        ...state,
+        seats: state.seats.map((s) =>
+          s.id === 0
+            ? { ...s, data: { ...s.data, store: { ...s.data.store, salt: 1, wax: 1 } } }
+            : {
+                ...s,
+                tableau: Array.from({ length: n }, (_, k) => ({
+                  id: 900 + s.id * 10 + k,
+                  def: 'reed-shallows',
+                })),
+              },
+        ),
+      }) as typeof state;
+    const content = windamereContent();
+    const rules = compileContent({ ...content, cards: [...content.cards, ...PENDING_CARDS] });
+    const fair = PENDING_CARDS.find((c) => c.id === 'wend-fair');
+    const arcade = PENDING_CARDS.find((c) => c.id === 'brokers-arcade');
+    if (!fair || !arcade) throw new Error('pending cards moved');
+    const v = (n: number) => valueOf(rules, withHoldings(n), 0, { def: fair, role: 'build' });
+    // One more Holding at the weaker neighbour: 2 coins more (n=0 differs by Honours standing).
+    expect((v(2) ?? 0) - (v(1) ?? 0)).toBeCloseTo(2 * 0.28, 5);
+    // A Landmark that scores sales is worth more than its goods cost alone, before any sale.
+    const base = withHoldings(0);
+    const rich = {
+      ...base,
+      seats: base.seats.map((s) =>
+        s.id === 0
+          ? { ...s, data: { ...s.data, store: { reed: 1, peat: 0, salt: 1, wax: 1, horn: 0 } } }
+          : s,
+      ),
+    } as typeof state;
+    const plain = { ...arcade, effects: [] };
+    expect(valueOf(rules, rich, 0, { def: arcade, role: 'build' }) ?? 0).toBeGreaterThan(
+      valueOf(rules, rich, 0, { def: plain, role: 'build' }) ?? 0,
+    );
   });
 });
