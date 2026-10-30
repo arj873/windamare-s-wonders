@@ -39,10 +39,11 @@ export const DEFAULT_TUNABLES: WwTunables = {
   handSize: 6,
   turnsPerSeason: 5,
   twoSeatHandSize: 10,
-  bankPrice: 5,
+  bankPrice: 6, // D8: always dearer than a neighbour
   exchangeRate: 2,
   buyLimit: 2,
-  marketPrice: [1, 2, 3, 4],
+  marketPrice: [1, 3, 4, 5], // D8: no Season at 2
+
   valourBySeason: [1, 2, 3, 4],
   plunderPerPoint: 1,
   bountyPerNeighbour: 1,

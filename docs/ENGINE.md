@@ -654,7 +654,7 @@ interface WwPickArgs {
 type Payment =
   | { good; via: 'buy'; from: SeatId } // a neighbour, at the Season's price (R6.6)
   | { good; via: 'exchange'; give: GoodId } // 2 of `give` (R6.3)
-  | { good; via: 'bank' }; // 5 coins
+  | { good; via: 'bank' }; // bankPrice coins (6)
 ```
 
 `normalizePick` fills whatever `args` leaves out with the R15.7 defaults, so `{ card, use }` is a
@@ -672,6 +672,12 @@ purchases from what its own Build left, alternating buyers from its left; a shor
 from the bank at the same price, R6.7; `sellBonus`) · 2c Build (cover, place, "when built",
 `buildBonus`) · Great Work check · 3 Tolls · 4 Yield (`yield`, `income`; not in Winter) · Great
 Work check.
+
+**Two stores per purchase (R6.7, R17.9 as of design's D8):** how many a buyer may buy is set by
+the seller's store at the start of the turn (checked when the pick is made); what fills it is
+the seller's store after its own Build is paid (2a), which includes its step-1 Spend or glean
+gains. This turn's Yield (step 4) comes too late to fill anything. Prices come from the
+tunables: `marketPrice` by Season (R16: 1, 3, 4, 5) and `bankPrice` (6), always dearer.
 
 **For ui and bots:** `checkPayment(pc, plan)` and `defaultPayment(pc)` with
 `pc = { rules, state, seat, cost, purse }` (`buildCostAfterDiscount`, `purseOf`), `missingGoods`,
