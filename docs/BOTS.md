@@ -2,7 +2,10 @@
 
 Owner: **bots** lane. Status (2026-10-29): **B1 implemented** against the toy ruleset (random bot +
 simulator). **B2 below is a plan**: nothing in it is implemented or measured. It is written against
-`docs/RULES.md` as it stands (draft, unapproved); every rule cited can still change.
+`docs/RULES.md` as it stood before the human's changes (2026-10-29 23:15): **single pick** (one
+card a turn, Build or Spend), **a new set of goods** (names TBD) and **neighbour trade** (buy
+goods from a neighbour, coins to them). design's D2c rewrites the rules; rule numbers and pair-pick
+details below are stale until B3 re-reads it. Sections 3 and 4 are already adjusted to single pick.
 
 ## 1. Contract (B1, implemented)
 
@@ -54,17 +57,19 @@ games one seat's standard error is about 3 points, so the 31% is **not evidence 
 
 ## 3. What a decision is (under RULES.md)
 
-Each turn a bot submits **two cards** (three with 2 seats): at most one **Build**, the rest
-**Spend**, one **Burn** in 2-seat. A pick also names payment, the "any good" gain, a discount
-choice and an upgrade target (R4.3). Bot work is: choose the pair, then the roles, then the
-arguments. R15.7 gives deterministic defaults for the arguments; every level may start from them.
+Each turn a bot submits **one card** with a role, **Build** or **Spend**. A pick also names
+whatever arguments the card needs (payment, the "any good" gain, a discount choice, an upgrade
+target, and now **which neighbour to buy missing goods from**). Bot work is: choose the card, then
+the role, then the arguments. Neighbour trade makes pricing public-state dependent (the neighbour's
+goods are visible) and costs a neighbour coins, so it is also a weak form of interaction to
+evaluate. Rule defaults for arguments (old R15.7) will exist; every level may start from them.
 
 Other decisions: the Great Work choice (R2.5, 1 of 2) and prompts. Prompt kinds depend on the
 ruleset (not yet known); levels answer them with `defaultAnswer` unless noted.
 
-Legal-action count is the cost driver. A 9-card hand gives 36 pairs, each with up to 2 role
-assignments and argument choices: of order 100-300 picks. Level logic should score picks, not
-enumerate game trees, on the early turns.
+Legal-action count is smaller than with pairs: a 9-card hand gives at most 9 cards x 2 roles x
+argument choices (payment plans, trade sources), order 20-60 picks. That makes one-ply scoring of
+every pick cheap and search (Hard) more affordable than planned. To be measured on E2.
 
 ## 4. Difficulty levels
 
@@ -75,10 +80,10 @@ Names are UI's call. Each level strictly adds to the one below.
 
 Goal: loses to a beginner who pays attention, never does anything absurd.
 
-- Candidate picks = `legalPicks`, filtered by hard sanity rules: never Burn/Spend a card it could
-  afford to Build when its Build slot is empty and the card scores; avoid a Build that leaves 0
+- Candidate picks = `legalPicks`, filtered by hard sanity rules: never Spend a card it could
+  afford to Build when the card scores; avoid a Build that leaves 0
   coins when a Raid is plundering this Season (R9.5).
-- Prefers Build + Spend over Spend + Spend (uniform among those). Arguments: R15.7 defaults.
+- Prefers a legal Build over a Spend about 70% of the time (uniform within each). Arguments: rule defaults.
 - Great Work: random of the two.
 - No memory, no look-ahead, no opponent model. Random tie-breaks.
 - Deliberately blind to: Lore runs, Honours, Landmarks, neighbours.
