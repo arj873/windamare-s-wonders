@@ -56,6 +56,14 @@ const ROWS: [string, string, (r: Record<string, number | string>) => string][] =
   ['S1g groups >= 10% of winners', 'report', (r) => String(r.s1Groups10)],
   ['Great Work share of all Renown', 'report', (r) => pct(r['share.greatWork'] as number)],
   ['Hall share of all Renown', 'report', (r) => pct(r['share.hall'] as number)],
+  [
+    'Raids: Valour share of Renown / Valour top source / Raids top group / Spring held',
+    'report',
+    (r) =>
+      [r['share.valour'], r['largest.valour'], r['group.raids'], r.heldSpring]
+        .map((x) => pct(x as number))
+        .join(' / '),
+  ],
   ['S4 tier IV', '20-50%', (r) => pct(r.tier4 as number)],
   ['S3 Lore run >= 3', '>= 25%', (r) => pct(r.loreRun3 as number)],
   ['S3 Lore run >= 5', '5-15%', (r) => pct(r.loreRun5 as number)],
