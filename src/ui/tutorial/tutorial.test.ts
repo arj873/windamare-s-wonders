@@ -76,6 +76,8 @@ describe('coach', () => {
     expect(coach.active).toBe(true);
     expect(root.querySelector('.tut-title')?.textContent).toBe('Welcome to Windamere');
     expect(paces[0]).toBeGreaterThan(0);
+    expect(root.hasAttribute('data-tut-active')).toBe(true);
+    expect(root.style.getPropertyValue('--tut-h')).not.toBe('');
 
     // A different game replaced it: the coach goes away.
     seed = 'other';
@@ -88,5 +90,6 @@ describe('coach', () => {
     expect(coach.active).toBe(false);
     expect(root.querySelector('.tut-panel')?.hasAttribute('hidden')).toBe(true);
     expect(paces.at(-1)).toBeNull();
+    expect(root.hasAttribute('data-tut-active')).toBe(false);
   });
 });

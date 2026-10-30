@@ -102,7 +102,7 @@ export const TERMS: readonly Term[] = [
   T(
     'price',
     'Market price',
-    'Coins per good bought from a neighbour. It rises each Season.',
+    'Coins per good bought from a neighbour. It is cheap in Spring to Autumn and dearer in Winter.',
     'R6.6',
   ),
   T('bank', 'Bank', 'Sells a missing good at a high fixed price. Always the dearest way.', 'R6.3'),
