@@ -5,6 +5,7 @@
  * name field, the chat and the copy button persist.
  */
 import { LIMITS, type RoomConfig, type RoomInfo, type TimerPreset } from '../../net/protocol';
+import { confirmDialog } from '../dialog';
 import { append, h } from '../dom';
 import {
   lobbyView,
@@ -26,6 +27,8 @@ export interface LobbyActions {
   configure(config: RoomConfig): void;
   start(): void;
   leave(): void;
+  /** Host: remove a member from the room (asked to confirm first). */
+  kick(member: string): void;
 }
 
 export interface LobbyOptions {
@@ -37,6 +40,8 @@ export interface LobbyOptions {
   chat: HTMLElement;
   /** Clipboard write; default navigator.clipboard with a select() fallback. */
   copy?: (text: string) => Promise<void>;
+  /** "Are you sure?" before a kick; default ui's confirmDialog. */
+  confirm?: (title: string, text: string, confirmLabel: string) => Promise<boolean>;
 }
 
 async function defaultCopy(text: string, input: HTMLInputElement): Promise<void> {
@@ -106,7 +111,7 @@ export class LobbyScreen {
     this.seatsBox = h('ol', { class: 'ol-seats', attrs: { 'aria-label': 'Seats in table order' } });
     this.specBox = h('div', { class: 'ol-specs' });
     this.configBox = h('div', { class: 'ol-config' });
-    this.configNote = h('p', { class: 'su-hint muted' });
+    this.configNote = h('p', { class: 'su-hint muted', attrs: { 'data-k': 'config-note' } });
     this.chatBox = h('div', { class: 'ol-chat-slot' });
     this.footerInfo = h('div', { class: 'su-summary ol-summary', attrs: { 'data-k': 'summary' } });
     this.footerActions = h('div', { class: 'ol-footer-actions' });
@@ -295,14 +300,44 @@ export class LobbyScreen {
           ...v.spectators.map((m) =>
             h(
               'span',
-              { class: `ol-spec${m.connected ? '' : ' is-away'}` },
-              m.name ?? 'Someone',
-              m.id === room?.host && h('span', { class: 'ol-tag is-host' }, 'Host'),
+              {
+                class: `ol-spec${m.connected ? '' : ' is-away'}`,
+                attrs: { 'data-k': `spec-${m.member}` },
+              },
+              m.name,
+              m.isMe && h('span', { class: 'ol-tag' }, 'You'),
+              m.isHost && h('span', { class: 'ol-tag is-host' }, 'Host'),
+              m.canKick &&
+                h(
+                  'button',
+                  {
+                    class: 'ol-spec-kick',
+                    title: `Remove ${m.name} from the room`,
+                    attrs: {
+                      'aria-label': `Remove ${m.name} from the room`,
+                      'data-k': `kick-${m.member}`,
+                    },
+                    on: { click: () => void this.kick(m.member, m.name) },
+                  },
+                  '×',
+                ),
             ),
           ),
         ),
       );
     }
+  }
+
+  /** Host: remove a member, after "Are you sure?" (UX.md §11.5: destructive actions only). */
+  private async kick(member: string, name: string): Promise<void> {
+    const ask = this.opts.confirm ?? confirmDialog;
+    const ok = await ask(
+      `Remove ${name}?`,
+      // Net drops the member and its token; the invite link still works for them (a new member).
+      `${name} is taken out of the room and loses their seat. They can still come back with the invite link.`,
+      'Remove',
+    );
+    if (ok) this.opts.actions.kick(member);
   }
 
   private seatCard(s: SeatView, v: LobbyView): HTMLElement {
@@ -326,6 +361,18 @@ export class LobbyScreen {
             title: 'Remove this seat',
             attrs: { 'data-k': 'remove-bot' },
             on: { click: () => a.configure(withSeatCount(room.config, room.seats.length - 1)) },
+          },
+          'Remove',
+        ),
+      s.canKick &&
+        s.member !== null &&
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-ghost',
+            title: `Remove ${name} from the room`,
+            attrs: { 'data-k': `kick-seat-${s.index}` },
+            on: { click: () => s.member !== null && void this.kick(s.member, name) },
           },
           'Remove',
         ),
@@ -404,7 +451,9 @@ export class LobbyScreen {
     );
     this.configNote.textContent = v.isHost
       ? 'You are the host: add bots or wait for friends, then start. Open seats are played by bots.'
-      : `Only the host${v.hostName ? ` (${v.hostName})` : ''} can change the settings.`;
+      : v.hostAway
+        ? `The host${v.hostName ? ` (${v.hostName})` : ''} is offline. If they are not back within a minute, another player here becomes the host.`
+        : `Only the host${v.hostName ? ` (${v.hostName})` : ''} can change the settings.`;
   }
 
   private renderFooter(v: LobbyView): void {

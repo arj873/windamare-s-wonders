@@ -62,8 +62,8 @@ export interface JoinCardOptions {
   invite?: { roomId: string; playing: boolean };
   /** Join (with a nickname: you take a free seat, or watch when the game is on). */
   onJoin(name: string, roomId: string): void;
-  /** Watch without a seat (invite only). */
-  onWatch?(roomId: string): void;
+  /** Watch without a seat (invite only); `name` may be '' (a nickname is only needed to chat). */
+  onWatch?(roomId: string, name: string): void;
   /** Start card: create a room as host. */
   onCreate?(name: string): void;
   /** Back to the home screen. */
@@ -114,21 +114,22 @@ export class JoinCard {
         { class: 'muted' },
         invite
           ? invite.playing
-            ? 'A game is on at this table: you can watch, and play in the next one.'
-            : 'Pick a nickname: you take a free seat at the table.'
+            ? 'A game is on at this table: watch it (a nickname lets you chat), and play in the next one.'
+            : 'Pick a nickname: you take a free seat at the table. Or just watch.'
           : 'Create a room and send the link to friends, or join one with its code.',
       ),
       h('label', { class: 'ol-label' }, 'Nickname', this.nameInput),
     );
     if (invite) {
-      append(card, [
-        h(
-          'div',
-          { class: 'ol-card-actions' },
-          opts.onWatch && button('Watch', 'join-watch', () => opts.onWatch?.(invite.roomId)),
-          button(invite.playing ? 'Join and watch' : 'Join', 'join', () => this.join(), true),
-        ),
-      ]);
+      const watch = () => opts.onWatch?.(invite.roomId, this.nameInput.value.trim());
+      // Mid-game there is no seat to take: watching is the only way in.
+      const actions = invite.playing
+        ? [opts.onWatch && button('Watch', 'join-watch', watch, true)]
+        : [
+            opts.onWatch && button('Watch', 'join-watch', watch),
+            button('Join', 'join', () => this.join(), true),
+          ];
+      append(card, [h('div', { class: 'ol-card-actions' }, ...actions)]);
     } else {
       append(card, [
         h(

@@ -34,6 +34,20 @@ export interface SeatView {
   canStand: boolean;
   /** Host: remove this seat (the last one, open, above the minimum). */
   canRemove: boolean;
+  /** The occupant's member id (null for an open seat). */
+  member: string | null;
+  /** Host: remove this player from the room (anyone but the host). */
+  canKick: boolean;
+}
+
+export interface SpectatorView {
+  member: string;
+  name: string;
+  connected: boolean;
+  isHost: boolean;
+  isMe: boolean;
+  /** Host: remove this watcher from the room. */
+  canKick: boolean;
 }
 
 export interface WatchingView {
@@ -46,10 +60,15 @@ export interface WatchingView {
 export interface LobbyView {
   seats: SeatView[];
   /** Members without a seat who have a nickname. */
-  spectators: MemberInfo[];
+  spectators: SpectatorView[];
   me: MemberInfo | null;
   isHost: boolean;
   hostName: string | null;
+  /**
+   * The host is disconnected: if they stay away past the grace period, net hands the room to
+   * the longest-present connected member (seated first). Shown to everyone else.
+   */
+  hostAway: boolean;
   canAddSeat: boolean;
   /** Start button: null = enabled, else why not. */
   startBlocked: string | null;
@@ -85,17 +104,30 @@ export function lobbyView(room: RoomInfo, meId: string | null, range: SeatRange)
       canStand: isMine,
       canRemove:
         isHost && s.occupant === null && index === lastIndex && room.seats.length > range.min,
+      member: s.occupant,
+      canKick: isHost && s.occupant !== null && s.occupant !== meId,
     };
   });
+  const host = byId.get(room.host);
   const humans = room.seats.filter((s) => s.occupant !== null).length;
   const open = room.seats.findIndex((s) => s.occupant === null);
   const tableFull = humans === room.seats.length && room.seats.length >= range.max;
   return {
     seats,
-    spectators: room.members.filter((m) => m.seat === null && m.name),
+    spectators: room.members
+      .filter((m) => m.seat === null && m.name)
+      .map((m) => ({
+        member: m.id,
+        name: m.name ?? 'Someone',
+        connected: m.connected,
+        isHost: m.id === room.host,
+        isMe: m.id === meId,
+        canKick: isHost && m.id !== meId,
+      })),
     me,
     isHost,
-    hostName: (byId.get(room.host)?.name ?? null) || null,
+    hostName: (host?.name ?? null) || null,
+    hostAway: !isHost && host !== undefined && !host.connected,
     canAddSeat: isHost && room.seats.length < range.max,
     startBlocked: !isHost
       ? 'Only the host can start'

@@ -118,8 +118,11 @@ describe('LobbyScreen', () => {
       configure: vi.fn(),
       start: vi.fn(),
       leave: vi.fn(),
+      kick: vi.fn(),
     };
     const copy = vi.fn(() => Promise.resolve());
+    let answer = true;
+    const confirm = vi.fn(() => Promise.resolve(answer));
     const lobby = new LobbyScreen({
       roomId: r.id,
       inviteUrl: `http://x.dev/?room=${r.id}`,
@@ -127,12 +130,45 @@ describe('LobbyScreen', () => {
       actions,
       chat: document.createElement('div'),
       copy,
+      confirm,
     });
     document.body.replaceChildren(lobby.element);
     lobby.update(r, me);
     const q = (k: string) => lobby.element.querySelector<HTMLElement>(`[data-k="${k}"]`);
-    return { lobby, actions, copy, q };
+    const setAnswer = (yes: boolean) => (answer = yes);
+    return { lobby, actions, copy, confirm, setAnswer, q };
   }
+
+  it('host: remove a player or a watcher, after confirming', async () => {
+    const { actions, confirm, setAnswer, q } = mount(room(), 'm1');
+    // Not on your own seat; not on open seats.
+    expect(q('kick-seat-0')).toBeNull();
+    expect(q('kick-seat-2')).toBeNull();
+    setAnswer(false);
+    q('kick-seat-1')?.click();
+    await Promise.resolve();
+    expect(confirm).toHaveBeenCalledWith('Remove Bob?', expect.stringContaining('loses'), 'Remove');
+    expect(actions.kick).not.toHaveBeenCalled();
+    setAnswer(true);
+    q('kick-seat-1')?.click();
+    await vi.waitFor(() => expect(actions.kick).toHaveBeenCalledWith('m2'));
+    q('kick-m3')?.click();
+    await vi.waitFor(() => expect(actions.kick).toHaveBeenLastCalledWith('m3'));
+  });
+
+  it('guests get no kick buttons; an offline host is explained', () => {
+    const offline = room({
+      members: [
+        { id: 'm1', name: 'Ann', seat: 0, connected: false },
+        { id: 'm2', name: 'Bob', seat: 1, connected: true },
+      ],
+    });
+    const { lobby, q } = mount(offline, 'm2');
+    expect(lobby.element.querySelector('[data-k^="kick-"]')).toBeNull();
+    expect(q('config-note')?.textContent).toMatch(/Ann\) is offline.*another player here becomes/);
+    expect(lobbyView(offline, 'm2', RANGE).hostAway).toBe(true);
+    expect(lobbyView(offline, 'm1', RANGE).hostAway).toBe(false); // the host sees their own room
+  });
 
   it('host: add / remove bots, clock preset, start, copy link', async () => {
     const { actions, copy, q } = mount(room(), 'm1');
@@ -231,7 +267,21 @@ describe('JoinCard and notices', () => {
     q('join')?.click();
     expect(onJoin).toHaveBeenCalledWith('Bob', 'K7QF2M');
     q('join-watch')?.click();
-    expect(onWatch).toHaveBeenCalledWith('K7QF2M');
+    expect(onWatch).toHaveBeenCalledWith('K7QF2M', 'Bob');
+  });
+
+  it('invite to a game in progress: Watch only, a nickname is optional', () => {
+    const onWatch = vi.fn();
+    const card = new JoinCard({
+      name: '',
+      invite: { roomId: 'K7QF2M', playing: true },
+      onJoin: vi.fn(),
+      onWatch,
+    });
+    const q = (k: string) => card.element.querySelector<HTMLElement>(`[data-k="${k}"]`);
+    expect(q('join')).toBeNull();
+    q('join-watch')?.click();
+    expect(onWatch).toHaveBeenCalledWith('K7QF2M', '');
   });
 
   it('start card: create, or join a typed code / pasted link', () => {

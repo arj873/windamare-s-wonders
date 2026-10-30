@@ -71,13 +71,21 @@ export interface Presence {
   seats: PresenceSeat[];
   /** Seats whose human is offline or replaced by a bot (shown with a mark). */
   absent: PresenceSeat[];
+  /** The viewer has no seat. */
+  watching: boolean;
+  /** Connected members without a seat (the viewer included), by nickname. */
+  watchers: string[];
 }
 
-/** What the presence strip says (pure; UX.md §7.1 "who has not picked yet", §8.5 away seats). */
+/**
+ * What the presence strip says (pure; UX.md §7.1 "who has not picked yet", §8.5 away seats,
+ * §6 "Back to lobby is the rematch path"). `me` is the viewer's member id (host check).
+ */
 export function presence<S, T>(
   game: GameSnapshot<S, T>,
   room: RoomInfo | null,
   mySeat: SeatId | null,
+  me: string | null = null,
 ): Presence {
   const view = game.view;
   const connected = new Map((room?.members ?? []).map((m) => [m.id, m.connected]));
@@ -102,7 +110,13 @@ export function presence<S, T>(
     return s.away || (info?.occupant != null && info.status === 'bot');
   });
   let line = '';
-  if (view.phase.kind !== 'gameOver' && waiting.size > 0) {
+  if (view.phase.kind === 'gameOver') {
+    const host = room?.members.find((m) => m.id === room.host);
+    line =
+      me !== null && room?.host === me
+        ? 'Game over. Rematch takes everyone back to the lobby.'
+        : `Game over. Waiting for ${host?.name ?? 'the host'} to open a rematch.`;
+  } else if (waiting.size > 0) {
     const others = seats.filter((s) => s.waiting && !s.you);
     const mine = mySeat !== null && waiting.has(mySeat);
     const verb = view.phase.kind === 'prompt' ? 'answer' : 'pick';
@@ -112,7 +126,10 @@ export function presence<S, T>(
       line = `Waiting on ${n} town${n === 1 ? '' : 's'}: ${listNames(others.map((s) => s.name))}`;
     }
   }
-  return { line, seats, absent };
+  const watchers = (room?.members ?? [])
+    .filter((m) => m.seat === null && m.connected)
+    .map((m) => m.name ?? 'Someone');
+  return { line, seats, absent, watching: mySeat === null, watchers };
 }
 
 export class NetPlay<S, T> {
@@ -166,12 +183,16 @@ export class NetPlay<S, T> {
         class: 'btn',
         attrs: { 'data-k': 'leave-room' },
         on: {
-          click: () =>
+          click: () => {
+            // Watching, or the game is over: nothing is lost by leaving.
+            const g = client.game;
+            if (client.mySeat === null || g?.view.phase.kind === 'gameOver') return opts.onLeave();
             void confirmDialog(
               'Leave the room?',
               'A bot plays your town. Open the invite link again in this browser to take it back.',
               'Leave',
-            ).then((yes) => yes && opts.onLeave()),
+            ).then((yes) => yes && opts.onLeave());
+          },
         },
       },
       'Leave',
@@ -273,8 +294,19 @@ export class NetPlay<S, T> {
   }
 
   private renderPresence(game: GameSnapshot<S, T>): void {
-    const p = presence(game, this.opts.client.room, this.opts.client.mySeat);
+    const c = this.opts.client;
+    const p = presence(game, c.room, c.mySeat, c.you?.member ?? null);
+    this.element.classList.toggle('is-over', game.view.phase.kind === 'gameOver');
     const parts: Node[] = [];
+    if (p.watching) {
+      parts.push(
+        h(
+          'span',
+          { class: 'ol-presence-watch', attrs: { 'data-k': 'you-watch' } },
+          "You're watching: no hand is shown. You can play in the next game.",
+        ),
+      );
+    }
     if (p.line) parts.push(h('span', { attrs: { 'data-k': 'waiting-line' } }, p.line));
     for (const s of p.absent) {
       parts.push(
@@ -287,6 +319,16 @@ export class NetPlay<S, T> {
           },
           h('span', { class: 'ol-dot', attrs: { 'aria-hidden': 'true' } }),
           s.away ? `${s.name} is offline` : `${s.name} is away: a bot plays`,
+        ),
+      );
+    }
+    if (p.watchers.length > 0) {
+      const n = p.watchers.length;
+      parts.push(
+        h(
+          'span',
+          { class: 'muted', title: p.watchers.join(', '), attrs: { 'data-k': 'watchers' } },
+          `${n} watching`,
         ),
       );
     }
