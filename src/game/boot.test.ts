@@ -158,6 +158,32 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
+  it('hands each resolved action to the fx hook with anchors, instead of its own badges', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const onAction = vi.fn();
+    const skip = vi.fn();
+    const root = mount();
+    const app = boot(root, { game: windamereBinding(), fx: { onAction, skip } });
+    toSetup(root);
+    click(root, '[data-k="start"]');
+    expect(onAction).not.toHaveBeenCalled(); // never for the first render
+    vi.advanceTimersByTime(10); // the bots choose their Great Works
+    click(root, '[data-k="answer-0"]'); // the group completes: Great Works revealed, Spring dealt
+    expect(onAction).toHaveBeenCalledTimes(1);
+    const moment = onAction.mock.calls[0]![0];
+    expect(moment.key).toBe(moment.model.effectsKey);
+    expect(moment.view.view.viewer).toBe(0);
+    expect(moment.anchors.town(0)).toBe(root.querySelector('.dt-town'));
+    expect(moment.anchors.stat(0, 'coins')).not.toBeNull();
+    expect(moment.anchors.town(1)).toBe(root.querySelector('.dt-left'));
+    expect(moment.anchors.card(app.play!.game.state.seats[0]!.hand[0]!.id)).not.toBeNull();
+    expect(root.querySelector('.dt-fx')).toBeNull(); // the table's own badges are off
+    click(root, '.dt-town');
+    expect(skip).toHaveBeenCalled();
+    app.play?.dispose();
+  });
+
   it('refuses a setup the ruleset cannot seat, with a notice', () => {
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });

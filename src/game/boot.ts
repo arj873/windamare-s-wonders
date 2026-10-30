@@ -19,6 +19,7 @@ import {
 } from '../ui';
 import { HomeScreen } from '../ui/home/screen';
 import { MAX_PLAYERS, MIN_PLAYERS, SEAT_COLORS } from '../ui/setup/model';
+import type { RevealHook } from './fx';
 import { playLocal, type GameBinding, type PlayHandle } from './play';
 
 export interface BootOptions<S, T> {
@@ -33,6 +34,8 @@ export interface BootOptions<S, T> {
   debug?: { seats: number; seed?: string };
   /** Title key art behind the home screen (public/art). */
   homeArt?: string;
+  /** The fx lane's reveal animation and sound (src/game/fx.ts); absent = the table's badges. */
+  fx?: RevealHook<S, T>;
 }
 
 /** The all-human game `?debug=1` starts. */
@@ -157,6 +160,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     const next = playLocal(opts.game, cfg, {
       botDelayMs,
       covers: !opts.debug,
+      ...(opts.fx ? { fx: opts.fx } : {}),
       onNewGame: showSetup,
       onRematch: () => {
         if (!lastConfig) return;

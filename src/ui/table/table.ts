@@ -19,6 +19,7 @@ import type {
   TableauCard,
   UseOption,
 } from './model';
+import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
 import type { EffectBadge, KindInfo, MonumentInfo, SeatStat } from './present';
 import '../shell.css';
@@ -30,6 +31,8 @@ export interface DraftTableHandlers {
   answer(prompt: number, answer: Json): void;
   /** Final scores: "New game" (absent hides the button). */
   newGame?(): void;
+  /** Any click or key on the table: skip the reveal animation (UX.md §8.3). */
+  skip?(): void;
   /** Hotseat cover: the named player has the device and wants their hand shown. */
   reveal?(): void;
   /** Final scores: same seats, new seed. */
@@ -70,6 +73,13 @@ export function clockText(ms: number): string {
 
 export class DraftTable {
   readonly element: HTMLElement;
+  /** DOM lookups for the fx lane (hand, towns, coins, ...); see anchors.ts. */
+  readonly anchors: TableAnchors;
+  /**
+   * The table's own reveal badges (a fallback). Off once the fx lane's hook animates reveals
+   * (play.ts turns it off when a hook is given).
+   */
+  ownEffects = true;
   private model: TableModel | null = null;
   private selected: CardId | null = null;
   private readonly timerEl: HTMLElement;
@@ -95,6 +105,7 @@ export class DraftTable {
       attrs: { role: 'main', 'aria-label': 'Draft table' },
       on: { click: (e) => this.onClick(e), dblclick: (e) => this.onDoubleClick(e) },
     });
+    this.anchors = tableAnchors(this.element);
     document.addEventListener('keydown', this.onKey);
     window.addEventListener('resize', this.placePopover);
   }
@@ -117,7 +128,12 @@ export class DraftTable {
       this.selected = null;
     }
     // A new action with effects: show its badges for a moment (never on the first render).
-    if (this.fxKey !== null && model.effectsKey !== this.fxKey && model.effects.length > 0) {
+    if (
+      this.ownEffects &&
+      this.fxKey !== null &&
+      model.effectsKey !== this.fxKey &&
+      model.effects.length > 0
+    ) {
       this.fx = model.effects;
       if (this.fxTimer !== null) clearTimeout(this.fxTimer);
       this.fxTimer = setTimeout(() => this.skipEffects(), FX_MS);
@@ -131,8 +147,9 @@ export class DraftTable {
     return this.fx;
   }
 
-  /** Any click or key skips the reveal badges (UX.md §8.3: skippable). */
+  /** Any click or key skips the reveal (UX.md §8.3: skippable): fx's and the table's own. */
   private skipEffects(): void {
+    this.handlers.skip?.();
     if (this.fxTimer !== null) clearTimeout(this.fxTimer);
     this.fxTimer = null;
     if (this.fx.length === 0) return;
@@ -495,7 +512,7 @@ export class DraftTable {
     if (!me) return h('section', { class: 'dt-town' }, h('p', { class: 'muted' }, 'Watching'));
     return h(
       'section',
-      { class: 'dt-town', attrs: { 'aria-label': 'Your town' } },
+      { class: 'dt-town', attrs: { 'aria-label': 'Your town', 'data-seat': String(me.seat) } },
       h(
         'header',
         { class: 'dt-town-head' },
@@ -610,7 +627,11 @@ export class DraftTable {
   private mini(c: TableauCard): HTMLElement {
     return h(
       'span',
-      { class: `dt-mini${c.fresh ? ' is-fresh' : ''}`, title: `${c.face.name}: ${c.face.text}` },
+      {
+        class: `dt-mini${c.fresh ? ' is-fresh' : ''}`,
+        title: `${c.face.name}: ${c.face.text}`,
+        attrs: { 'data-card': String(c.id) },
+      },
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
     );

@@ -46,6 +46,7 @@ author, same stack). §14 maps each Catan module to its use here.
 16. Open questions
 17. Online client API (what `RoomClient` gives the UI)
 18. Test hooks (qa playtest harness)
+19. The fx seam (reveal animation and sound)
 
 ---
 
@@ -995,3 +996,37 @@ assertions; never read it to choose moves). Without `debug=1` nothing of this ex
 **Flow for one pick:** click the hand card → click `[data-option]` buttons to change sellers (each
 option is re-checked by the engine; disabled ones carry the reason in `title`) → click
 `[data-use="build"]` or `[data-use="spend"]`. Keyboard works too (`1`–`9`, `B`, `S`, `Z`, `Esc`).
+
+---
+
+## 19. The fx seam (reveal animation and sound)
+
+The reveal (§8.3) and all game sound belong to the **fx** lane (`src/ui/fx`, `src/audio`). The
+table and the game screen are ui's. They meet at one hook, `RevealHook` in `src/game/fx.ts`:
+
+```ts
+interface RevealHook<S, T> {
+  onAction(moment: RevealMoment<S, T>): void; // once per resolved action, after the re-render
+  skip?(): void; // the player clicked or pressed a key on the table
+  dispose?(): void; // the table left the screen
+}
+interface RevealMoment<S, T> {
+  key: string; // new per action (the last log entry's seq)
+  view: DraftView<S, T>; // the viewer's view: E3 events via latestEvents(view)
+  model: TableModel; // reveal lines, effect badges (presenter.effects), seats
+  anchors: TableAnchors; // DOM lookups, below
+  reducedMotion: boolean; // prefers-reduced-motion or Animations: off → fades only
+}
+```
+
+- **When:** after the table shows the new state, never for the first render, never while a hotseat
+  pass cover is up. Bots' picks that do not resolve anything log nothing, so they call nothing.
+- **Anchors** (`src/ui/table/anchors.ts`, live lookups, null when not on screen): `hand()`,
+  `card(id)` (a hand card), `stage()` (your face-down slot), `town(seat)` (your town, a neighbour
+  panel, else the summary row), `stat(seat, id)` (`coins`, `score`, `guard`, `labour`,
+  `good-<good>`), `monument(seat)` (Great Work picture), `built(seat, cardId)` (a tableau card).
+  fx draws in its own layer over these; it never edits the table's DOM (the next render would
+  undo it).
+- **Fallback:** without a hook the table shows its own badges (§8.3, `presenter.effects`). With
+  one, `boot(root, { fx })` turns them off. Wiring: `main.ts` (ui) passes fx's hook once fx ships
+  one.
