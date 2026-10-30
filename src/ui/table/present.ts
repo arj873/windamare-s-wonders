@@ -109,10 +109,22 @@ export interface Presenter<S = unknown, T = unknown> {
   banner?(view: DraftView<S, T>): SeatStat[];
   /** The seat's monument (Great Work), or null when it has none yet. */
   monument?(view: DraftView<S, T>, seat: SeatId): MonumentInfo | null;
+  /**
+   * What the latest action did to each seat, for the reveal animation (UX.md §8.3): short
+   * badges ("+2 Reed", "−3 coins", "Great Work tier II"). Empty = nothing to show.
+   */
+  effects?(view: DraftView<S, T>): EffectBadge[];
   /** One line on what a legal pick costs or gives ("pay 2 Reed · buy 1 Salt from Ana, 2g"). */
   describe?(view: DraftView<S, T>, seat: SeatId, pick: Pick): string;
   /** The choices inside a legal pick the player may change (sellers, upgrade or not). */
   choices?(view: DraftView<S, T>, seat: SeatId, pick: Pick): ChoiceRow[];
   /** A player-facing reason for the engine's refusal `error` of `pick`. */
   whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
+}
+
+/** One reveal badge over a seat (UX.md §8.3). */
+export interface EffectBadge {
+  seat: SeatId;
+  text: string;
+  tone: 'gain' | 'loss' | 'info';
 }

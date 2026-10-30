@@ -7,7 +7,7 @@
  * delegated from the root through `data-act`, so re-renders can patch the DOM in place
  * (patchChildren) without stale listeners. Card faces are text placeholders until art A3.
  */
-import type { CardId, Json, Pick } from '../../engine';
+import type { CardId, Json, Pick, SeatId } from '../../engine';
 import { h, patchChildren, type Child } from '../dom';
 import type {
   HandCard,
@@ -20,7 +20,7 @@ import type {
   UseOption,
 } from './model';
 import { fillSvg, svgText } from './art';
-import type { KindInfo, MonumentInfo, SeatStat } from './present';
+import type { EffectBadge, KindInfo, MonumentInfo, SeatStat } from './present';
 import '../shell.css';
 import './table.css';
 
@@ -53,6 +53,8 @@ export interface TimerState {
 export const TIMER_WARN_SEC = 10;
 /** Matches `.dt-pop` width in table.css (used before the popover has a layout). */
 const POPOVER_W = 300;
+/** How long the reveal badges stay (UX.md §8.3: the reveal reads in ≤ 1.2 s, then lingers). */
+export const FX_MS = 2200;
 
 const STATUS_MARK: Record<SeatStatus, string> = { picked: '✓', thinking: '⋯', idle: '' };
 const STATUS_TEXT: Record<SeatStatus, string> = {
@@ -77,6 +79,10 @@ export class DraftTable {
   private overridesFor = '';
   /** Hotseat pass cover (UX.md §9): while set, no hand is in the DOM at all. */
   private cover: CoverInfo | null = null;
+  /** The reveal badges on show (UX.md §8.3), the action they belong to, and their timer. */
+  private fx: EffectBadge[] = [];
+  private fxKey: string | null = null;
+  private fxTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly handlers: DraftTableHandlers) {
     this.timerEl = h('div', {
@@ -97,6 +103,7 @@ export class DraftTable {
   destroy(): void {
     document.removeEventListener('keydown', this.onKey);
     window.removeEventListener('resize', this.placePopover);
+    if (this.fxTimer !== null) clearTimeout(this.fxTimer);
     this.element.remove();
   }
 
@@ -109,6 +116,27 @@ export class DraftTable {
     if (this.selected !== null && !model.hand.some((c) => c.id === this.selected)) {
       this.selected = null;
     }
+    // A new action with effects: show its badges for a moment (never on the first render).
+    if (this.fxKey !== null && model.effectsKey !== this.fxKey && model.effects.length > 0) {
+      this.fx = model.effects;
+      if (this.fxTimer !== null) clearTimeout(this.fxTimer);
+      this.fxTimer = setTimeout(() => this.skipEffects(), FX_MS);
+    }
+    this.fxKey = model.effectsKey;
+    this.render();
+  }
+
+  /** The reveal badges on show, for tests. */
+  get effects(): readonly EffectBadge[] {
+    return this.fx;
+  }
+
+  /** Any click or key skips the reveal badges (UX.md §8.3: skippable). */
+  private skipEffects(): void {
+    if (this.fxTimer !== null) clearTimeout(this.fxTimer);
+    this.fxTimer = null;
+    if (this.fx.length === 0) return;
+    this.fx = [];
     this.render();
   }
 
@@ -162,6 +190,7 @@ export class DraftTable {
   // ---- intents -----------------------------------------------------------
 
   private onClick(e: MouseEvent): void {
+    this.skipEffects();
     const el = (e.target as Element | null)?.closest<HTMLElement>('[data-act]');
     if (!el || (el instanceof HTMLButtonElement && el.disabled)) return;
     this.run(el.dataset.act ?? '');
@@ -231,6 +260,7 @@ export class DraftTable {
     if (!m || !this.element.isConnected || e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target instanceof Element ? e.target : null;
     if (t?.closest('input, textarea, select, [contenteditable="true"], .ww-menu')) return;
+    this.skipEffects();
     if (document.querySelector('.ww-scrim')) return;
     const key = e.key.toLowerCase();
     const digit = /^[1-9]$/.test(key) ? Number(key) - 1 : -1;
@@ -448,6 +478,7 @@ export class DraftTable {
         ),
       ),
       this.stats(s),
+      this.fxFor(s.seat),
       this.monument(s.monument, 'small'),
       h(
         'ul',
@@ -472,6 +503,7 @@ export class DraftTable {
         h('span', { class: 'dt-town-name' }, me.name),
         this.stats(me),
       ),
+      this.fxFor(me.seat),
       this.monument(me.monument, 'large'),
       me.columns.length
         ? h(
@@ -581,6 +613,19 @@ export class DraftTable {
       { class: `dt-mini${c.fresh ? ' is-fresh' : ''}`, title: `${c.face.name}: ${c.face.text}` },
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
+    );
+  }
+
+  /** This seat's reveal badges while they show (UX.md §8.3), else nothing. */
+  private fxFor(seat: SeatId): Child {
+    const mine = this.fx.filter((b) => b.seat === seat);
+    if (mine.length === 0) return null;
+    return h(
+      'div',
+      { class: 'dt-fx', attrs: { 'aria-hidden': 'true', 'data-fx': this.fxKey ?? '' } },
+      ...mine.map((b, i) =>
+        h('span', { class: `dt-fx-badge is-${b.tone}`, style: { '--i': String(i) } }, b.text),
+      ),
     );
   }
 
@@ -875,6 +920,7 @@ export class DraftTable {
                 STATUS_MARK[s.status],
               ),
               this.stats(s),
+              this.fxFor(s.seat),
               s.monument &&
                 h(
                   'span',
@@ -891,15 +937,19 @@ export class DraftTable {
       m.reveal &&
         h(
           'section',
-          { class: 'dt-reveal', attrs: { 'aria-label': 'Last reveal' } },
+          {
+            class: 'dt-reveal',
+            // A new key per reveal makes a new element, so the flip-in plays again.
+            attrs: { 'aria-label': 'Last reveal', 'data-reveal': m.effectsKey },
+          },
           h('h2', {}, m.reveal.title),
           h(
             'ul',
             {},
-            ...m.reveal.lines.map((l) =>
+            ...m.reveal.lines.map((l, i) =>
               h(
                 'li',
-                {},
+                { style: { '--i': String(i) } },
                 h('b', {}, l.you ? 'You' : l.name),
                 ` ${l.verb} `,
                 this.kindMark(l.kind),
