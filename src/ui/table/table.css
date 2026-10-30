@@ -751,12 +751,17 @@
   margin-bottom: 6px;
   font-weight: 800;
 }
+/* Names wrap to a second line rather than lose letters ("Bot Or…" on phones). */
 .dt-band-name {
   flex: 1;
   min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
 }
 .dt-band-total {
   font-size: 20px;
@@ -1237,7 +1242,7 @@
     right: 0;
     bottom: 0;
     z-index: 22;
-    width: min(360px, 92vw);
+    width: min(360px, calc(100vw - 64px)); /* stops short of the ☰ button (12 + 44 px) */
     padding: 8px;
     flex-direction: column; /* not the tablet's row of panels */
     flex-wrap: nowrap;
