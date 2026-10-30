@@ -5,11 +5,25 @@
  */
 import type { CardDefId, DraftView, Json, Pick, Prompt, SeatId } from '../../engine';
 
-/** A card category. `mark` is a text placeholder for the kind's shape until art A3. */
+/** A card category: its icon (URL), with `mark` as the text fallback. */
 export interface KindInfo {
   id: string;
   label: string;
   mark: string;
+  icon?: string;
+}
+
+/** A town's personal monument (Windamere: its Great Work). */
+export interface MonumentInfo {
+  name: string;
+  /** Inline SVG art whose `tier-N` layers fade until done. */
+  art?: string;
+  tiers: number;
+  total: number;
+  /** "Labour 5 · tier III at 10". */
+  progress: string;
+  /** What it does all game (the Perk). */
+  perk: string;
 }
 
 /** One way to use a hand card (`Pick.use`). */
@@ -68,6 +82,8 @@ export interface PromptInfo {
   answer(answer: Json): string;
   /** Longer text under an answer (a Great Work's Perk and tiers); '' = none. */
   detail?(answer: Json): string;
+  /** Inline SVG art for an answer (a Great Work's picture). */
+  art?(answer: Json): string | undefined;
   /** One line under the title ("Hidden until everyone has chosen. You can change it."). */
   hint?: string;
 }
@@ -87,6 +103,8 @@ export interface Presenter<S = unknown, T = unknown> {
   scoreLabel(category: string): string;
   /** Table-wide facts for the top bar (this Season's Raid, Honours, prices). */
   banner?(view: DraftView<S, T>): SeatStat[];
+  /** The seat's monument (Great Work), or null when it has none yet. */
+  monument?(view: DraftView<S, T>, seat: SeatId): MonumentInfo | null;
   /** One line on what a legal pick costs or gives ("pay 2 Reed · buy 1 Salt from Ana, 2g"). */
   describe?(view: DraftView<S, T>, seat: SeatId, pick: Pick): string;
   /** The choices inside a legal pick the player may change (sellers, upgrade or not). */

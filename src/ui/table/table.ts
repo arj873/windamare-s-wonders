@@ -19,7 +19,8 @@ import type {
   TableauCard,
   UseOption,
 } from './model';
-import type { SeatStat } from './present';
+import { fillSvg, svgText } from './art';
+import type { KindInfo, MonumentInfo, SeatStat } from './present';
 import '../shell.css';
 import './table.css';
 
@@ -378,7 +379,7 @@ export class DraftTable {
             title: c.kind.label,
             attrs: { 'aria-label': `${c.n} ${c.kind.label}` },
           },
-          h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true' } }, c.kind.mark),
+          this.kindMark(c.kind),
           c.n,
         ),
       ),
@@ -437,6 +438,7 @@ export class DraftTable {
         ),
       ),
       this.stats(s),
+      this.monument(s.monument, 'small'),
       h(
         'ul',
         { class: 'dt-list' },
@@ -460,6 +462,7 @@ export class DraftTable {
         h('span', { class: 'dt-town-name' }, me.name),
         this.stats(me),
       ),
+      this.monument(me.monument, 'large'),
       me.columns.length
         ? h(
             'div',
@@ -471,7 +474,7 @@ export class DraftTable {
                 h(
                   'div',
                   { class: 'dt-col-head' },
-                  h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true' } }, col.kind.mark),
+                  this.kindMark(col.kind),
                   `${col.kind.label} ${col.cards.length}`,
                 ),
                 ...col.cards.map((c) => this.mini(c)),
@@ -566,8 +569,46 @@ export class DraftTable {
     return h(
       'span',
       { class: `dt-mini${c.fresh ? ' is-fresh' : ''}`, title: `${c.face.name}: ${c.face.text}` },
-      h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true' } }, c.kind.mark),
+      this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
+    );
+  }
+
+  /** The kind's icon from art, or its text mark until there is one. Never colour alone. */
+  private kindMark(kind: KindInfo): HTMLElement {
+    return kind.icon
+      ? h('img', {
+          class: 'dt-kind-icon',
+          attrs: { src: kind.icon, alt: '', 'aria-hidden': 'true' },
+        })
+      : h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true' } }, kind.mark);
+  }
+
+  /** Inline SVG art; with `tiers`, the layers above that many completed tiers fade. */
+  private art(url: string, cls: string, tiers?: number): HTMLElement {
+    const el = h('span', { class: `dt-art ${cls}`, attrs: { 'aria-hidden': 'true' } });
+    const text = svgText(url, () => this.render());
+    if (text) fillSvg(el, text, tiers);
+    return el;
+  }
+
+  /** The Great Work strip (UX.md §7.2): art, tiers, labour, Perk. */
+  private monument(mo: MonumentInfo | null, size: 'large' | 'small'): Child {
+    if (!mo) return null;
+    return h(
+      'div',
+      {
+        class: `dt-monument is-${size}`,
+        attrs: { 'aria-label': `${mo.name}: ${mo.tiers} of ${mo.total} tiers. ${mo.progress}` },
+      },
+      mo.art && this.art(mo.art, 'dt-monument-art', mo.tiers),
+      h(
+        'div',
+        { class: 'dt-monument-text' },
+        h('span', { class: 'dt-monument-name' }, `${mo.name} · ${mo.tiers}/${mo.total}`),
+        h('span', { class: 'dt-monument-progress' }, mo.progress),
+        size === 'large' && mo.perk && h('span', { class: 'dt-monument-perk' }, `Perk: ${mo.perk}`),
+      ),
     );
   }
 
@@ -614,7 +655,7 @@ export class DraftTable {
         h(
           'span',
           { class: 'dt-card-band' },
-          h('span', { class: 'dt-mark' }, c.kind.mark),
+          this.kindMark(c.kind),
           h('span', { class: 'dt-card-name' }, c.face.name),
         ),
         c.face.cost && h('span', { class: 'dt-card-cost' }, c.face.cost),
@@ -761,6 +802,7 @@ export class DraftTable {
               h('span', { class: 'dt-answer-label' }, a.chosen ? `✓ ${a.label}` : a.label),
               i < 9 && h('kbd', {}, String(i + 1)),
             ),
+            a.art && this.art(a.art, 'dt-answer-art', 4),
             a.detail && h('span', { class: 'dt-answer-detail' }, a.detail),
           ),
         ),
@@ -807,6 +849,12 @@ export class DraftTable {
                 STATUS_MARK[s.status],
               ),
               this.stats(s),
+              s.monument &&
+                h(
+                  'span',
+                  { class: 'dt-row-work', title: s.monument.name },
+                  `${s.monument.name} ${s.monument.tiers}/${s.monument.total}`,
+                ),
             ),
           ),
         ),
@@ -828,7 +876,7 @@ export class DraftTable {
                 {},
                 h('b', {}, l.you ? 'You' : l.name),
                 ` ${l.verb} `,
-                h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true' } }, l.kind.mark),
+                this.kindMark(l.kind),
                 ` ${l.face.name}`,
               ),
             ),

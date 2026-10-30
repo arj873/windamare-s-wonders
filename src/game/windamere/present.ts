@@ -15,6 +15,7 @@ import {
   marketPrice,
   missingGoods,
   neighboursOf,
+  nextThreshold,
   purseOf,
   scoreTown,
   SEASONS,
@@ -36,6 +37,7 @@ import type {
   CardFace,
   ChoiceOption,
   ChoiceRow,
+  MonumentInfo,
   Presenter,
   SeatStat,
 } from '../../ui/table/present';
@@ -67,6 +69,9 @@ const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** Art A5's icons (public/art/goods/): the five goods plus coin, guard, labour, renown, valour. */
 const icon = (name: string): string => `${import.meta.env.BASE_URL}art/goods/${name}.svg`;
+/** Any file under public/art (kinds/<kind>, great-works/<content id>: art A6). */
+const art = (path: string): string => `${import.meta.env.BASE_URL}art/${path}.svg`;
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 const argsOf = (pick: Pick): WwPickArgs => (pick.args ?? {}) as WwPickArgs;
 const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
@@ -257,7 +262,25 @@ export function windamerePresenter(
       id,
       label: l.one,
       mark: KIND_MARKS[id] ?? '◇',
+      icon: art(`kinds/${id}`),
     })),
+    monument(view, seat): MonumentInfo | null {
+      const d = view.seats[seat]?.data;
+      if (!d?.greatWork) return null;
+      const gw = rules.greatWork(d.greatWork);
+      const next = nextThreshold(rules, d);
+      return {
+        name: gw.name,
+        art: art(`great-works/${gw.id}`),
+        tiers: d.tiers,
+        total: gw.tiers.length,
+        progress:
+          next === null
+            ? `Labour ${d.labour} · every tier done`
+            : `Labour ${d.labour} · tier ${ROMAN[d.tiers] ?? d.tiers + 1} at ${next}`,
+        perk: effectsText(rules, gw.perk),
+      };
+    },
     uses: [
       { id: BUILD, label: 'Build', verb: 'built', key: 'b' },
       { id: SPEND, label: 'Spend', verb: 'spent', key: 's' },
@@ -268,15 +291,6 @@ export function windamerePresenter(
       if (!s) return [];
       const d = s.data;
       const renown = Object.values(scoreTown(rules, view, seat)).reduce((a, b) => a + b, 0);
-      const work: SeatStat[] = d.greatWork
-        ? [
-            {
-              id: 'work',
-              label: 'Great Work tiers',
-              value: `${rules.greatWork(d.greatWork).name} ${d.tiers}/4`,
-            },
-          ]
-        : [];
       return [
         { id: 'coins', label: 'Coins', value: `${d.coins}`, icon: icon('coin') },
         { id: 'score', label: 'Renown estimate', value: `~${renown}`, icon: icon('renown') },
@@ -286,7 +300,6 @@ export function windamerePresenter(
           value: `${guardOf(rules, view, seat)}`,
           icon: icon('guard'),
         },
-        ...work,
         { id: 'labour', label: 'Labour', value: `${d.labour}`, icon: icon('labour') },
         ...rules.goods.map((g) => ({
           id: `good-${g}`,
@@ -310,12 +323,16 @@ export function windamerePresenter(
         title: 'Choose your Great Work',
         hint: 'Hidden until every town has chosen. You can change it until then.',
         answer: (a) => work(a)?.name ?? String(a),
+        art: (a) => {
+          const gw = work(a);
+          return gw ? art(`great-works/${gw.id}`) : undefined;
+        },
         detail: (a) => {
           const gw = work(a);
           if (!gw) return '';
           const tiers = gw.tiers.map(
             (t, i) =>
-              `${['I', 'II', 'III', 'IV'][i] ?? i + 1} at ${t.threshold} labour: ${effectsText(rules, t.reward)}`,
+              `${ROMAN[i] ?? i + 1} at ${t.threshold} labour: ${effectsText(rules, t.reward)}`,
           );
           return [`Perk: ${effectsText(rules, gw.perk)}`, ...tiers].join('\n');
         },
