@@ -1,5 +1,6 @@
 export * from './types';
-export { createWindamereEngine, WINDAMERE_NOT_READY } from './engine';
+export { createWindamereEngine } from './engine';
+export { SHIPPED_TUNABLES, windamereContent } from './shipped';
 export { checkContent, compileContent, DEFAULT_TUNABLES, type WwRules } from './content';
 export { ANY, COINS, LABOUR, checkGains, storeTotal } from './gains';
 export {

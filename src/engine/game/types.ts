@@ -51,8 +51,8 @@ export interface WwCardDef extends CardDef {
   upgrade?: { of: CardDefId[]; cost: Gains };
   /** The Spend band (R5). */
   spend: Gains;
-  /** Copies at 3, 4, 5, 6, 7 seats; 2 seats use the 3-seat count (R14.1). */
-  counts: number[];
+  /** Copies at 3, 4, 5, 6, 7 seats; 2 seats use the 4-seat count (R14.1). */
+  counts: readonly number[];
 }
 
 export interface GreatWorkTier {
@@ -121,11 +121,11 @@ export interface WwTunables {
 /** Everything the Windamere rules read as data (design lane: `src/content/`). */
 export interface WwContent {
   /** In goods order (R1.3). */
-  goods: GoodDef[];
-  cards: WwCardDef[];
-  greatWorks: GreatWorkDef[];
-  raids: RaidDef[];
-  honours: HonourDef[];
+  goods: readonly GoodDef[];
+  cards: readonly WwCardDef[];
+  greatWorks: readonly GreatWorkDef[];
+  raids: readonly RaidDef[];
+  honours: readonly HonourDef[];
   tunables?: Partial<WwTunables>;
 }
 

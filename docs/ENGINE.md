@@ -55,11 +55,10 @@ engine.ruleset                                      // the ruleset (card defs: e
 ```
 
 **The Windamere engine:** `createWindamereEngine(content?)` (barrel export, `src/engine/game/`)
-returns `DraftEngine<WwSeat, WwTable>`; `content` defaults to the shipped card data once
-`src/content/` has it. **Stub until E2 lands: it throws `WINDAMERE_NOT_READY`.** The signature is
-final, so net can wire it now. A `DraftEngine<WwSeat, WwTable>` is not assignable to
-`DraftEngine<unknown, unknown>` (`resolve` steps are contravariant), so cast it as net already
-does for the toy engine.
+returns `DraftEngine<WwSeat, WwTable>` for 3 to 7 towns (§15); `content` defaults to the shipped
+card data (`windamereContent()`, design's `src/content/windamere`). A
+`DraftEngine<WwSeat, WwTable>` is not assignable to `DraftEngine<unknown, unknown>` (`resolve`
+steps are contravariant), so cast it as net already does for the toy engine.
 
 `legalPicks`, `defaultPick` and `defaultAction` work on a full state or on that seat's view
 (§6 view-safe), so a server, a client and a bot get the same answer.
@@ -718,8 +717,11 @@ with its own 60 s clock; `waitingOn` and `defaultAction` cover it.
 
 - the 2-player variant (R14: Burn on turns 1-4, §14 C1, C2). `minSeats` is 3 until then.
 - Recall (R15.8, §14 C10). Timeouts use the fallback pick (R15.6); the Easy bot is bots' lane.
-- shipped content: `createWindamereEngine()` without `content` throws `WINDAMERE_NOT_READY`
-  until design's `src/content/` exists.
+
+**Shipped content** (`shipped.ts`): `windamereContent()` maps design's `src/content/windamere`
+(goods, cards, Great Works, Raids, Honours, its R16 `TUNABLES`) to `WwContent`; design keeps its
+own field names (`buyLimitPerNeighbour`, per-Season objects) and this file maps them. It passes
+`checkContent`, and random games on it run to a scored end at 3, 5 and 7 towns (tested).
 
 Tests use `src/engine/game/testing/fixture.ts`: made-up test content whose goods (flint, slate,
 honey) are not the game's, and `testing/helpers.ts`. The unchanged systems are tested on hand-built
