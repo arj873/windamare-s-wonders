@@ -3,10 +3,10 @@
 Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this file.
 **If you change a public type in `src/engine/core/types.ts`, update this file in the same commit.**
 
-Status (2026-10-29): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
-what the code does. Not measured yet: simulation speed (§11). **§14 lists the contract changes
-the Windamere rules still need (E1b): planned, not implemented. §15 is the Windamere game (E2):
-the unchanged systems are in; the turn structure waits for design's D2c.**
+Status (2026-10-30): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
+what the code does. **§14 lists the contract changes the Windamere rules still need: planned,
+not implemented. §15 is the Windamere game (E2): playable for 3 to 7 towns on the D2c rules;
+not yet the Great Work choice, 2 players or Recall.**
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
 resolution order, hand passing, rounds, prompts, scoring hooks and per-seat views. It does not
@@ -633,8 +633,9 @@ Everything else the rules need fits the current contract; how the game uses it i
 
 `src/engine/game/`, exported from the barrel. Rules: `docs/RULES.md`, approved by the human
 (H1), with design's D2c changes (on `agent/design` d3eda57, not on main yet): five new goods, a
-single-card pick with a glean on the fifth turn, buying goods from neighbours. The systems below
-follow D2c (including its new bounty, R11.5 measures and six score groups); the turn is next.
+single-card pick with a glean on the fifth turn, buying goods from neighbours. Everything below
+follows D2c. **Playable for 3 to 7 towns** with `createWindamereEngine(content)`; not yet: the
+Great Work choice at setup, the 2-player variant, Recall (list at the end).
 
 **Content in, rules out.** `compileContent(content: WwContent): WwRules` (throws on bad content)
 turns design's data (`src/content/`, CARDS.md §1 shapes) into lookups, the effect registry and
@@ -681,24 +682,67 @@ Readers for ui and bots: `measure(rules, state, seat, id)` (R11.5), `guardOf`, `
 `kindCounts`, `honourStandings`, `scoreTown`; all read public information only.
 
 `windamereRuleset(rules)` wires these into a core `Ruleset` (Season end: `resolveRaid`, then the
-core runs `seasonEnd` effects in seat order, R3.6). Tested end to end for Winter's end: Raid,
-Season-end effects, game over with scores (R3.6, R12.1).
+core runs `seasonEnd` effects in seat order, R3.6).
 
-**Not yet (the turn, next; or waiting on core changes in §14):**
+### 15.1 The turn (R3, R4, R6; `turn.ts`, `pick.ts`, `pay.ts`)
 
-- the turn: deal sizes (`roundSpec`), picks and their validation, the glean, resolve steps,
-  paying and buying from neighbours (R6), Tolls, Yield (R4.5 step 4, Winter has none), and the
-  handlers `yield`, `income`, `exchange`, `discount`, `toll`, `sellBonus`, `spendBonus`,
-  `buildBonus`. They are `TURN_PENDING` in the ruleset.
-- the 2-player variant (R14: Burn on turns 1-4, needs a hidden burned face, §14 C2).
-- the Great Work choice at setup (R2.4, R2.5, R15.10): needs §14 C3 and C4.
-- the Great Work check's place in the turn (after steps 2 and 4, R8.3): `greatWorkCheck` is
-  ready to be called from those steps.
-- Recall (R15.8, §14 C10), timeouts (R15.6).
-- `createWindamereEngine` still throws `WINDAMERE_NOT_READY` (and `createDraftEngine` refuses
-  the ruleset: it has no resolve steps).
+**Deal** (`roundSpec`): the Season's cards at the seat count's copies (`counts[i]`, i = seats − 3;
+2 seats would use the 4-seat counts), 6 to a hand, 5 turns, left in Spring and Autumn, right in
+Summer and Winter. The fifth turn's spare card goes to the town's `glean` zone (`onLeftovers`)
+and is Spent in step 1 (R3.5).
+
+**Pick** `{ card, use: 'build' | 'spend', args?: WwPickArgs }`:
+
+```ts
+interface WwPickArgs {
+  any?: GoodId[]; // "any" goods of the Spent card's band, or of the Built card's own onBuild
+  glean?: GoodId[]; // "any" goods of the glean's band (fifth turn)
+  cover?: CardId | null; // Build: the card an upgrade covers; null = full cost (R7.9)
+  discount?: GoodId[]; // Build: goods a discount takes off, one entry per good (R6.1)
+  pay?: Payment[]; // Build: one entry per missing good, in goods order (R6.3)
+}
+type Payment =
+  | { good; via: 'buy'; from: SeatId } // a neighbour, at the Season's price (R6.6)
+  | { good; via: 'exchange'; give: GoodId } // 2 of `give` (R6.3)
+  | { good; via: 'bank' }; // 5 coins
+```
+
+`normalizePick` fills whatever `args` leaves out with the R15.7 defaults, so `{ card, use }` is a
+complete pick; the stored and revealed pick holds every choice (R4.4: the purchases are public
+with the reveal). Defaults: payment = fewest coins, then fewest goods given in Exchanges, then
+the left neighbour before the right, Exchanges in town order, goods in goods order (an Exchange
+costs no coins, so it wins over buying when the town can afford the goods); "any" = the first
+good the Build still lacks, else the good the town holds fewest of; upgrade = the first matching
+uncovered card; discount = goods order. `legalPicks` = every Spend, plus every payable Build
+with default choices (an upgrade both ways). `defaultPick` = Spend the first card (R15.6).
+
+**Resolve steps**, step-major (R4.8): 1 Spend (band + `spendBonus`, glean) · 2a Pay (own goods,
+Exchanges, coins for the cost, purchases and bank) · 2b Sell (each seller fills its neighbours'
+purchases from what its own Build left, alternating buyers from its left; a short good comes
+from the bank at the same price, R6.7; `sellBonus`) · 2c Build (cover, place, "when built",
+`buildBonus`) · Great Work check · 3 Tolls · 4 Yield (`yield`, `income`; not in Winter) · Great
+Work check.
+
+**For ui and bots:** `checkPayment(pc, plan)` and `defaultPayment(pc)` with
+`pc = { rules, state, seat, cost, purse }` (`buildCostAfterDiscount`, `purseOf`), `missingGoods`,
+`exchangeGoods`, `marketPrice`, `discountFor`, `gleanOf`, `spendGains`. All view-safe.
+
+Measured: a whole random game takes about 10-35 ms (vitest, 3-7 towns), so a few thousand games
+per minute on one core. Unmeasured: bots that rate every legal pick.
+
+**Not yet:**
+
+- the Great Work choice at setup (R2.4, R2.5, R15.10): needs §14 C3 and C4. Until then towns
+  start with no Great Work (no Perk, no track).
+- the 2-player variant (R14: Burn on turns 1-4, §14 C1, C2). `minSeats` is 3 until then.
+- Recall (R15.8, §14 C10). Timeouts use the fallback pick (R15.6); the Easy bot is bots' lane.
+- shipped content: `createWindamereEngine()` without `content` throws `WINDAMERE_NOT_READY`
+  until design's `src/content/` exists.
 
 Tests use `src/engine/game/testing/fixture.ts`: made-up test content whose goods (flint, slate,
-honey) are not the game's, and `testing/helpers.ts` (`newWwGame` builds the starting state by
-hand until `createGame` can run). The content check passes on it; three deliberate bugs (tie-break
-order, bounty count, unmasked Raids) each made rule tests fail (checked by hand, reverted).
+honey) are not the game's, and `testing/helpers.ts`. The unchanged systems are tested on hand-built
+states (`newWwGame`), the turn on the real engine (`fxEngine`, `playTurn`, controlled hands), and
+whole random games for 3-7 towns check soundness and view-safety of `legalActions` and
+`defaultAction` at every step. Mutation checks by hand (each reverted): tie-break order, bounty
+count, unmasked Raids, fill order of purchases, Yield in Winter, the default plan's order; each
+made rule tests fail.

@@ -2,7 +2,7 @@
  * Placing a Build: the card rules of R7.8 (Landmarks) and R7.9 (upgrades). Paying for it (R6)
  * belongs to the turn structure and waits for D2c; this file never touches coins or goods.
  */
-import type { Card, CardDefId, CardId, Ctx, SeatId } from '../core';
+import type { Card, CardDefId, CardId, Ctx, Json, SeatId } from '../core';
 import type { WwRules } from './content';
 import { townOf, uncovered } from './town';
 import type { Gains, WwSeat, WwState, WwTable } from './types';
@@ -57,6 +57,7 @@ export function placeBuild(
   seat: SeatId,
   card: Card,
   cover: CardId | null,
+  args?: Json,
 ): void {
   const err = checkBuildRules(rules, ctx.state, seat, card.def, cover);
   if (err) throw new Error(`placeBuild: ${err}`);
@@ -64,5 +65,5 @@ export function placeBuild(
     ctx.place(seat, COVERED, ctx.take(cover));
     townOf(ctx.state, seat).data.covers.push({ card: cover, by: card.id });
   }
-  ctx.play(seat, card);
+  ctx.play(seat, card, args);
 }

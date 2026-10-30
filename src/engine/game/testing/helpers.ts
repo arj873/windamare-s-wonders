@@ -3,10 +3,19 @@
  * structure exists (D2c) `createGame` cannot run, so `newWwGame` builds the same starting state
  * by hand: setup, then `onRoundStart(0)`, with empty hands.
  */
-import { Rng, type Card, type CardDefId, type CardId, type Ctx, type SeatId } from '../../core';
+import {
+  Rng,
+  type Card,
+  type CardDefId,
+  type CardId,
+  type Ctx,
+  type Pick,
+  type SeatId,
+} from '../../core';
 import { makeCtx } from '../../core/ctx';
 import { placeBuild } from '../build';
 import { compileContent, type WwRules } from '../content';
+import { createWindamereEngine } from '../engine';
 import { windamereRuleset } from '../ruleset';
 import type { WwContent, WwSeat, WwState, WwTable } from '../types';
 import { FIXTURE } from './fixture';
@@ -88,6 +97,47 @@ export function toSeason(state: WwState, season: number): void {
   const ctx = ctxOf(state);
   for (let r = state.round + 1; r <= season; r++) fxRuleset.onRoundStart?.(ctx, r);
   state.round = season;
+}
+
+/** The real engine over the test fixture (the turn, R3-R6). */
+export const fxEngine = createWindamereEngine(FIXTURE);
+
+export function newGame(seats = 3, seed: number | string = 1): WwState {
+  return fxEngine.createGame({
+    seed,
+    seats: Array.from({ length: seats }, (_, i) => ({ name: `P${i}` })),
+  });
+}
+
+/** Give the seat's hand these faces (the dealt ids stay; only faces change). Mutates `state`. */
+export function setHand(state: WwState, seat: SeatId, defs: CardDefId[]): Card[] {
+  const hand = state.seats[seat]?.hand ?? [];
+  if (defs.length > hand.length) throw new Error('setHand: more faces than cards');
+  defs.forEach((def, i) => {
+    const c = hand[i];
+    if (c) c.def = def;
+  });
+  return hand;
+}
+
+/** The first card with face `def` in the seat's hand. */
+export function inHand(state: WwState, seat: SeatId, def: CardDefId): Card {
+  const c = state.seats[seat]?.hand.find((x) => x.def === def);
+  if (!c) throw new Error(`seat ${seat} holds no ${def}`);
+  return c;
+}
+
+/** Every seat picks (the given pick, else the default pick); returns the state after the reveal. */
+export function playTurn(state: WwState, picks: Partial<Record<SeatId, Pick>> = {}): WwState {
+  let s = state;
+  for (const seat of fxEngine.waitingOn(s)) {
+    const pick = picks[seat] ?? fxEngine.defaultPick(s, seat);
+    if (!pick) throw new Error(`seat ${seat} has no pick`);
+    const r = fxEngine.applyAction(s, { type: 'pick', seat, pick });
+    if (!r.ok) throw new Error(`seat ${seat}: ${r.error}`);
+    s = r.state;
+  }
+  return s;
 }
 
 /** The fixture with some fields replaced (e.g. tunables). */

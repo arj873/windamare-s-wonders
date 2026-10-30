@@ -23,10 +23,24 @@ import {
   type WwTunables,
 } from './types';
 
+/** Seat counts with their own card counts (`WwCardDef.counts` index i = 3 + i seats). */
+export const SEAT_COUNTS = [3, 4, 5, 6, 7] as const;
+
+/** R2.7: the `counts` index for `seats` (2 seats use the 4-seat counts). */
+export function countsIndex(seats: number): number {
+  return seats === 2 ? 1 : Math.min(Math.max(seats, 3), 7) - 3;
+}
+
 /** R16, the numbers this code uses. */
 export const DEFAULT_TUNABLES: WwTunables = {
   startingCoins: 5,
   honoursPerGame: 3,
+  handSize: 6,
+  turnsPerSeason: 5,
+  bankPrice: 5,
+  exchangeRate: 2,
+  buyLimit: 2,
+  marketPrice: [1, 2, 3, 4],
   valourBySeason: [1, 2, 3, 4],
   plunderPerPoint: 1,
   bountyPerNeighbour: 1,
@@ -200,8 +214,24 @@ export function checkContent(content: WwContent): string[] {
     const ok = Array.isArray(v) ? v.every((x) => isCount(x)) : isCount(v);
     if (!ok) errors.push(`tunable ${k} must be counts`);
   }
-  if (t.valourBySeason.length !== SEASONS.length)
+  if (t.valourBySeason.length !== SEASONS.length) {
     errors.push('valourBySeason needs one per Season');
+  }
+  if (t.marketPrice.length !== SEASONS.length) errors.push('marketPrice needs one per Season');
+  if (t.turnsPerSeason < 1 || t.handSize !== t.turnsPerSeason + 1) {
+    errors.push('handSize must be turnsPerSeason + 1 (the last turn gleans one card, R3.5)');
+  }
+  if (t.exchangeRate < 1) errors.push('exchangeRate must be >= 1');
+  // R2.7, R3.2: each Season deck deals a full hand to every seat, for 3 to 7 seats.
+  for (const season of SEASONS) {
+    const cards = content.cards.filter((c) => c.season === season);
+    SEAT_COUNTS.forEach((seats, i) => {
+      const size = cards.reduce((n, c) => n + (c.counts[i] ?? 0), 0);
+      if (size < t.handSize * seats) {
+        errors.push(`${season} deck: ${size} cards at ${seats} seats, needs ${t.handSize * seats}`);
+      }
+    });
+  }
   if (t.loreRunScores.length !== 6) errors.push('loreRunScores needs 6 entries (runs of 1 to 6)');
   if (t.coinsPerRenown < 1) errors.push('coinsPerRenown must be >= 1');
   if (content.honours.length < t.honoursPerGame) {

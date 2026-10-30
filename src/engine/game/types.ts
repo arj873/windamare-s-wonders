@@ -89,6 +89,18 @@ export interface WwTunables {
   startingCoins: number;
   /** R2.3 */
   honoursPerGame: number;
+  /** R3.2, 3-7 seats. One more than `turnsPerSeason`: the last turn's spare card is the glean. */
+  handSize: number;
+  /** R3.4 */
+  turnsPerSeason: number;
+  /** R6.3: coins per missing good bought from the bank. */
+  bankPrice: number;
+  /** R6.3: goods an Exchange gives for one missing good. */
+  exchangeRate: number;
+  /** R6.6b: goods a town may buy from each neighbour per turn. */
+  buyLimit: number;
+  /** R6.6c: coins per good bought from a neighbour, per Season. */
+  marketPrice: number[];
   /** R9.4, per Season. */
   valourBySeason: number[];
   /** R9.5: coins lost per point of Guard short. */

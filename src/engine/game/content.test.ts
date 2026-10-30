@@ -145,6 +145,12 @@ describe('content check', () => {
     expect(DEFAULT_TUNABLES).toEqual({
       startingCoins: 5,
       honoursPerGame: 3,
+      handSize: 6,
+      turnsPerSeason: 5,
+      bankPrice: 5,
+      exchangeRate: 2,
+      buyLimit: 2,
+      marketPrice: [1, 2, 3, 4],
       valourBySeason: [1, 2, 3, 4],
       plunderPerPoint: 1,
       bountyPerNeighbour: 1,
@@ -158,6 +164,24 @@ describe('content check', () => {
     expect(checkContent({ ...FIXTURE, tunables: { loreRunScores: [1, 2] } })).toEqual([
       'loreRunScores needs 6 entries (runs of 1 to 6)',
     ]);
+    expect(checkContent({ ...FIXTURE, tunables: { turnsPerSeason: 4 } })).toEqual([
+      'handSize must be turnsPerSeason + 1 (the last turn gleans one card, R3.5)',
+    ]);
+  });
+
+  it('R2.7 and R3.2 each Season deck deals a full hand to every town, at 3 to 7 seats', () => {
+    const thin = {
+      ...FIXTURE,
+      cards: FIXTURE.cards.map((c) =>
+        c.season === 'winter' ? { ...c, counts: [1, 1, 1, 1, 1] } : c,
+      ),
+    };
+    const n = FIXTURE.cards.filter((c) => c.season === 'winter').length;
+    expect(checkContent(thin)).toEqual(
+      [3, 4, 5, 6, 7].map(
+        (seats) => `winter deck: ${n} cards at ${seats} seats, needs ${6 * seats}`,
+      ),
+    );
   });
 
   it('compileContent refuses bad content with every problem', () => {

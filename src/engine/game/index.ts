@@ -21,4 +21,25 @@ export { currentRaid, type RaidOutcome } from './raid';
 export { buildCost, checkBuildRules, COVERED } from './build';
 export { honourScore, honourStandings, type HonourStanding } from './honours';
 export { CATEGORIES, scoreTown, tiebreakOf, type Category } from './score';
-export { RULESET_ID, RULESET_VERSION, TURN_PENDING, windamereRuleset } from './ruleset';
+export { RULESET_ID, RULESET_VERSION, windamereRuleset } from './ruleset';
+export {
+  checkPayment,
+  defaultPayment,
+  discountFor,
+  exchangeGoods,
+  marketPrice,
+  missingGoods,
+  type PayContext,
+  type Payment,
+  type Purse,
+} from './pay';
+export {
+  BUILD,
+  SPEND,
+  buildCostAfterDiscount,
+  gleanOf,
+  purseOf,
+  spendGains,
+  type WwPickArgs,
+} from './pick';
+export { GLEAN } from './turn';

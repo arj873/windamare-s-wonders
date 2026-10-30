@@ -45,6 +45,28 @@ export function checkGains(
   return null;
 }
 
+/** How many "any" units `gains` holds. */
+export function anyCount(gains: Gains): number {
+  return gains[ANY] ?? 0;
+}
+
+/** `gains` with its "any" units replaced by the chosen goods (one per unit, R5.1). */
+export function resolveAny(gains: Gains, chosen: readonly GoodId[]): Gains {
+  const n = anyCount(gains);
+  if (chosen.length !== n) throw new Error(`${n} "any" good(s) need ${n} choice(s)`);
+  const out: Gains = {};
+  for (const [k, v] of Object.entries(gains)) if (k !== ANY) out[k] = v;
+  for (const g of chosen) out[g] = (out[g] ?? 0) + 1;
+  return out;
+}
+
+/** a + b. */
+export function sumGains(a: Gains, b: Gains): Gains {
+  const out: Gains = { ...a };
+  for (const [k, v] of Object.entries(b)) out[k] = (out[k] ?? 0) + v;
+  return out;
+}
+
 /** Sum of goods in a store. */
 export function storeTotal(store: Record<GoodId, number>): number {
   return Object.values(store).reduce((a, b) => a + b, 0);

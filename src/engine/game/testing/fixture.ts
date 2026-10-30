@@ -29,8 +29,54 @@ function card(
 const lore = (rank: number, season: Season) =>
   card(`tf-lore-${rank}`, 'lore', season, [{ type: 'lore', rank }]);
 
-export const FX_CARDS: WwCardDef[] = [
-  card('tf-hut', 'holding', 'spring', []),
+const BASE: WwCardDef[] = [
+  // --- turn effects (R13) ---
+  card('tf-pond', 'holding', 'spring', [{ type: 'yield', gains: { flint: 1 } }], {
+    cost: { coins: 1 },
+    spend: { flint: 1, any: 1 },
+  }),
+  card('tf-quarry', 'holding', 'spring', [{ type: 'yield', gains: { slate: 1, labour: 1 } }], {
+    cost: { flint: 1 },
+    spend: { slate: 2 },
+  }),
+  card('tf-apiary', 'holding', 'summer', [{ type: 'yield', gains: { honey: 1 } }], {
+    cost: { slate: 2 },
+    spend: { honey: 2 },
+  }),
+  card('tf-mint', 'market', 'summer', [{ type: 'income', coins: 2 }], {
+    cost: { honey: 1 },
+    spend: { coins: 3 },
+  }),
+  card('tf-broker', 'market', 'spring', [{ type: 'exchange', good: 'flint' }], {
+    spend: { coins: 2 },
+  }),
+  card('tf-toll', 'market', 'summer', [{ type: 'toll', coins: 1 }]),
+  card('tf-hall-toll', 'market', 'autumn', [{ type: 'toll', kind: 'hall', coins: 2 }]),
+  card('tf-seller', 'market', 'spring', [{ type: 'sellBonus', coins: 1 }]),
+  card('tf-mason', 'watch', 'summer', [
+    { type: 'guard', amount: 1 },
+    { type: 'discount', kind: 'hall', amount: 1 },
+  ]),
+  card('tf-school', 'lore', 'summer', [
+    { type: 'lore', rank: 2 },
+    { type: 'spendBonus', kind: 'lore', gains: { labour: 1 } },
+  ]),
+  card(
+    'tf-patron',
+    'hall',
+    'autumn',
+    [
+      { type: 'renown', amount: 1 },
+      { type: 'buildBonus', kind: 'hall', gains: { coins: 2 } },
+    ],
+    { cost: { honey: 1 } },
+  ),
+  card('tf-gift', 'market', 'winter', [{ type: 'onBuild', gains: { any: 2 } }], {
+    spend: { any: 1 },
+  }),
+  card('tf-keep', 'watch', 'autumn', [{ type: 'guard', amount: 3 }], { cost: { slate: 3 } }),
+  // --- the rest ---
+  card('tf-hut', 'holding', 'spring', [], { spend: { labour: 3 } }),
   card('tf-cellar', 'holding', 'autumn', [{ type: 'seasonEnd', gains: { flint: 1, coins: 2 } }]),
   card('tf-shrine', 'hall', 'spring', [{ type: 'renown', amount: 2 }], { cost: { flint: 1 } }),
   card('tf-hall', 'hall', 'summer', [{ type: 'renown', amount: 4 }], {
@@ -78,6 +124,12 @@ export const FX_CARDS: WwCardDef[] = [
     { type: 'scoreSeasons', kind: 'hall', amount: 2 },
   ]),
 ];
+
+/** BASE with enough copies that every Season deck deals 6 cards a seat, at 3 to 7 seats. */
+export const FX_CARDS: WwCardDef[] = BASE.map((c) => {
+  const kinds = BASE.filter((d) => d.season === c.season).length;
+  return { ...c, counts: [3, 4, 5, 6, 7].map((seats) => Math.ceil((6 * seats) / kinds)) };
+});
 
 const tiers = (thresholds: number[], rewards: EffectSpec[][]): GreatWorkDef['tiers'] =>
   thresholds.map((threshold, i) => ({ threshold, reward: rewards[i] ?? [] }));
