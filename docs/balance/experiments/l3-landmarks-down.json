@@ -1,0 +1,10 @@
+{
+  "extends": "l2-final-2.json",
+  "name": "l3-landmarks-down",
+  "hypothesis": "At level 2 Landmarks are the winner's second Town part (5-12 Renown, rising with seats) and the biggest single source of the winning margin (1.7-2.5 Renown). Every Landmark score effect except scoreBeat -1 (min 1): scoreSeasons 2 -> 1, scoreThreshold 6/8 -> 5/7, scorePerKind 2 -> 1, scoreSets 4 -> 3 (scoreGoods stays 1). Town falls at both levels; the rivalry Landmarks (Victors' Oak, Pride of the Wend) keep their scoreBeat, so I1 holds.",
+  "cardEffect": {
+    "kinds": ["landmark"],
+    "types": ["scoreSeasons", "scoreThreshold", "scorePerKind", "scoreSets", "scoreGoods"],
+    "delta": -1
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "extends": "l2-final-2.json",
+  "name": "l3-valour-up",
+  "hypothesis": "Lift the Raids group: Valour 2/3/4/5 -> 3/4/5/6 per held Raid. Raids is 14-18% of all Renown but the winner's top group in < 15%; one more Valour per held Season moves some winners from Town to Raids, and Victors' Oak (scoreBeat valour) is untouched. Level 2 holds 47-72% of Raids, level 1 25-60%, so level 2 should gain more.",
+  "tunables": { "valourBySeason": [3, 4, 5, 6] }
+}

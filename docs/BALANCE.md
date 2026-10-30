@@ -12,7 +12,8 @@ points (2 seats) to 1.1 (7 seats).
 
 **Bases.** Sections 0-5 are on main `4fb5baf` (the L2 work). Section 6 reruns the baselines and
 the hand-off package on main `9c09f9e` (design D10a: 4 rivalry cards; bots B5b: the Wolf Gate is
-rated), the base for design's D9c.
+rated), the base for design's D9c. Section 7 (L3) is on main `0bf1efe` (D11, E7, B6) with the
+package on top, i.e. the expected D9c.
 
 ## 0. Read this first
 
@@ -129,7 +130,8 @@ band at level 2. Any Great Work change should be checked at both levels.
 
 ### 5.2 Earlier, on main `ccb126f` (D9, level 1 only): superseded, kept for the record
 
-D9b and E4 changed the game under these runs; read them as directions, not numbers.
+D9b and E4 changed the game under these runs; read them as directions, not numbers. Their
+before/after tables: `docs/balance/results-d9.md` (frozen).
 
 | Experiment            | Change                                                       | Result on D9, level 1                                                                                               | Verdict then                    |
 | --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
@@ -231,3 +233,61 @@ undoes it. Two things changed: Town is now over 55% at level 1 too (3-5 seats, a
 package), so the Hall cut is no longer enough on its own; and the S4 conflict (level 1 at 3
 seats 16%, level 2 54-71%) is unchanged. A next experiment would aim at the Town group without
 hurting the rivalry gain (e.g. Landmark or rivalry Renown), measured at both levels.
+
+## 7. L3: a Town lever that keeps D10a's rivalry gain (main `0bf1efe` + the package)
+
+Base: main `0bf1efe` (D11 turn-1 costs, E7, B6) with the l2-final-2 package on top, i.e. what
+D9c should ship. Every lever below extends that package (`"extends"` in the overlay) and is
+compared with the package at the same level. **No lever touches `scoreBeat`**, so the rivalry
+Renown is left as it is; the I1 column checks that the net neighbour share stays. Baselines:
+`docs/balance/baseline/0bf1efe-level{1,2}.md`; tables: `docs/balance/results.md`.
+
+Where Town comes from, package at level 2 (winner's mean Renown): Hall 10-13, Landmark 5-12
+(rising with seats), other cards 3-7 (mostly rivalry), against Great Work 13-16 of ~65. At level
+1 the three Town parts are 3.8-6.3 / 1.8-4.9 / 2.2-5.4, against Great Work 9-12.5.
+
+At level 1 a Renown-only lever changes no bot decision, so its level-1 delta is exact (same
+games); level 2 reads Renown and plays differently.
+
+| Lever (on the package)                                             | Level 1: winner's top group (package: 37-62%, Town at 3-7 seats)                       | Level 2: Town (package: 70-84%)               | Side effects                                                                                       | I1            | Verdict                    |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------- | -------------------------- |
+| l3-halls-2: Halls -2 in all (package -1, one more)                 | top group <= 54% everywhere (**passes**)                                               | 54-74% (-9..-16)                              | level 2: Great Work by 8 sources 57% / 56% at 2 / 4 seats; level-2 tier IV +2..+4                  | kept          | good                       |
+| l3-landmarks-down: every Landmark score effect -1 except scoreBeat | 3 seats 58% (-4)                                                                       | 65-78% (-4..-10)                              | none seen                                                                                          | kept          | good, smaller              |
+| l3-hall-landmarks: Wayfarers' Cross and The Long Table 2 -> 1      | about no change                                                                        | about no change                               | -                                                                                                  | kept          | fail                       |
+| l3-gw-up: every Great Work tier III and IV +1                      | -4..-5                                                                                 | 59-78% (-5..-11)                              | **Great Work by 8 sources 51-63%** at both levels (fails at 6-7 seats L1, 2/4/7 seats L2)          | kept          | fail (trades one S1 miss)  |
+| l3-valour-up: Valour 3/4/5/6                                       | 33-49% (**passes**)                                                                    | 63-81% (-2..-7)                               | **level 1: Valour is the top source at 3 seats (62%)**                                             | kept          | fail (Valour takes over)   |
+| **l3-combo: l3-halls-2 + l3-landmarks-down**                       | **top group 40-49% everywhere (passes)**; Great Work by 8 sources 42-56% (7 seats 56%) | **45-65% (-16..-26)**; passes at 2-3 seats    | level 2: Great Work by 8 sources 56 / 59 / 56% at 2 / 4 / 7 seats; tier IV +2..+4; blowouts +0..+3 | kept (+0..+1) | **best: handed to design** |
+| l3-combo-v: l3-combo + Valour 2/3/5/6                              | 36-43%                                                                                 | 55-65% at 3-7 seats (2 seats: Great Work top) | level 1: Valour top source at 3 seats 58%                                                          | kept          | no better than l3-combo    |
+
+### 7.1 Hand-off to design (after D9c): l3-combo
+
+On top of the D9c package (values below are from the current main, so they already include the
+package's Hall -1):
+
+1. **Halls -2 printed Renown from today's values** (never below 1): Moot Stone 2 -> 1, Ferry Steps
+   2 -> 1, Moot Hall 4 -> 2, Boathouse 5 -> 3, Hearth Hall 3 -> 1, Wend Council House 6 -> 4,
+   Players' Green 4 -> 2, Clock House 4 -> 2, Bell Tower 4 -> 2, High Hall of Windamere 9 -> 7,
+   Ice Fair Hall 8 -> 6, Snowlight Hall 5 -> 3, Long Barrow 4 -> 2, Mere Gate Hall 5 -> 3. (If D9c
+   already took the package's -1, this is one more -1 each, Moot Stone and Ferry Steps staying 1.)
+2. **Every Landmark score effect -1 except `scoreBeat`**: Wayfarers' Cross 2 -> 1 per Season with
+   a Hall; Mustering Stone 6 -> 5; Hall of Banners 6 -> 5; Keystone Arch 8 -> 7; Harvest Home 2 ->
+   1 per Season with a Holding; The Long Table 2 -> 1 per Hall; Market Cross 8 -> 7; Watchers'
+   Cairn 2 -> 1 per Season with a Watch; Ancestors' Walk 4 -> 3 per set. Unchanged: Winter Larder
+   (already 1), The Victors' Oak and Pride of the Wend (`scoreBeat`, the rivalry).
+
+What it does on the package: level 1, Town is no longer the winner's top group over 49% at any
+seat count (S1 by group passes); level 2, Town falls from 70-84% to 45-65% (passes at 2-3 seats
+only). The rivalry share holds (I1 equal or +1 point at every count, both levels).
+
+**What it does not do, honestly**: level-2 Town stays over 55% at 4-7 seats, and as Town falls
+the Great Work rises over 55% of winners (8 sources) at 2, 4 and 7 seats at level 2 and at 7
+seats at level 1. Level-2 winners take their Renown from two groups (Town and Great Work; groups
+reaching 10% of winners: 2-3 of 6, target 4), so cutting one lifts the other. S1 at level 2
+needs a third group that pays a level-2 player: Raids, Lore or Purse. Valour helped level 2 a
+little and took over level 1 (l3-valour-up); Lore does not move under level 2 at all (5.4). That
+is a design question beyond tunables, and possibly a bots one (level 2 cannot see a Lore run's
+future value).
+
+**S1 definition, for research**: Town is three of the eight sources added together, so it beats
+any single group easily. By 8 sources, level 2 passes S1 on the package (Great Work 39-46%);
+by R12.2 group it fails. Which one the target means decides whether L3 is needed at all.
