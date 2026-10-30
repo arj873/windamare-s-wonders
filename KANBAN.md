@@ -1,62 +1,51 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-30 03:48 · Progress: **73 / 90 cards done**
+Updated: 2026-10-30 05:05 · Progress: **85 / 98 cards done**
 
 ## In progress (12)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A3 | art | P0 | Retheme to the real design: 6 kinds, goods, Lore ranks, Raid frame, Great Work track, Honours |
-| A2 | art | P1 | Table chrome: background, seat panel, neighbour strips, timer badge, title key art |
-| L2 | balance | P0 | Tuning experiments as overlays; winners to design D9 |
-| B7 | bots | P1 | Normal bots keep Guard 0 (R7): measure + fix evaluator |
+| L3 | balance | P2 | Town-group lever keeping D10a rivalry gain (levels 1+2) |
 | B6 | bots | P2 | Level 3 on engine lookahead + Lore-run/Honour planning (K2 1.5x) |
-| D11 | design | P1 | Turn-1 affordability (R7: 1-2 of 6 Spring cards buildable) |
-| E7 | engine | P1 | D10b effect types: onBuildNeighbourMin, scoreNeighbourMin, scoreSales |
-| F5 | fx | P2 | Reveal sprites with real card names and art |
-| O2 | online | P1 | Spectators, rematch, host leaves |
-| Q3 | qa | P2 | Audit tests: R19 First game, D10a rivalry cards |
-| T3b | tutorial | P2 | Tutorial on real E6 option + seed; headless lesson check |
-| U7 | ui | P1 | Wire online launcher, First game toggle, tutorial coach |
-
-## In review (1)
-
-| Card | Lane | Pri | Title |
-|---|---|---|---|
-| N4 | net | P2 | Room options: firstGame, per-seat bot level, seat colour |
-
-## Ready (3)
-
-| Card | Lane | Pri | Title |
-|---|---|---|---|
-| D9c | design | P2 | Re-tune from balance L2 at bot level 2 (Halls/Town top source) |
-| U2 | ui | P1 | Fix R4 red-team: O4 placeholders + popover, O12 score tally |
-| U8 | ui | P2 | R7 top 5 UX fixes + qa/fx/art hooks |
-
-## Backlog (1)
-
-| Card | Lane | Pri | Title |
-|---|---|---|---|
 | D10b | design | P2 | Ship 4 pending neighbour cards once engine E7 lands |
+| D9c | design | P2 | Re-tune from balance L2 at bot level 2 (Halls/Town top source) |
+| E8 | engine | P2 | Structured actor/target seat in log entries (viewer 'You') |
+| N5 | net | P1 | Host hand-off at final scores (nextWakeAt in over); 2-tab browser e2e |
+| O3 | online | P2 | Lobby bot-level picker + colours; openingBonus parity; phone pass |
+| Q2b | qa | P2 | Playtest harness browser layer (Playwright, system Chrome) |
+| R8 | research | P2 | UX review 3: R7 re-check, Learn to play, 2-tab online, phone |
+| T3c | tutorial | P2 | Coach panel placement; Lore lesson fires live |
+| U9 | ui | P1 | Coach shows in normal games (bug); fx face; spectator layout; labels |
 
-## Done (73)
+## Ready (1)
+
+| Card | Lane | Pri | Title |
+|---|---|---|---|
+| U2 | ui | P1 | Fix R4 red-team: O4 placeholders + popover, O12 score tally |
+
+## Done (85)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A1 | art | P0 | Art direction + card frame + icon set (SVG) -> docs/design/ART.md, public/art, art-dev.html |
 | A4 | art | P0 | Fix R4 red-team: O1 palette/type map, O2 glass+cloth, O3 stage sockets |
 | A5 | art | P0 | Goods icons (final D2c names) + coin + labour |
+| A2 | art | P1 | Table chrome: background, seat panel, neighbour strips, timer badge, title key art |
 | A6 | art | P1 | Great Work vignettes on the tier track + title key art refresh |
 | A8 | art | P1 | Kind-coloured card headers; distinct Holding/Market glyphs |
 | A7 | art | P2 | Card art-window illustrations per kind |
 | A9 | art | P2 | warn tokens, Season marker on card frame, table chrome vs UX.md |
 | B4 | balance | P0 | Baseline balance re-run on main -> docs/BALANCE.md |
+| L2 | balance | P0 | Tuning experiments as overlays; winners to design D9 |
 | B5 | bots | P0 | Smarter bots: level 2 (plans) and level 3 (denial) |
 | B1 | bots | P1 | Random + heuristic bots, headless sim, balance report |
 | B2 | bots | P1 | 3 difficulty levels plan -> docs/BOTS.md |
 | B3 | bots | P1 | Level-1 heuristic bot + sim report vs balance-targets.md |
 | B5b | bots | P1 | rateGreatWork values Valour-scoring tiers (Wolf Gate never chosen) |
+| B7 | bots | P1 | Normal bots keep Guard 0 (R7): measure + fix evaluator |
 | D2 | design | P0 | Original ruleset with numbered rules -> docs/RULES.md |
 | D2b | design | P0 | Answer lane questions in RULES.md: pick change before reveal, early resolve, timers, resolution order |
 | D2c | design | P0 | Human changes: new goods set, single pick, neighbour trade (own mechanism/numbers) |
@@ -65,6 +54,7 @@ Updated: 2026-10-30 03:48 · Progress: **73 / 90 cards done**
 | D6 | design | P0 | Fix R4 red-team: O5-O16 names/numbers, D1 neighbour share, D2 Watch/Raid bug |
 | D9 | design | P0 | Re-tune from BALANCE.md: Town dominance 82-90%, blowouts 32-53%, Lore runs low |
 | D10 | design | P1 | Neighbour-interaction cards (I1): pay off/score from neighbours' towns |
+| D11 | design | P1 | Turn-1 affordability (R7: 1-2 of 6 Spring cards buildable) |
 | D4 | design | P1 | Card catalog draft with counts per player count -> docs/design/CARDS.md |
 | D8 | design | P1 | Rule fixes: Summer price 2, R6.7 vs R17.9, deck size vs seats, re-tune plan |
 | D9b | design | P1 | Re-tune follow-up |
@@ -76,17 +66,21 @@ Updated: 2026-10-30 03:48 · Progress: **73 / 90 cards done**
 | E4 | engine | P1 | Follow design D8: R6.7/R17.9 rewrite, price ladder via tunables |
 | E5 | engine | P1 | Fast lookahead API for level-3 bots + bench |
 | E6 | engine | P1 | R19 First game option: no Honours, one Great Work, no upgrades |
+| E7 | engine | P1 | D10b effect types: onBuildNeighbourMin, scoreNeighbourMin, scoreSales |
 | F1 | fx | P0 | Reveal animation from latestEvents (reduced-motion safe) |
 | F2 | fx | P1 | Port catan synth audio + game sounds |
 | F3 | fx | P1 | Season transition, score count-up, tier moment, hover motion |
 | F4 | fx | P2 | plan.ts gaps (Honour, Great Work, Raid reveal), sprite CSS; audition panel |
+| F5 | fx | P2 | Reveal sprites with real card names and art |
 | H1 | human | P0 | Approve the ruleset (D2-D4) before full rules engine (E2) starts |
 | N0 | net | P0 | Multiplayer plan: port Catan rooms, add per-seat hidden-hand redaction -> docs/MULTIPLAYER.md |
 | N1b | net | P0 | Real-engine adapter + real-engine leak test |
 | N2 | net | P0 | Fix qa Q0-N1..N4 (hello rate limit, double hello, host succession, engine throws) |
 | N3 | net | P0 | Server runs real Windamere games; RoomClient; 2-tab online e2e |
 | N1 | net | P1 | Online rooms via Cloudflare Durable Objects (port from Catan) |
+| N4 | net | P2 | Room options: firstGame, per-seat bot level, seat colour |
 | O1 | online | P0 | Lobby flow on loopback: room, invite, seats, start, online table, waiting states, chat |
+| O2 | online | P1 | Spectators, rematch, host leaves |
 | P1 | platform | P0 | Scaffold the Catan stack (pnpm, TS strict, Vite, Vitest, ESLint, Prettier, Pixi v8) + hello screen |
 | P2 | platform | P0 | scripts/gate.sh (typecheck+lint+test, exit code) + GitHub Actions CI |
 | P5 | platform | P0 | Deps for art (fonts, tokens import, art-dev.html under vite) and net (wrangler, workers-types) |
@@ -102,6 +96,7 @@ Updated: 2026-10-30 03:48 · Progress: **73 / 90 cards done**
 | Q1b | qa | P0 | Update R6.6c/R6.3 audit tests to D8 prices (pairs with engine E4) |
 | Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
 | Q2 | qa | P1 | Playtest harness: drive a browser game from a CLI |
+| Q3 | qa | P2 | Audit tests: R19 First game, D10a rivalry cards |
 | R1 | research | P0 | Genre + rules research: drafting/tableau games, mechanics, balance lessons -> docs/design/RESEARCH.md |
 | R4 | research | P0 | Red-team originality + design-risk review of RULES/CARDS |
 | R2 | research | P1 | Online drafting UX survey (BGA, colonist.io feel, timers, reconnect) -> docs/design/research/online-ux.md |
@@ -111,9 +106,12 @@ Updated: 2026-10-30 03:48 · Progress: **73 / 90 cards done**
 | T1 | tutorial | P0 | docs/HOWTOPLAY.md one-page player summary |
 | T2 | tutorial | P0 | In-game How to play overlay + term/icon tooltips |
 | T3 | tutorial | P1 | Guided first game (coach) |
+| T3b | tutorial | P2 | Tutorial on real E6 option + seed; headless lesson check |
 | U0 | ui | P0 | UX spec + wireframes for every screen -> docs/design/UX.md |
 | U3 | ui | P0 | Playable hotseat vs bots in the browser: setup -> table -> end scoring -> rematch |
 | U4 | ui | P0 | Fix 404 asset; tunables-driven price test; Great Work SVG; playtest hooks; home screen |
 | U5 | ui | P0 | Wire fx reveal + remove duplicate; R6 UX fixes (bank spend bug, affordability, Season-end card, Recall, timers, phone) |
 | U1 | ui | P1 | Draft table UI: hand, city tableau, neighbours, simultaneous reveal |
 | U6 | ui | P1 | Wire help T2 (one card list), fx F3, art kinds.css, bot levels, First game |
+| U7 | ui | P1 | Wire online launcher, First game toggle, tutorial coach |
+| U8 | ui | P2 | R7 top 5 UX fixes + qa/fx/art hooks |
