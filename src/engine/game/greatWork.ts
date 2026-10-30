@@ -1,8 +1,54 @@
-/** R8: the Great Work labour track. */
-import type { Ctx, EffectSpec, SeatId } from '../core';
+/** R2.4, R2.5 the Great Work choice and R8 the labour track. */
+import type { Ctx, EffectSpec, Json, PromptHandler, SeatId } from '../core';
 import type { WwRules } from './content';
 import { greatWorkEffects, townOf } from './town';
 import type { WwSeat, WwState, WwTable } from './types';
+
+export const GREAT_WORK_CHOICE = 'greatWork';
+
+/**
+ * R2.4, R2.5, R15.10: deal each town its offers from the shuffled pool, face down, and ask every
+ * town at once (one prompt group: hidden, changeable until the last choice, revealed together).
+ * The offers live only in the prompts' owner-only data, so the ones not chosen leave unseen.
+ */
+export function offerGreatWorks(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): void {
+  const pool = ctx.rng.shuffle(rules.content.greatWorks.map((g) => g.id));
+  const n = rules.tunables.greatWorksOffered;
+  ctx.promptGroup(
+    ctx.state.seats.map((s, i) => ({
+      seat: s.id,
+      kind: GREAT_WORK_CHOICE,
+      data: { offers: pool.slice(i * n, (i + 1) * n) },
+    })),
+  );
+}
+
+/** The Great Work ids a choice prompt offers. */
+export function offersOf(data: Json): string[] {
+  const offers = (data as { offers?: unknown } | null)?.offers;
+  return Array.isArray(offers) ? offers.filter((x): x is string => typeof x === 'string') : [];
+}
+
+export function greatWorkChoice(rules: WwRules): PromptHandler<WwSeat, WwTable> {
+  return {
+    answers: (_state, prompt) => offersOf(prompt.data),
+    validate: (_state, prompt, answer) =>
+      typeof answer === 'string' && offersOf(prompt.data).includes(answer)
+        ? null
+        : 'choose one of your offered Great Works',
+    // Runs for every town once all have chosen (R2.5): the Perk is active from now on.
+    apply: (ctx, prompt, answer) => {
+      const town = townOf(ctx.state, prompt.seat);
+      const gw = rules.greatWork(answer as string);
+      town.data.greatWork = gw.id;
+      ctx.log(prompt.seat, 'greatWork', `${town.name} will raise ${gw.name}.`, {
+        data: { greatWork: gw.id },
+      });
+    },
+    // R15.6, R15.10: the timeout choice is the first offered.
+    defaultAnswer: (_state, prompt) => offersOf(prompt.data)[0] ?? null,
+  };
+}
 
 /** The labour the town's next tier needs, or null (no Great Work yet, or tier IV done, R8.5). */
 export function nextThreshold(rules: WwRules, town: WwSeat): number | null {

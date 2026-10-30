@@ -18,13 +18,14 @@ import type { WwState } from './types';
 
 const filler = Array(6).fill('tf-stall') as string[]; // Spend band: 1 coin, no goods
 
-/** 3 towns, spring turn 1, every hand Stalls, every store empty, 5 coins each. */
+/** 3 towns, spring turn 1, every hand Stalls, every store empty, 5 coins, no Great Work. */
 function table(seats = 3): WwState {
   const s = structuredClone(newGame(seats, 1));
   for (const t of s.seats) {
     setHand(s, t.id, filler);
     t.data.store = { flint: 0, slate: 0, honey: 0 };
     t.data.coins = 5;
+    t.data.greatWork = null;
   }
   return s;
 }

@@ -1,11 +1,14 @@
-/** Ruleset hooks the Windamere turn needs: normalizePick (C5), play args (C6), onLeftovers. */
+/**
+ * Ruleset hooks the Windamere game needs: normalizePick (C5), play args (C6), prompt groups (C3),
+ * start prompts before the deal (C4), onLeftovers.
+ */
 import { describe, expect, it } from 'vitest';
 import { makeCtx } from './ctx';
 import { createDraftEngine } from './engine';
 import { Rng } from './rng';
-import { newToyGame, sellFirst, toyConfig } from './testing/helpers';
+import { newToyGame, sellFirst, toy, toyConfig } from './testing/helpers';
 import { toyRuleset, TOY_PICKS, type ToySeat, type ToyState, type ToyTable } from './testing/toy';
-import type { Pick, Ruleset } from './types';
+import type { Json, Pick, Ruleset } from './types';
 
 const variant = (over: Partial<Ruleset<ToySeat, ToyTable>>) =>
   createDraftEngine({ ...toyRuleset, ...over });
@@ -88,6 +91,82 @@ describe('play and trigger pass args to onPlay (C6)', () => {
     ctx.trigger(0, [{ type: 'coins', amount: 1 }], null);
     ctx.play(0, { id: s.nextCardId++, def: 'toy-well' }, { pay: 1 });
     expect(seen).toEqual([{ any: ['x'] }, undefined, { pay: 1 }]);
+  });
+});
+
+describe('prompt groups (C3) and start prompts before the deal (C4)', () => {
+  const answer = (s: ToyState, seat: number, a: string) => {
+    const p = s.prompts.find((x) => x.seat === seat)!;
+    return toy.applyAction(s, { type: 'answer', seat, prompt: p.id, answer: a });
+  };
+  const ok = (r: ReturnType<typeof answer>): ToyState => {
+    if (!r.ok) throw new Error(r.error);
+    return r.state;
+  };
+
+  it('a group is open for every seat at once; answers stay hidden and may change', () => {
+    const s0 = newToyGame(3, { openingGroup: true });
+    expect(s0.phase).toEqual({ kind: 'prompt', then: 'start' });
+    expect(toy.waitingOn(s0)).toEqual([0, 1, 2]);
+    expect(toy.legalActions(s0, 2)).toHaveLength(2);
+    const s1 = ok(answer(s0, 1, 'coins'));
+    expect(toy.waitingOn(s1)).toEqual([0, 2]);
+    expect(s1.seats[1]!.data.opening).toBeNull(); // not applied yet
+    expect(toy.viewFor(s1, 0).prompts[1]).toMatchObject({
+      answered: true,
+      answer: null,
+      data: null,
+    });
+    expect(toy.viewFor(s1, 1).prompts[1]).toMatchObject({ answered: true, answer: 'coins' });
+    const s2 = ok(answer(s1, 1, 'none')); // changed
+    expect(s2.prompts[1]!.answer).toBe('none');
+    expect(toy.legalActions(s2, 1)).toHaveLength(2); // may still change
+  });
+
+  it('the last answer applies the whole group in seat order, whatever the arrival order', () => {
+    const s0 = newToyGame(3, { openingGroup: true });
+    const answers = ['coins', 'none', 'coins'];
+    const ends = [
+      [0, 1, 2],
+      [2, 1, 0],
+      [1, 2, 0],
+    ].map((order) => order.reduce((s, seat) => ok(answer(s, seat, answers[seat]!)), s0));
+    for (const end of ends) {
+      expect(end.phase).toEqual({ kind: 'pick' });
+      expect(end.table.trace).toEqual(['opening:0', 'opening:1', 'opening:2']);
+      expect(end.seats.map((x) => x.data.opening)).toEqual(answers);
+      expect({ ...end, seq: 0, log: [] }).toEqual({ ...ends[0]!, seq: 0, log: [] });
+    }
+  });
+
+  it('startBeforeDeal: start prompts come before the first deal, no hands until they end', () => {
+    const late = variant({ startBeforeDeal: true });
+    const variants: Record<string, Json>[] = [{ openingGroup: true }, { opening: true }];
+    for (const options of variants) {
+      let s = late.createGame(toyConfig(3, options));
+      expect(s.seats.every((x) => x.hand.length === 0)).toBe(true);
+      expect(s.deck).toEqual([]);
+      while (s.phase.kind === 'prompt') {
+        const seat = late.waitingOn(s)[0]!;
+        const r = late.applyAction(s, late.defaultAction(s, seat)!);
+        if (!r.ok) throw new Error(r.error);
+        s = r.state;
+      }
+      expect(s.seats.map((x) => x.hand.length)).toEqual([4, 4, 4]);
+    }
+    // Default: round 0 is dealt first, so the hands are there during the start prompts.
+    expect(newToyGame(3, { opening: true }).seats.map((x) => x.hand.length)).toEqual([4, 4, 4]);
+  });
+
+  it('a group may not hold two prompts for one seat', () => {
+    const s = newToyGame(2);
+    const ctx = makeCtx(toyRuleset, s, new Rng(s.rng));
+    expect(() =>
+      ctx.promptGroup([
+        { seat: 0, kind: 'opening', data: null },
+        { seat: 0, kind: 'opening', data: null },
+      ]),
+    ).toThrow('two prompts for seat 0 in one group');
   });
 });
 

@@ -1,12 +1,11 @@
 /**
  * The Windamere ruleset object for the core (docs/ENGINE.md §8), for 3 to 7 seats. Not yet: the
- * 2-player variant (R14) and the Great Work choice at setup (R2.4, R2.5): towns start without a
- * Great Work until it lands.
+ * 2-player variant (R14).
  */
 import type { Ruleset } from '../core';
 import { COVERED } from './build';
 import type { WwRules } from './content';
-import { greatWorkSpecs } from './greatWork';
+import { GREAT_WORK_CHOICE, greatWorkChoice, greatWorkSpecs, offerGreatWorks } from './greatWork';
 import { defaultPick, legalPicks, normalizePick, validatePick } from './pick';
 import { resolveRaid, revealRaid } from './raid';
 import { scoreTown, tiebreakOf } from './score';
@@ -25,11 +24,14 @@ export function windamereRuleset(rules: WwRules): Ruleset<WwSeat, WwTable> {
     maxSeats: 7,
     cards: rules.content.cards,
     effects: rules.effects,
-    prompts: {},
+    prompts: { [GREAT_WORK_CHOICE]: greatWorkChoice(rules) },
     rounds: SEASONS.length,
     roundSpec: (state, round) => roundSpec(rules, state, round),
     setupTable: (ctx) => setupTable(rules, ctx),
     setupSeat: () => setupSeat(rules),
+    // R2.4, R2.5: the Great Work choice, before the first deal.
+    onGameStart: (ctx) => offerGreatWorks(rules, ctx),
+    startBeforeDeal: true,
     onRoundStart: (ctx, round) => revealRaid(rules, ctx, round),
     normalizePick: (state, seat, pick) => normalizePick(rules, state, seat, pick),
     validatePick: (state, seat, pick) => validatePick(rules, state, seat, pick),

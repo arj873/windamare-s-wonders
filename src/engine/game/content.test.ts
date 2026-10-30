@@ -145,6 +145,7 @@ describe('content check', () => {
     expect(DEFAULT_TUNABLES).toEqual({
       startingCoins: 5,
       honoursPerGame: 3,
+      greatWorksOffered: 2,
       handSize: 6,
       turnsPerSeason: 5,
       bankPrice: 5,

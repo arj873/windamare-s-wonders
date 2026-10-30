@@ -41,12 +41,21 @@ export type PromptStage = 'start' | 'turn' | 'roundEnd';
 
 export type Phase = { kind: 'pick' } | { kind: 'prompt'; then: PromptStage } | { kind: 'gameOver' };
 
-/** A follow-up decision for one seat. `data` (its options) is visible to that seat only. */
+/**
+ * A follow-up decision for one seat. `data` (its options) and `answer` are visible to that seat
+ * only. Prompts with the same `group` are open together and resolve when all are answered.
+ */
 export interface Prompt {
   id: number;
   seat: SeatId;
   kind: string;
   data: Json;
+  /** The id of the group's first prompt; a lone prompt is a group of one. */
+  group: number;
+  /** Public: this seat has answered (the answer waits for the rest of its group). */
+  answered: boolean;
+  /** The waiting answer; null until answered. */
+  answer: Json;
 }
 
 export interface RevealedPick {
@@ -216,7 +225,13 @@ export interface Ctx<S = unknown, T = unknown> {
   take(id: CardId): Card;
   /** Run `onPlay` of arbitrary specs (e.g. a monument stage). */
   trigger(seat: SeatId, specs: readonly EffectSpec[], source: Card | null, args?: Json): void;
+  /** Queue a prompt for one seat (a group of one: it resolves when answered). */
   prompt(seat: SeatId, kind: string, data: Json): void;
+  /**
+   * Queue one group of prompts, at most one per seat, answered at the same time: each answer is
+   * hidden and may change until the last one arrives; then all apply in `resolveOrder`.
+   */
+  promptGroup(entries: readonly { seat: SeatId; kind: string; data: Json }[]): void;
   log(seat: SeatId | null, kind: string, text: string, opts?: { data?: Json; to?: SeatId[] }): void;
   left(seat: SeatId): SeatId;
   right(seat: SeatId): SeatId;
@@ -274,6 +289,11 @@ export interface Ruleset<S = unknown, T = unknown> {
   setupTable(ctx: Ctx<S, T>): T;
   setupSeat(ctx: Ctx<S, T>, seat: SeatId): S;
   onGameStart?(ctx: Ctx<S, T>): void;
+  /**
+   * true: `onGameStart` and its prompts come before round 0 is dealt (no hands meanwhile).
+   * Default false: round 0 is dealt first.
+   */
+  startBeforeDeal?: boolean;
   /** Runs just before each round is dealt (round 0 included), before `roundSpec`. */
   onRoundStart?(ctx: Ctx<S, T>, round: number): void;
   validateOptions?(options: Record<string, Json>): string | null;

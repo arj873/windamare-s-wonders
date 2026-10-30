@@ -49,6 +49,13 @@ export function checkInvariants(state: DraftState<unknown, unknown>): string[] {
   if (prompting !== state.prompts.length > 0) {
     errors.push(`phase ${state.phase.kind} with ${state.prompts.length} prompts`);
   }
+  const head = state.prompts[0]?.group;
+  for (const p of state.prompts) {
+    if (p.answered && p.group !== head)
+      errors.push(`prompt ${p.id} answered before its group opened`);
+    if (!p.answered && p.answer !== null)
+      errors.push(`prompt ${p.id} has an answer but is not answered`);
+  }
   if ((state.phase.kind === 'gameOver') !== (state.result !== null)) {
     errors.push(`phase ${state.phase.kind} with result ${state.result === null ? 'null' : 'set'}`);
   }

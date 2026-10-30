@@ -12,6 +12,7 @@ import type {
   DraftState,
   GameConfig,
   GameResult,
+  Prompt,
   PromptStage,
   RevealedPick,
   Ruleset,
@@ -141,11 +142,18 @@ export function afterStage<S, T>(ctx: Ctx<S, T>, stage: PromptStage): void {
   }
 }
 
-/** The first queued prompt is now the open one: let its handler refresh its data. */
+/** The open group: the queue's head and the prompts of its group (they are queued together). */
+export function openGroup(state: DraftState<unknown, unknown>): Prompt[] {
+  const head = state.prompts[0];
+  return head ? state.prompts.filter((p) => p.group === head.group) : [];
+}
+
+/** The head group is now the open one: let each prompt's handler refresh its data. */
 export function openHead<S, T>(ctx: Ctx<S, T>): void {
-  const head = ctx.state.prompts[0];
-  const refresh = head && ctx.rules.prompts[head.kind]?.refresh;
-  if (head && refresh) head.data = refresh(ctx.state, head);
+  for (const p of openGroup(ctx.state as DraftState<unknown, unknown>)) {
+    const refresh = ctx.rules.prompts[p.kind]?.refresh;
+    if (refresh) p.data = refresh(ctx.state, p);
+  }
 }
 
 /** The flow after `stage` and its prompts are done. */
@@ -153,6 +161,8 @@ export function continueAfter<S, T>(ctx: Ctx<S, T>, stage: PromptStage): void {
   const draft = ctx.state;
   switch (stage) {
     case 'start':
+      // `startBeforeDeal`: the start prompts came before the first deal (docs/ENGINE.md §5).
+      if (ctx.rules.startBeforeDeal === true) deal(ctx, 0);
       enterPick(ctx);
       return;
     case 'turn':

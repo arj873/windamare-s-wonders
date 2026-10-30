@@ -59,9 +59,29 @@ export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng
     },
     trigger,
     prompt(seat, kind, data) {
-      seatOf(seat);
-      if (!rules.prompts[kind]) throw new Error(`unknown prompt kind: ${kind}`);
-      draft.prompts.push({ id: draft.nextPromptId++, seat, kind, data });
+      ctx.promptGroup([{ seat, kind, data }]);
+    },
+    promptGroup(entries) {
+      if (entries.length === 0) return;
+      const seats = new Set<SeatId>();
+      for (const e of entries) {
+        seatOf(e.seat);
+        if (!rules.prompts[e.kind]) throw new Error(`unknown prompt kind: ${e.kind}`);
+        if (seats.has(e.seat)) throw new Error(`two prompts for seat ${e.seat} in one group`);
+        seats.add(e.seat);
+      }
+      const group = draft.nextPromptId;
+      for (const e of entries) {
+        draft.prompts.push({
+          id: draft.nextPromptId++,
+          seat: e.seat,
+          kind: e.kind,
+          data: e.data,
+          group,
+          answered: false,
+          answer: null,
+        });
+      }
     },
     log(seat, kind, text, opts = {}) {
       const entry: LogEntry = {

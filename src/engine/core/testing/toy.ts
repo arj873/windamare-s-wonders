@@ -4,7 +4,8 @@
  * income, end-game points, a prompt during resolution and an optional prompt at game start.
  * Never import it from shipped code.
  *
- * Options: `rounds` (default 2), `opening: true` (every seat answers an 'opening' prompt first).
+ * Options: `rounds` (default 2), `opening: true` (every seat answers an 'opening' prompt first,
+ * one after the other), `openingGroup: true` (the same prompts as one group, answered at once).
  */
 import { effectScore } from '../effects';
 import type { Card, CardDef, DraftState, EffectSpec, Json, Pick, Ruleset, SeatId } from '../types';
@@ -115,8 +116,12 @@ export const toyRuleset: Ruleset<ToySeat, ToyTable> = {
   setupTable: () => ({ trace: [] }),
   setupSeat: () => ({ coins: START_COINS, opening: null }),
   onGameStart(ctx) {
-    if (ctx.state.config.options?.opening !== true) return;
-    for (const s of ctx.state.seats) ctx.prompt(s.id, 'opening', { choices: ['coins', 'none'] });
+    const data = { choices: ['coins', 'none'] };
+    if (ctx.state.config.options?.openingGroup === true) {
+      ctx.promptGroup(ctx.state.seats.map((s) => ({ seat: s.id, kind: 'opening', data })));
+    } else if (ctx.state.config.options?.opening === true) {
+      for (const s of ctx.state.seats) ctx.prompt(s.id, 'opening', data);
+    }
   },
   validatePick: checkToyPick,
   legalPicks(state, seat) {
@@ -194,6 +199,7 @@ export const toyRuleset: Ruleset<ToySeat, ToyTable> = {
         const data = seatOf(ctx.state, prompt.seat).data;
         data.opening = answer as string;
         if (answer === 'coins') data.coins += 1;
+        ctx.state.table.trace.push(`opening:${prompt.seat}`);
       },
       defaultAnswer: () => 'none',
     },

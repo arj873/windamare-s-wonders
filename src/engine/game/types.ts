@@ -89,6 +89,8 @@ export interface WwTunables {
   startingCoins: number;
   /** R2.3 */
   honoursPerGame: number;
+  /** R2.4: Great Works dealt to each town to choose from. */
+  greatWorksOffered: number;
   /** R3.2, 3-7 seats. One more than `turnsPerSeason`: the last turn's spare card is the glean. */
   handSize: number;
   /** R3.4 */
