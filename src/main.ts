@@ -7,10 +7,13 @@ import { sfx } from './audio';
 import { boot, type BootHandle } from './game/boot';
 import { bootOnline, roomFromUrl } from './game/online';
 import { windamereBinding } from './game/windamere';
+import { mountAudition, wantsAudition } from './ui/fx/audition';
 import type { WwSeat, WwTable } from './engine';
 
 // The fx lane's sound engine starts silent; the first click, key or touch unlocks it.
 sfx.installUnlock(document);
+// ?sfx=1: fx's sound audition panel (F4), for tuning recipes by ear.
+if (wantsAudition(location.search)) mountAudition(document.body);
 
 // index.html names no icon, so browsers asked for /favicon.ico (404). Point them at art's
 // Renown mark until platform or art ship a favicon of its own.
