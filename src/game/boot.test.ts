@@ -61,13 +61,19 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
-  it('plays Windamere: Start deals a 6-card hand, bots answer, picks resolve', () => {
+  it('plays Windamere: choose a Great Work, then a 6-card hand, bots answer, picks resolve', () => {
     vi.useFakeTimers();
     localStorage.setItem('ww.botSpeed', 'instant');
     const root = mount();
     const app = boot(root, { game: windamereBinding() });
     click(root, '[data-k="start"]');
+    expect(root.querySelector('.dt-prompt h2')?.textContent).toBe('Choose your Great Work');
+    expect(root.querySelectorAll('.dt-answer')).toHaveLength(2);
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(0);
+    vi.advanceTimersByTime(10); // the bots choose theirs
+    click(root, '[data-k="answer-0"]');
     expect(root.querySelectorAll('.dt-card')).toHaveLength(6);
+    expect(app.play?.game.state.seats[0]?.data).toMatchObject({ greatWork: expect.any(String) });
     expect(root.querySelector('.dt-round')?.textContent).toMatch(/^Spring · Pick 1 of 5/);
     click(root, '.dt-card');
     click(root, '[data-k^="use-"][data-k$="-spend"]');

@@ -8,11 +8,27 @@ const { rules, engine } = windamere();
 const present = windamerePresenter(rules, engine);
 const looks = Array.from({ length: 4 }, () => ({ color: '#888888', bot: false }));
 
-const newGame = (): WwState =>
+const fresh = (): WwState =>
   engine.createGame({
     seed: 'present',
     seats: ['Ana', 'Bo', 'Cy', 'Dee'].map((name) => ({ name })),
   });
+
+/** Every waiting town takes its default action while `until` says go on. */
+function advance(state: WwState, until: (s: WwState) => boolean): WwState {
+  let s = state;
+  while (!until(s)) {
+    for (const seat of engine.waitingOn(s)) {
+      const r = engine.applyAction(s, engine.defaultAction(s, seat)!);
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+  }
+  return s;
+}
+
+/** Past the Great Work choice (R2.5): Spring is dealt. */
+const newGame = (): WwState => advance(fresh(), (s) => s.phase.kind === 'pick');
 
 const model = (state: WwState, viewer = 0) =>
   tableModel({ view: engine.viewFor(state, viewer), engine, present, looks });
@@ -23,6 +39,7 @@ function pastureState(coins: number, leftReed: number, rightReed: number): WwSta
   const me = s.seats[0]!;
   me.hand[0] = { id: me.hand[0]!.id, def: 'fell-pasture' };
   me.data.coins = coins;
+  me.data.greatWork = null; // no Perk (a discount or Exchange would change the options)
   for (const g of rules.goods) {
     me.data.store[g] = 0;
     s.seats[1]!.data.store[g] = 0;
@@ -34,6 +51,40 @@ function pastureState(coins: number, leftReed: number, rightReed: number): WwSta
 }
 
 describe('windamerePresenter', () => {
+  it('opens with the Great Work choice: 1 of 2, Perk and tiers shown, hidden from others', () => {
+    const s = fresh();
+    const m = model(s, 0);
+    expect(m.phase).toBe('prompt');
+    expect(m.round).toBe('Spring');
+    expect(m.hand).toEqual([]);
+    expect(m.status).toBe('Choose your Great Work');
+    expect(m.prompt?.answers).toHaveLength(2);
+    for (const a of m.prompt!.answers) {
+      expect(a.detail).toMatch(/^Perk: .+\nI at \d+ labour: /);
+      expect(a.chosen).toBe(false);
+    }
+    const choice = m.prompt!.answers[1]!;
+    const r = engine.applyAction(s, {
+      type: 'answer',
+      seat: 0,
+      prompt: m.prompt!.id,
+      answer: choice.answer,
+    });
+    if (!r.ok) throw new Error(r.error);
+    const after = model(r.state, 0);
+    expect(after.prompt?.answers[1]!.chosen).toBe(true);
+    expect(after.prompt?.answered).toBe(true);
+    expect(after.status).toBe('Waiting for Bo, Cy and Dee');
+    expect(after.seats.map((x) => x.status)).toEqual([
+      'picked',
+      'thinking',
+      'thinking',
+      'thinking',
+    ]);
+    // Another town sees that Ana chose, not what.
+    expect(model(r.state, 1).prompt?.answers.every((a) => !a.chosen)).toBe(true);
+  });
+
   it('names the Season, the Raid, the market and every town stat', () => {
     const m = model(newGame());
     expect(m.round).toBe('Spring · Pick 1 of 5');

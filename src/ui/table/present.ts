@@ -64,6 +64,10 @@ export interface ChoiceRow {
 export interface PromptInfo {
   title: string;
   answer(answer: Json): string;
+  /** Longer text under an answer (a Great Work's Perk and tiers); '' = none. */
+  detail?(answer: Json): string;
+  /** One line under the title ("Hidden until everyone has chosen. You can change it."). */
+  hint?: string;
 }
 
 export interface Presenter<S = unknown, T = unknown> {

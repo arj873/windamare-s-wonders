@@ -4,7 +4,7 @@ import type { GameBinding } from '../play';
 import { windamere } from './content';
 import { windamerePresenter } from './present';
 
-export { WINDAMERE_CONTENT, windamere } from './content';
+export { windamere } from './content';
 export { windamerePresenter } from './present';
 
 export function windamereBinding(): GameBinding<WwSeat, WwTable> {

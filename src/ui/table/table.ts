@@ -716,28 +716,50 @@ export class DraftTable {
     );
   }
 
+  /**
+   * The viewer's open prompt in the hand row: one card-like button per answer. Answers to a
+   * group prompt (the Great Work choice) stay hidden and changeable until everyone has chosen.
+   */
   private prompt(p: PromptModel): HTMLElement {
+    const chosen = p.answers.find((a) => a.chosen);
     return h(
       'section',
       { class: 'dt-hand dt-prompt', attrs: { 'aria-label': p.title } },
-      h('header', { class: 'dt-hand-head' }, h('h2', {}, p.title)),
+      h(
+        'header',
+        { class: 'dt-hand-head' },
+        h('h2', {}, p.title),
+        h(
+          'span',
+          { class: 'muted dt-keys' },
+          chosen ? `You chose ${chosen.label}. You can still change it.` : p.hint,
+        ),
+      ),
       h(
         'div',
-        { class: 'dt-answers' },
+        { class: 'dt-answers', attrs: { role: 'radiogroup', 'aria-label': p.title } },
         ...p.answers.map((a, i) =>
           h(
             'button',
             {
-              class: `btn ${i === 0 ? 'btn-primary' : ''}`,
+              class: `btn dt-answer${a.chosen ? ' is-chosen' : ''}${
+                !p.answered && i === 0 ? ' btn-primary' : ''
+              }`,
               attrs: {
+                role: 'radio',
+                'aria-checked': String(a.chosen),
                 'data-act': `answer:${i}`,
                 'data-k': `answer-${i}`,
                 'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
               },
             },
-            a.label,
-            i < 9 && ' ',
-            i < 9 && h('kbd', {}, String(i + 1)),
+            h(
+              'span',
+              { class: 'dt-answer-head' },
+              h('span', { class: 'dt-answer-label' }, a.chosen ? `✓ ${a.label}` : a.label),
+              i < 9 && h('kbd', {}, String(i + 1)),
+            ),
+            a.detail && h('span', { class: 'dt-answer-detail' }, a.detail),
           ),
         ),
       ),

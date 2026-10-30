@@ -282,7 +282,27 @@ export function windamerePresenter(
     },
     roundName: (round) => capitalize(SEASONS[round] ?? `Season ${round + 1}`),
     zones: { glean: 'Glean', covered: 'Covered' },
-    prompt: (prompt) => ({ title: prompt.kind, answer: (a) => JSON.stringify(a) }),
+    prompt(prompt) {
+      if (prompt.kind !== 'greatWork') {
+        return { title: prompt.kind, answer: (a) => JSON.stringify(a) };
+      }
+      // R2.4, R2.5: choose 1 of the offered Great Works, hidden until everyone has chosen.
+      const work = (a: Json) => (typeof a === 'string' ? rules.greatWork(a) : null);
+      return {
+        title: 'Choose your Great Work',
+        hint: 'Hidden until every town has chosen. You can change it until then.',
+        answer: (a) => work(a)?.name ?? String(a),
+        detail: (a) => {
+          const gw = work(a);
+          if (!gw) return '';
+          const tiers = gw.tiers.map(
+            (t, i) =>
+              `${['I', 'II', 'III', 'IV'][i] ?? i + 1} at ${t.threshold} labour: ${effectsText(rules, t.reward)}`,
+          );
+          return [`Perk: ${effectsText(rules, gw.perk)}`, ...tiers].join('\n');
+        },
+      };
+    },
     scoreLabel: (category) => BAND_LABELS[category] ?? category,
     banner(view) {
       const raid = currentRaid(rules, view);
