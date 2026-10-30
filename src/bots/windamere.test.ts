@@ -195,4 +195,24 @@ describe('bots on the Windamere ruleset', () => {
       valueOf(rules, rich, 0, { def: plain, role: 'build' }) ?? 0,
     );
   });
+
+  it('the I1 metric counts the D10b neighbour types in the net share', () => {
+    const { summary } = runSim(
+      {
+        engine: windamere,
+        bots: createGreedyBot(windamereAdapter(), 'greedy'),
+        seats: 3,
+        observe: (s) => observeWindamere(windamereRules, s),
+      },
+      6,
+      1,
+    );
+    const d = summary.metrics.nbrD10b ?? [];
+    const net = summary.metrics.nbrNet ?? [];
+    expect(d.length).toBe(18);
+    expect(d.every((x) => x >= 0)).toBe(true);
+    // The D10b Renown is part of the net, so the net is at least the Renown it adds minus the
+    // coins the town paid; with 3 greedy towns some pay nothing, so some net values reach it.
+    expect(d.some((x, k) => x > 0 && (net[k] ?? 0) >= x - 3)).toBe(true);
+  });
 });
