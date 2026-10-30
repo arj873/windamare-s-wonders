@@ -1,0 +1,6 @@
+{
+  "extends": "l2-final-2.json",
+  "name": "l3-halls-2",
+  "hypothesis": "On the package (expected D9c), Town (Hall + Landmark + other card Renown) is still the winner's top R12.2 group in 40-63% at level 1 and 74-84% at level 2 (S1 <= 55%); Hall is its biggest part at level 2 (10-13 Renown of a winner's ~67). Halls -2 printed Renown in all (the package's -1 and one more; 2-9 -> 1-7) cut Town under 55% at level 1 and well down at level 2. scoreBeat is untouched, so the rivalry share (I1 4-13%) stays.",
+  "cardRenown": { "delta": -2, "kinds": ["hall"] }
+}

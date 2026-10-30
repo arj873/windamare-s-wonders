@@ -12,9 +12,15 @@
  *     Spend band with labour gets `labourDelta` labour (floored at 0) and `refund` coins
  *     (default 1) per labour removed; every matching band gets `coinsDelta` coins
  *   cardRenown: { delta, kinds?, seasons? } — printed `renown` of matching cards + delta (min 1)
+ *   cardEffect: { types, delta, min?, kinds?, seasons?, ids? } — the `amount` of every effect of
+ *     those types on matching cards + delta (floored at `min`, default 1)
  *   raids: { "<id>": { strength } }
+ *   extends: "<file>.json" (next to this one) — start from that overlay. Keyed maps (tunables,
+ *     greatWorks, cards, raids) merge key by key, a Great Work's or card's patch field by field;
+ *     every other field of this overlay replaces the base's.
  */
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type {
   EffectSpec,
   GreatWorkDef,
@@ -57,11 +63,49 @@ export interface Overlay {
   };
   /** Printed `renown` of every matching card + `delta`, floored at 1 (cards with none untouched). */
   cardRenown?: { delta: number; kinds?: string[]; seasons?: string[] };
+  /** `amount` of every effect of `types` on matching cards + `delta`, floored at `min` (1). */
+  cardEffect?: {
+    types: string[];
+    delta: number;
+    min?: number;
+    kinds?: string[];
+    seasons?: string[];
+    ids?: string[];
+  };
   raids?: Record<string, { strength: number }>;
+  /** Another overlay file, next to this one, to start from. */
+  extends?: string;
 }
 
-export function loadOverlay(path: string): Overlay {
-  return JSON.parse(readFileSync(path, 'utf8')) as Overlay;
+const KEYED = ['tunables', 'greatWorks', 'cards', 'raids'] as const;
+
+/** `own` on top of `base`: keyed maps merge per key (and per field inside), the rest replaces. */
+export function mergeOverlays(base: Overlay, own: Overlay): Overlay {
+  const out: Overlay = { ...base, ...own };
+  for (const k of KEYED) {
+    const a = (base[k] ?? {}) as Record<string, unknown>;
+    const b = (own[k] ?? {}) as Record<string, unknown>;
+    if (!base[k] && !own[k]) continue;
+    const merged: Record<string, unknown> = { ...a };
+    for (const [id, v] of Object.entries(b)) {
+      const prev = merged[id];
+      merged[id] =
+        k !== 'tunables' && prev && typeof prev === 'object' && v && typeof v === 'object'
+          ? { ...prev, ...v }
+          : v;
+    }
+    (out as Record<string, unknown>)[k] = merged;
+  }
+  delete out.extends;
+  return out;
+}
+
+export function loadOverlay(path: string, seen: string[] = []): Overlay {
+  if (seen.includes(path)) throw new Error(`overlay: extends loop ${[...seen, path].join(' -> ')}`);
+  const own = JSON.parse(readFileSync(path, 'utf8')) as Overlay;
+  if (!own.extends) return own;
+  const base = loadOverlay(join(dirname(path), own.extends), [...seen, path]);
+  return mergeOverlays(base, own);
 }
 
 const four = (xs: unknown, what: string): number[] => {
@@ -124,6 +168,8 @@ export function applyOverlay(base: WwContent, ov: Overlay): WwContent {
   const cardIds = new Set(base.cards.map((c) => c.id));
   for (const id of Object.keys(ov.cards ?? {}))
     if (!cardIds.has(id)) throw new Error(`overlay: unknown card "${id}"`);
+  for (const id of ov.cardEffect?.ids ?? [])
+    if (!cardIds.has(id)) throw new Error(`overlay: unknown card "${id}" in cardEffect`);
   const raidIds = new Set(base.raids.map((r) => r.id));
   for (const id of Object.keys(ov.raids ?? {}))
     if (!raidIds.has(id)) throw new Error(`overlay: unknown Raid "${id}"`);
@@ -160,6 +206,20 @@ export function applyOverlay(base: WwContent, ov: Overlay): WwContent {
     ) {
       const effects = out.effects.map((e) =>
         e.type === 'renown' ? { ...e, amount: Math.max(1, (e.amount as number) + cr.delta) } : e,
+      );
+      out = { ...out, effects };
+    }
+    const ce = ov.cardEffect;
+    if (
+      ce &&
+      (!ce.kinds || ce.kinds.includes(c.kind)) &&
+      (!ce.seasons || ce.seasons.includes(c.season)) &&
+      (!ce.ids || ce.ids.includes(c.id))
+    ) {
+      const effects = out.effects.map((e) =>
+        ce.types.includes(e.type) && typeof e.amount === 'number'
+          ? { ...e, amount: Math.max(ce.min ?? 1, e.amount + ce.delta) }
+          : e,
       );
       out = { ...out, effects };
     }

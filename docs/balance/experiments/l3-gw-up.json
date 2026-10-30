@@ -1,0 +1,21 @@
+{
+  "extends": "l2-final-2.json",
+  "name": "l3-gw-up",
+  "hypothesis": "The other way round: lift a rival group instead of cutting Town. Every Great Work tier III and IV +1 Renown (on top of the package's per-work values) moves winners' largest group from Town to Great Work. Risk: Great Work by 8 sources is already 37-52% at level 1 (55% target), and level-2 tier IV is 54-71%, so this may trade one S1 miss for another. (Per-work deltas, not '*': a '*' patch runs before the package's absolute per-work values and would be overwritten.)",
+  "greatWorks": {
+    "the-mere-bridge": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-wind-organ": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-beacon-crown": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-salt-stair": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-stonewrights-spire": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-hall-of-echoes": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-harvest-wheel": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-ice-lantern": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-wolf-gate": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-tide-mill": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-lantern-market": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-ring-of-oaths": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-coinwell": { "tierRenownDelta": [0, 0, 1, 1] },
+    "the-fourfold-gate": { "tierRenownDelta": [0, 0, 1, 1] }
+  }
+}

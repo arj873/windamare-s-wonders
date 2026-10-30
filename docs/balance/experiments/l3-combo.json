@@ -1,0 +1,10 @@
+{
+  "extends": "l3-halls-2.json",
+  "name": "l3-combo",
+  "hypothesis": "The two Town cuts that worked alone, together: Halls -2 in all (l3-halls-2: level-1 Town <= 54% everywhere, level-2 Town 54-74%) and every Landmark score effect -1 except scoreBeat (l3-landmarks-down: level-2 Town -4..-10 pts). Town falls further at level 2 than either alone, still without touching scoreBeat. Watch Great Work by 8 sources at level 2 (56-57% at 2/4 seats with l3-halls-2).",
+  "cardEffect": {
+    "kinds": ["landmark"],
+    "types": ["scoreSeasons", "scoreThreshold", "scorePerKind", "scoreSets", "scoreGoods"],
+    "delta": -1
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "l2-final-2.json",
+  "name": "l3-hall-landmarks",
+  "hypothesis": "Two Landmarks pay for Halls and so stack on the Hall engine inside Town: Wayfarers' Cross (2 per Season with a Hall) and Long Table (2 per Hall). Each 2 -> 1 trims Town where it is strongest without touching Halls themselves or any scoreBeat. Expect a smaller Town drop than l3-halls-2, at both levels.",
+  "cardEffect": {
+    "ids": ["wayfarers-cross", "long-table"],
+    "types": ["scoreSeasons", "scorePerKind"],
+    "delta": -1
+  }
+}

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { checkContent, windamereContent } from '../src/engine';
-import { applyOverlay, loadOverlay } from './balance-overlay';
+import { applyOverlay, loadOverlay, mergeOverlays } from './balance-overlay';
 
 const base = windamereContent();
 const renown = (specs: readonly { type: string; amount?: unknown }[]) =>
@@ -74,6 +74,51 @@ describe('balance overlays', () => {
           ),
         );
     }
+  });
+
+  it('shifts the chosen effect types only, never below min', () => {
+    const c = applyOverlay(base, {
+      cardEffect: { kinds: ['landmark'], types: ['scoreThreshold', 'scoreSeasons'], delta: -1 },
+    });
+    for (const [i, card] of c.cards.entries()) {
+      const was = base.cards[i]?.effects ?? [];
+      expect(card.effects).toEqual(
+        card.kind !== 'landmark'
+          ? was
+          : was.map((e) =>
+              e.type === 'scoreThreshold' || e.type === 'scoreSeasons'
+                ? { ...e, amount: Math.max(1, (e.amount as number) - 1) }
+                : e,
+            ),
+      );
+    }
+  });
+
+  it('extends: keyed maps merge per key and per field, other fields replace', () => {
+    const merged = mergeOverlays(
+      {
+        name: 'base',
+        tunables: { bankPrice: 5, honourSole: 3 },
+        greatWorks: { 'the-coinwell': { tierRenown: [1, 1, 1, 1] }, 'the-tide-mill': {} },
+        cardRenown: { delta: -1, kinds: ['hall'] },
+      },
+      {
+        name: 'own',
+        tunables: { bankPrice: 7 },
+        greatWorks: { 'the-coinwell': { thresholds: [1, 2, 3, 4] } },
+        cardRenown: { delta: -2, kinds: ['hall'] },
+        extends: 'base.json',
+      },
+    );
+    expect(merged).toEqual({
+      name: 'own',
+      tunables: { bankPrice: 7, honourSole: 3 },
+      greatWorks: {
+        'the-coinwell': { tierRenown: [1, 1, 1, 1], thresholds: [1, 2, 3, 4] },
+        'the-tide-mill': {},
+      },
+      cardRenown: { delta: -2, kinds: ['hall'] },
+    });
   });
 
   it('rejects unknown ids', () => {

@@ -1,0 +1,6 @@
+{
+  "extends": "l3-combo.json",
+  "name": "l3-combo-v",
+  "hypothesis": "l3-combo plus a milder Valour rise, 2/3/4/5 -> 2/3/5/6 (Autumn and Winter only). l3-valour-up (3/4/5/6) cut Town most at level 1 (35-49%) and pulled level-2 Great Work down to 31-39% of winners, but made Valour level 1's top source at 3 seats (62%). The milder rise spreads winners' Renown over more groups without letting Valour take over.",
+  "tunables": { "valourBySeason": [2, 3, 5, 6] }
+}
