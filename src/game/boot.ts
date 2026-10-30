@@ -67,6 +67,8 @@ export interface BootHandle<S, T> {
   readonly home: HomeScreen | null;
   readonly setup: SetupScreen | null;
   readonly play: PlayHandle<S, T> | null;
+  /** Show the home screen (the online lane calls this when a player leaves a room). */
+  showHome(): void;
 }
 
 export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): BootHandle<S, T> {
@@ -219,5 +221,6 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     get play() {
       return play;
     },
+    showHome,
   };
 }

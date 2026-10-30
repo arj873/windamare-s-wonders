@@ -35,7 +35,18 @@ function whenGone(root: HTMLElement, selector: string, maxMs = 12_000): Promise<
   });
 }
 
-export function windamereFx(rules: WwRules): RevealHook<WwSeat, WwTable> {
+export interface WindamereFxOptions {
+  /**
+   * Whose actions are "local" (louder cues): 'humans' = every human at this table (hotseat,
+   * the default); 'viewer' = only the player on this screen (online).
+   */
+  local?: 'humans' | 'viewer';
+}
+
+export function windamereFx(
+  rules: WwRules,
+  opts: WindamereFxOptions = {},
+): RevealHook<WwSeat, WwTable> {
   /** Bumped by skip/dispose and by every new action, so an older run stops at its next step. */
   let generation = 0;
   const label = (id: string): string => {
@@ -56,9 +67,10 @@ export function windamereFx(rules: WwRules): RevealHook<WwSeat, WwTable> {
       const mine = ++generation;
       const live = () => mine === generation;
       const seat = (s: number) => model.seats[s];
-      // Hotseat: every human at this table is local (louder); bots are quietest.
+      // Hotseat: every human at this table is local (louder); online only the viewer. Bots are
+      // quietest.
       const who: TableFx = {
-        isLocal: (s) => seat(s)?.bot === false,
+        isLocal: (s) => (opts.local === 'viewer' ? s === model.viewer : seat(s)?.bot === false),
         isBot: (s) => seat(s)?.bot ?? false,
       };
       const instant = reducedMotion;

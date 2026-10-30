@@ -11,12 +11,18 @@ import { windamerePresenter } from './present';
 export { windamere } from './content';
 export { windamerePresenter } from './present';
 
-export function windamereBinding(): GameBinding<WwSeat, WwTable> {
+/**
+ * `online`: the binding for the online table (only the viewer's actions sound "local"; the
+ * hotseat default treats every human at the table as local).
+ */
+export function windamereBinding(
+  mode: 'hotseat' | 'online' = 'hotseat',
+): GameBinding<WwSeat, WwTable> {
   const { rules, engine } = windamere();
   return {
     engine,
     present: windamerePresenter(rules, engine),
-    fx: windamereFx(rules),
+    fx: windamereFx(rules, { local: mode === 'online' ? 'viewer' : 'humans' }),
     clock: windamereClock,
     // Tutorial lane (src/ui/help): tooltips, rules overlay, the card list on the current Season.
     help: {
