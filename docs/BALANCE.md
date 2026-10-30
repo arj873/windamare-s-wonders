@@ -1,4 +1,7 @@
-# Balance report: Windamere on main after D9b, bot levels 1 and 2 (cards L1, L2)
+# Balance report: Windamere at bot levels 1 and 2 (cards L1-L4)
+
+**Current state: section 8 (L4, main `86c28af`, D9c + D10b + L3 + D10c as shipped).** Sections
+0-7 are the history that led there, each on the main it names.
 
 Owner: balance lane. Run 2026-10-30 on main `4fb5baf`: design D9b (`868c469`, -1 good on 21
 Summer/Autumn cards) on top of D9 (Great Work thresholds 4/9/15/22, Valour 2/3/4/5), engine E4
@@ -13,7 +16,11 @@ points (2 seats) to 1.1 (7 seats).
 **Bases.** Sections 0-5 are on main `4fb5baf` (the L2 work). Section 6 reruns the baselines and
 the hand-off package on main `9c09f9e` (design D10a: 4 rivalry cards; bots B5b: the Wolf Gate is
 rated), the base for design's D9c. Section 7 (L3) is on main `0bf1efe` (D11, E7, B6) with the
-package on top, i.e. the expected D9c.
+package on top, i.e. the expected D9c. Section 8 (L4) is main `86c28af` with nothing on top.
+
+**S1 changed meaning in section 8.** Research R9: S1 is the winner's top of the 8 sources (cap
+55%, at least 4 sources reaching 10% of winners); the R12.2 group view is S1g, a report line
+flagged above 75%. Sections 0-7 used "S1 by group" with a 55% cap; read those as S1g.
 
 ## 0. Read this first
 
@@ -291,3 +298,78 @@ future value).
 **S1 definition, for research**: Town is three of the eight sources added together, so it beats
 any single group easily. By 8 sources, level 2 passes S1 on the package (Great Work 39-46%);
 by R12.2 group it fails. Which one the target means decides whether L3 is needed at all.
+(Research answered in R9: by the 8 sources; section 8.)
+
+## 8. L4: re-check on main `86c28af` (D9c, D10b, L3, D10c as shipped)
+
+What shipped is not exactly what was measured: design kept the originality rules, so neighbour
+prices are **1/1/1/3** (not 1/2/2/3: no price of 2), Great Work tiers have no plain 3 or 7 (e.g.
+Spire tier IV 8 -> 6, not 7), and design's L3 values differ in the same way. D10b adds 4 cards
+with the new neighbour types (Wend Fair, Commons of the Wend, Brokers' Arcade, Kinsfolk Hall);
+D10c a second copy of each rivalry card at 6-7 seats. So this section measures main as it is, no
+overlay. 1000 games per row, seeds 1-1000, 2-7 seats. Tables:
+`docs/balance/baseline/86c28af-level1.md`, `-level2.md`, `-k2.md`.
+
+### 8.1 Verdict, levels 1 and 2
+
+| Target                                                  | Level 1 (greedy)                                                                              | Level 2                                                                                                                        | Status                                        |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| Robustness                                              | 0 violations                                                                                  | 0 violations                                                                                                                   | pass                                          |
+| F1 seat fairness, fair +/- 3 pts                        | max dev 0.6-2.0 pts                                                                           | max dev 0.6-2.5 pts                                                                                                            | pass                                          |
+| F2 each Great Work fair x 0.75-1.25                     | 2 of 14 out: **Spire 1.61x** (tier IV 63%, others 12-22%), Harvest Wheel 1.52x (n=113)        | 3 of 14 out: **Tide Mill 1.43x**, Coinwell 1.37x, Salt Stair 0.66x (n=175); Spire 0.76x, Fourfold 0.76x, Wind Organ 0.75x edge | fail at both, different outliers              |
+| **S1** top source of 8 <= 55% (R9)                      | 33-49% (Great Work; Valour at 3 seats)                                                        | Great Work 43-57%: **over at 2 seats (57.3%) and 4 seats (55.6%)**                                                             | L1 pass, L2 fails at 2/4 seats                |
+| **S1** sources >= 10% of winners, per seat count (>= 4) | 3 / 2 / 2 / 3 / 4 / 2 (2..7 seats)                                                            | **3 / 4 / 2 / 3 / 3 / 3** (2..7 seats)                                                                                         | **fail** (passes at 6 seats L1, 3 seats L2)   |
+| S1g top R12.2 group, flag > 75% (R9)                    | Town <= 61% (2 seats: Great Work 36%)                                                         | Town 53 / 68 / 72 / **75 / 80 / 77%**                                                                                          | L1 fine; **L2 flagged at 5-7 seats**          |
+| S2 level-1 specialists fair x 0.6-1.5                   | Watch 1.09-1.52x, Market 0.58-0.97x, Holding 0.36-0.85x, Lore 0.17-0.68x, **Hall 0.08-0.50x** | -                                                                                                                              | **fail** (Hall plan dead after two Hall cuts) |
+| S3 Lore run >= 3 >= 25%; >= 5 in 5-15%                  | **26.5-32.7%** (pass); 3.1-4.3%                                                               | 10.4-15.4%; 1.4-4.1%                                                                                                           | L1 pass (run >= 5 short); L2 fail             |
+| S4 tier IV in 20-50%                                    | 15-24%: under at 2 seats (18%) and 3 seats (15%)                                              | **57-72%**; Spire 95%                                                                                                          | fail both, opposite ways                      |
+| R3 margin median <= 10%, blowouts <= 10%                | margin 11.3-25.8%; blowouts 56 / 37 / 30 / 24 / 20 / 18%                                      | margin 7.4-17.3% (passes at 4-7); **blowouts 34 / 17 / 12 / 8.6 / 6.2 / 5.7% (pass at 5-7)**                                   | L1 fail; L2 passes at 5-7 seats               |
+| I1 net neighbour share median >= 10%, bots' metric      | 4.5-12.2%                                                                                     | 4.3-13.2%                                                                                                                      | under-counts D10b (8.4)                       |
+| **I1 incl. D10b types** (mine, 8.4)                     | 7.8-16.7%: **passes at 3-7 seats**                                                            | **11.4-17.2%: passes at every count**                                                                                          | L2 pass; L1 pass except 2 seats               |
+| I3 Spring hold >= 50%                                   | 40-50%                                                                                        | 48-50%                                                                                                                         | about                                         |
+| P3 Spend share <= 25% Spring-Autumn                     | **passes at 3-7 seats** (Summer 12-23%, Autumn 13-23%); 2 seats Summer 40%, Autumn 31%        | Spring 26-27% (just over), Summer 32-39%, Autumn 41-47%                                                                        | L1 pass at 3-7; L2 fail                       |
+| K1 vs random >= 83% at 3 seats, >= 3x at 5              | 74.9% (2.25x) at 3; 50.7% (2.54x) at 5                                                        | 99.6% at 3; 98.9% (4.95x) at 5                                                                                                 | L1 fail (closer), L2 pass                     |
+| K2 each level >= 1.5x the one below                     | level 2 / level 1: 20-106x                                                                    | level 3 / level 2: 1.12-1.51x (5 seats 1.51x)                                                                                  | L2/L1 pass; L3/L2 fails except 5 seats        |
+| R4 winning score (report)                               | median 39-47, p95 52-61                                                                       | median 59-67, p95 73-78                                                                                                        | report                                        |
+
+### 8.2 Against what was measured for it (l3-combo on `0bf1efe`), not isolated
+
+Main also gained D10b, D10c and design's own values, so these deltas mix causes:
+
+- **Level-2 Town rose back**: S1g 55-65% -> 68-80% at 3-7 seats. Landmarks now carry it: a
+  level-2 winner's Landmark Renown is 6.5-13.1 (Hall 4.8-8.0), and Landmark is level 2's top
+  single source in 25-31% of games at 5-7 seats. Candidates: Commons of the Wend and Brokers'
+  Arcade (both D10b Landmarks), D10c's second rivalry Landmark (The Victors' Oak) at 6-7 seats,
+  design's L3 values.
+- **Level-2 Summer/Autumn Spends fell** 2-9 points (1/1/1/3 is cheaper than the 1/2/2/3 I ran).
+- **I1 at 6-7 seats rose** 4-5 points (D10c's second rivalry copies).
+- Level-1 F2 better (4 -> 2 of 14 out); blowouts within 1-4 points.
+
+### 8.3 For design's D12, in order of size
+
+1. **Level-2 Town is flagged (S1g 75-80% at 5-7 seats) and level-2 Great Work is over the S1 cap
+   at 2 and 4 seats.** Town at level 2 is now Landmarks more than Halls. Untested candidates: the
+   D10b Landmarks' amounts, or one more Landmark step; any Town cut lifts the Great Work (seen in
+   L3), so check S1 at 2 and 4 seats with it.
+2. **S1 breadth fails at both levels** (2-4 sources reach 10% of winners). Level-2 winners take
+   their top source from Great Work, Landmark and Purse; Lore is under 2%, Honours under 3%,
+   Valour 4-15%. A third paying source for level 2 is still the open fix (L3 §7.1).
+3. **The Hall-only plan is dead for level 1** (0.08-0.50x fair) and Holding-only is weak
+   (0.36-0.85x): the cost of two Hall cuts and D9c. Fine if design accepts that a one-kind plan
+   need not carry a weak player; otherwise it is S2's biggest miss.
+4. **S4 pulls two ways**: level 2 57-72% (ceiling 50%), level 1 15-24% (floor 20% fails at 2-3
+   seats). The Spire is the outlier at both levels (tier IV 63% / 95%).
+5. **F2**: Spire 1.61x at level 1 but 0.76x at level 2; Tide Mill 1.43x and Coinwell 1.37x at
+   level 2.
+6. Level-2 P3 (Summer/Autumn 32-47%); level-1 K1 and K2 level 3 over level 2 are bots matters.
+
+### 8.4 I1 and the D10b types
+
+`src/bots/windamereMetrics.ts` (`nbrShare`, the "I1 neighbour share median" everywhere in this
+report and in `results.md`) counts net neighbour coins and `scoreBeat` only. It misses D10b's
+`scoreNeighbourMin`, `scoreSales` and `onBuildNeighbourMin` (bots is adding them). No shipped card
+used those types before `86c28af`, so every I1 figure in sections 0-7 is complete for its main;
+only section 8's bots-metric row under-counts. My "I1 incl. D10b" (`scripts/balance.ts`) adds the
+two score types' Renown exactly, and Wend Fair's `onBuildNeighbourMin` coins from the Build log
+at 4 coins per Renown (exact while no `buildBonus` applies to Markets, true on this main). The
+D10b part is 1.0-1.8 Renown per town at level 1 and 1.8-4.3 at level 2; the coin part is 0.0-0.2.

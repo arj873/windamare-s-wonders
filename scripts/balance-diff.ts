@@ -41,18 +41,19 @@ const short: Record<string, string> = {
 
 /** [label, target, cell formatter for one seat row] */
 const ROWS: [string, string, (r: Record<string, number | string>) => string][] = [
+  // S1 by the 8 sources and S1g by R12.2 group, as research R9 defines them.
   [
-    'S1 winner top R12.2 group',
-    '<= 55%',
-    (r) => `${short[r.s1GroupTop as string] ?? r.s1GroupTop} ${pct(r.s1GroupTopShare as number)}`,
-  ],
-  ['S1 groups >= 10% of winners', '>= 4', (r) => String(r.s1Groups10)],
-  [
-    'winner top of 8 sources',
+    'S1 winner top source (of 8)',
     '<= 55%',
     (r) => `${short[r.s1Top as string] ?? r.s1Top} ${pct(r.s1TopShare as number)}`,
   ],
-  ['sources >= 10% of winners', 'report', (r) => String(r.s1Sources10)],
+  ['S1 sources >= 10% of winners', '>= 4', (r) => String(r.s1Sources10)],
+  [
+    'S1g winner top R12.2 group',
+    'flag > 75%',
+    (r) => `${short[r.s1GroupTop as string] ?? r.s1GroupTop} ${pct(r.s1GroupTopShare as number)}`,
+  ],
+  ['S1g groups >= 10% of winners', 'report', (r) => String(r.s1Groups10)],
   ['Great Work share of all Renown', 'report', (r) => pct(r['share.greatWork'] as number)],
   ['Hall share of all Renown', 'report', (r) => pct(r['share.hall'] as number)],
   ['S4 tier IV', '20-50%', (r) => pct(r.tier4 as number)],
@@ -85,6 +86,11 @@ const ROWS: [string, string, (r: Record<string, number | string>) => string][] =
             .join(' / '),
   ],
   ['I1 neighbour share median', '>= 10%', (r) => pct(r.nbrShareMedian as number)],
+  [
+    'I1 incl. D10b types',
+    '>= 10%',
+    (r) => (r.nbrShareAllMedian === undefined ? 'n/a' : pct(r.nbrShareAllMedian as number)),
+  ],
   ['F1 max seat deviation', '<= 3 pts', (r) => `${num((r.seatMaxDev as number) * 100)}`],
   ['winning score median', 'report', (r) => num(r.winScoreMedian as number)],
   [

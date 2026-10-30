@@ -22,6 +22,7 @@ import { windamereRules as sharedRules } from '../src/bots/windamere';
 import { rateGreatWork, windamereAdapter } from '../src/bots/windamereAdapter';
 import { observeWindamere, SOURCES, sourcesOf, type Source } from '../src/bots/windamereMetrics';
 import {
+  activeEffects,
   compileContent,
   createWindamereEngine,
   windamereContent,
@@ -137,6 +138,33 @@ function observe(s: WwState): Record<string, number[]> {
   }
   (m.bankGoodsPerTown ??= []).push(bank / s.seats.length);
   if (pays > 0) (m.coinsPerBuild ??= []).push(paid / pays);
+
+  // I1 with D10b's neighbour types, which observeWindamere does not count yet: Renown from
+  // scoreNeighbourMin and scoreSales, and onBuildNeighbourMin coins (a Build's logged gains,
+  // which are only that effect's while no buildBonus applies to the card's kind) / coinsPerRenown.
+  const per = windamereRules.tunables.coinsPerRenown;
+  const nbrBuild = new Set(
+    content.cards
+      .filter((c) => c.effects.some((e) => e.type === 'onBuildNeighbourMin'))
+      .map((c) => c.id),
+  );
+  const nbrCoins = s.seats.map(() => 0);
+  for (const e of s.log) {
+    const d = e.data as { card?: { def?: string }; gains?: Record<string, number> } | undefined;
+    if (e.kind === 'build' && e.seat !== null && nbrBuild.has(d?.card?.def ?? ''))
+      nbrCoins[e.seat] = (nbrCoins[e.seat] ?? 0) + (d?.gains?.coins ?? 0);
+  }
+  s.seats.forEach((x, i) => {
+    let d10b = 0;
+    for (const type of ['scoreNeighbourMin', 'scoreSales'])
+      for (const { spec } of activeEffects(windamereRules, s, x.id, type))
+        d10b += windamereRules.effects[spec.type]?.score?.(s, x.id, spec).renown ?? 0;
+    const coinsR = (nbrCoins[i] ?? 0) / per;
+    const tot = total(all[i] as Record<Source, number>);
+    (m.nbrD10bScore ??= []).push(d10b);
+    (m.nbrD10bCoins ??= []).push(coinsR);
+    (m.nbrShareAll ??= []).push(tot > 0 ? ((m.nbrNet?.[i] ?? 0) + d10b + coinsR) / tot : 0);
+  });
   return m;
 }
 
@@ -228,15 +256,18 @@ if (sections.has('1')) {
   out();
   out("Winner's largest source (S1; target: none > 55% of winners, at least 4 sources >= 10%):");
   out();
-  out('| seats | hall | landmark | otherCard | greatWork | valour | lore | honours | purse |');
-  out('|---|---|---|---|---|---|---|---|---|');
+  out(
+    '| seats | hall | landmark | otherCard | greatWork | valour | lore | honours | purse | sources >= 10% |',
+  );
+  out('|---|---|---|---|---|---|---|---|---|---|');
   for (const n of seatCounts) {
     const m = (equal[n] as SimSummary).metrics;
-    out(`| ${n} | ${SRCS.map((c) => pct(mean(m[`winnerLargest.${c}`]))).join(' | ')} |`);
+    const shares = SRCS.map((c) => mean(m[`winnerLargest.${c}`]));
+    out(`| ${n} | ${shares.map(pct).join(' | ')} | ${shares.filter((x) => x >= 0.1).length} |`);
   }
   out();
   out(
-    "Winner's largest R12.2 score-sheet group (S1 as written; Town = Hall + Landmark + other cards):",
+    "Winner's largest R12.2 score-sheet group (S1g, research R9: report, flag over 75%; Town = Hall + Landmark + other cards):",
   );
   out();
   out(`| seats | ${Object.keys(GROUPS).join(' | ')} |`);
@@ -263,6 +294,21 @@ if (sections.has('1')) {
     const gaps = SRCS.map((c) => mean(m[`gap.${c}`]));
     out(
       `| ${n} | ${f1(gaps.reduce((a, b) => a + b, 0))} | ${gaps.map(f1).join(' | ')} | ${f1(mean(m['gap.builds']))} | ${pct(mean(m.winnerMostBuilds))} |`,
+    );
+  }
+  out();
+  out(
+    'I1 with the D10b neighbour types (observeWindamere counts net coins and scoreBeat only; this adds scoreNeighbourMin and scoreSales Renown and onBuildNeighbourMin coins / coinsPerRenown):',
+  );
+  out();
+  out(
+    '| seats | I1 median, metrics as shipped | I1 median incl. D10b | D10b score Renown per town | D10b Build coins per town (Renown-equiv.) |',
+  );
+  out('|---|---|---|---|---|');
+  for (const n of seatCounts) {
+    const m = (equal[n] as SimSummary).metrics;
+    out(
+      `| ${n} | ${pct(quantile(m.nbrShare, 0.5))} | ${pct(quantile(m.nbrShareAll, 0.5))} | ${f1(mean(m.nbrD10bScore))} | ${f1(mean(m.nbrD10bCoins))} |`,
     );
   }
   out();
@@ -371,6 +417,9 @@ if (sections.has('1')) {
       loreRun5: ge(m.loreRun, 5),
       tier4: ge(m.tiers, 4),
       nbrShareMedian: quantile(m.nbrShare, 0.5),
+      nbrShareAllMedian: quantile(m.nbrShareAll, 0.5),
+      nbrD10bScore: mean(m.nbrD10bScore),
+      nbrD10bCoins: mean(m.nbrD10bCoins),
       heldSpring: mean(m['held.spring']),
       spendSpring: spendShare('spring'),
       spendSummer: spendShare('summer'),
