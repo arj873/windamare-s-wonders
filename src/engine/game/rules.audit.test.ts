@@ -14,6 +14,7 @@ import { FIXTURE } from './testing/fixture';
 import {
   atChoice,
   build,
+  fx,
   fxEngine as e,
   newGame,
   playTurn,
@@ -29,7 +30,6 @@ const DEF = new Map<string, WwCardDef>(FIXTURE.cards.map((c) => [c.id, c]));
 const defOf = (c: Card): WwCardDef => DEF.get(c.def)!;
 const GW = new Map(FIXTURE.greatWorks.map((g) => [g.id, g]));
 const RAID = new Map(FIXTURE.raids.map((r) => [r.id, r]));
-const PRICE = [1, 2, 3, 4];
 const VALOUR = [1, 2, 3, 4];
 
 // ---------------------------------------------------------------------------
@@ -906,8 +906,12 @@ describe('buying (R6.6, R6.7, R17.9-R17.11)', () => {
     expect(submit(s, 0, pk(keep, 'build', { pay: nonNeighbour })).ok).toBe(false); // R6.6: neighbours only
   });
 
-  it('R6.6c the price follows the Season: 1, 2, 3, 4 coins a good', () => {
-    for (const [round, price] of PRICE.entries()) {
+  it('R6.6c the price follows the Season, as the content tunables say (RULES.md R16)', () => {
+    const prices = fx.tunables.marketPrice;
+    expect(prices).toHaveLength(4);
+    expect(prices).toEqual([...prices].sort((a, b) => a - b)); // dearer as the year runs on
+    expect(prices[0]).toBe(1);
+    for (const [round, price] of prices.entries()) {
       const s = table();
       s.round = round;
       townData(s, 1).store.honey = 1;
@@ -938,9 +942,11 @@ describe('buying (R6.6, R6.7, R17.9-R17.11)', () => {
     expect(submit(s, 0, pk(mint, 'build', { pay: [] })).ok).toBe(true);
   });
 
-  it('R6.3 the bank price is 5 per missing good, even where a neighbour could sell it cheaper', () => {
+  it('R6.3 the bank price per missing good is the content tunable, always above any market price', () => {
+    const bank = fx.tunables.bankPrice;
+    expect(bank).toBeGreaterThan(Math.max(...fx.tunables.marketPrice));
     const s = table();
-    townData(s, 0).coins = 5;
+    townData(s, 0).coins = bank;
     const mint = setHand(s, 0, ['tf-mint'])[0]!;
     const r = submit(s, 0, pk(mint, 'build', { pay: [{ good: 'honey', via: 'bank' }] }));
     expect(r.ok).toBe(true);
@@ -948,8 +954,36 @@ describe('buying (R6.6, R6.7, R17.9-R17.11)', () => {
       const after = playTurn(s, {
         0: pk(mint, 'build', { pay: [{ good: 'honey', via: 'bank' }] }),
       });
-      expect(townData(after, 0).coins).toBe(0 + 2); // paid 5, +2 income from the new Mint
+      expect(townData(after, 0).coins).toBe(0 + 2); // paid the bank price, +2 income from the new Mint
+      // One coin fewer is not enough.
+      townData(s, 0).coins = bank - 1;
+      expect(submit(s, 0, pk(mint, 'build', { pay: [{ good: 'honey', via: 'bank' }] })).ok).toBe(
+        false,
+      );
     }
+  });
+
+  it('R17.9 what may be bought is the seller’s store at the start of the turn; its Spend can fill, never raise the limit', () => {
+    const s = table();
+    townData(s, 1).store.honey = 1;
+    const apiary = setHand(s, 1, ['tf-apiary'])[0]!; // Spend band: 2 honey, in step 1
+    const m0 = setHand(s, 0, ['tf-mint'])[0]!; // 1 honey
+    const m2 = setHand(s, 2, ['tf-mint'])[0]!;
+    const one = [{ good: 'honey', via: 'buy', from: 1 }];
+    const two = [one[0]!, one[0]!];
+    // The seller held 1 honey when picks were made: a second honey cannot be bought, whatever it spends.
+    expect(submit(s, 0, pk(m0, 'build', { pay: two })).ok).toBe(false);
+    // Two buyers want 1 each (store 1 at the start). The Spend's 2 honey (step 1) fills both.
+    const after = playTurn(s, {
+      0: pk(m0, 'build', { pay: one }),
+      1: pk(apiary, 'spend'),
+      2: pk(m2, 'build', { pay: one }),
+    });
+    const trades = after.log
+      .filter((l) => l.kind === 'trade')
+      .map((l) => (l.data as { filled: boolean }).filled);
+    expect(trades).toEqual([true, true]);
+    expect(townData(after, 1).store.honey).toBe(1 + 2 - 2);
   });
 
   it('R17.11 a bought good is used at once and never kept', () => {
