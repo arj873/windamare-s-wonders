@@ -40,3 +40,8 @@ Owned by the engine lane. See `docs/ENGINE.md` (not written yet).
 | `scripts/gate.sh`                  | frozen install + typecheck + lint + test; last line `GATE PASS` or `GATE FAIL`; CI runs it |
 
 Tests live next to the code as `*.test.ts`; QA audits are `*.audit.test.ts`.
+
+Browser automation (`playwright` devDep, used by qa/net): launch the system Chrome with
+`chromium.launch({ executablePath: '/usr/bin/google-chrome-stable' })`. No browser download
+(it would land in `~/.cache`, and never use `/tmp`). `pnpm pt` / `pnpm pt:serve` run
+`playtest/cli.ts` / `playtest/serve.ts` (qa lane); `pnpm e2e` is a stub.
