@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toy } from '../engine/core/testing/helpers';
 import { toyPresenter } from '../ui/table/testing/toy';
 import { boot } from './boot';
+import { BOT_LEVEL } from './play';
 import { windamereBinding } from './windamere';
 
 beforeEach(() => {
@@ -219,6 +220,10 @@ describe('boot', () => {
     expect(document.querySelector('.ww-dialog h2')?.textContent).toBe('All cards');
     app.play?.dispose();
     document.querySelectorAll('.ww-scrim').forEach((s) => s.remove());
+  });
+
+  it('maps setup bot levels onto the bots lane (Normal = level 2, Hard = level 3)', () => {
+    expect(BOT_LEVEL).toEqual({ easy: 'easy', normal: 'medium', hard: 'hard' });
   });
 
   it('refuses a setup the ruleset cannot seat, with a notice', () => {

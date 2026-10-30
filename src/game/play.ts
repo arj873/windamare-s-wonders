@@ -73,8 +73,12 @@ export interface PlayHandle<S, T> {
   dispose(): void;
 }
 
-/** Setup screen bot levels → the bots lane's levels (only 'easy' plays differently today). */
-const BOT_LEVEL: Record<BotLevel, BotStrength> = { easy: 'easy', normal: 'medium', hard: 'hard' };
+/** Setup screen bot levels → pickFor levels (bots B5: medium = level 2, hard = level 3). */
+export const BOT_LEVEL: Record<BotLevel, BotStrength> = {
+  easy: 'easy',
+  normal: 'medium',
+  hard: 'hard',
+};
 
 /** Timer ring refresh between renders, ms. */
 export const TICK_MS = 250;
