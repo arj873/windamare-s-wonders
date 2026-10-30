@@ -3,9 +3,10 @@
 Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this file.
 **If you change a public type in `src/engine/core/types.ts`, update this file in the same commit.**
 
-Status (2026-10-29): **E1 implemented** in `src/engine/core/` with 70 vitest tests (toy ruleset,
-§12). §1-§13 are what the code does. Not measured yet: simulation speed (§11). **§14 lists the
-contract changes the Windamere rules need (E1b): planned, not implemented.**
+Status (2026-10-29): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
+what the code does. Not measured yet: simulation speed (§11). **§14 lists the contract changes
+the Windamere rules still need (E1b): planned, not implemented. §15 is the Windamere game (E2):
+the unchanged systems are in; the turn structure waits for design's D2c.**
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
 resolution order, hand passing, rounds, prompts, scoring hooks and per-seat views. It does not
@@ -701,3 +702,74 @@ yield, greatWorkCheck]`, step-major, in seat order (R4.5). Winter skips `yield` 
 2. **R8.3** runs the Great Work check only after steps 2 and 4. Labour gained at Season end would
    wait for the next turn, and at Winter's end it would never count. No card in CARDS.md gives
    labour at Season end today, so this is moot unless one is added.
+
+## 15. The Windamere game (E2, in progress)
+
+`src/engine/game/`, exported from the barrel. Rules: `docs/RULES.md`, approved by the human
+(H1). D2c will change the turn structure (a single-card pick), the goods and add neighbour
+trade, so those parts are not written yet.
+
+**Content in, rules out.** `compileContent(content: WwContent): WwRules` (throws on bad content)
+turns design's data (`src/content/`, CARDS.md §1 shapes) into lookups, the effect registry and
+the R16 tunables (`DEFAULT_TUNABLES`; content may override any of them).
+`checkContent(content): string[]` is the check design's content tests run. **Goods are data:**
+`WwContent.goods` lists them in goods order, a town's `store` has exactly those keys, and no code
+names a good. Gains and costs are `{ <good>: n, coins, labour, any }` (`any` only in Spend bands
+and a card's own `onBuild`, R13.4: checked).
+
+**State** (`WwState = DraftState<WwSeat, WwTable>`, all of it public, R1.11):
+
+```ts
+interface WwSeat {
+  coins: number;
+  store: Record<GoodId, number>; // every content good, in goods order
+  labour: number; // only goes up
+  greatWork: string | null; // null until the choice is revealed
+  tiers: number; // completed, 0-4
+  valour: number[]; // Valour tokens, each its Season's value
+  covers: { card: CardId; by: CardId }[]; // R7.9: `card` (zone 'covered') lies under `by`
+}
+interface WwTable {
+  honours: string[]; // the 3 revealed at setup
+  raids: { id: string; revealed: boolean }[]; // by Season; unrevealed ones masked in views
+}
+```
+
+**Done (unchanged systems), each with tests named by rule id:**
+
+| System                  | Code                                                                                                                                   | Rules                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Setup                   | `setupTable` (Honours, Raids), `setupSeat`; Raid reveal in `onRoundStart`                                                              | R2.2, R2.3, R2.6, R3.2, R1.11        |
+| Halls, upgrades         | `checkBuildRules`, `buildCost`, `placeBuild` (covered cards move to the public `covered` zone)                                         | R7.1, R7.3, R7.8-R7.10, R13.1, R17.7 |
+| Great Work track, Perks | `greatWorkCheck`, `nextThreshold`; Perk and tiers via `activeEffects`                                                                  | R8.1-R8.6                            |
+| Raids                   | `resolveRaid` (Season end, every Guard read first), `currentRaid`                                                                      | R9.1-R9.7, R17.6, R14.5              |
+| Lore                    | `loreRanks`, `loreRuns`, `loreScore`                                                                                                   | R10.1-R10.5                          |
+| Honours                 | `honourStandings` (leaders all game, works on views), `honourScore`                                                                    | R11.1-R11.4                          |
+| End scoring             | `scoreTown` (categories `CATEGORIES`, R12.2 a-g), `tiebreakOf` [tiers, coins]                                                          | R12.2-R12.5, R7.7                    |
+| Effects                 | `renown guard lore onBuild onBuildPerKind heldBonus seasonEnd scorePerKind scorePerTier scorePerValour scoreSets scoreGoods scoreBeat` | R13, R17.8                           |
+
+Score by source (R12.2): on a card, `renown` is Buildings and the `score…` effects are
+Landmarks; on the Perk or a tier, both are Great Work. A covered card counts for nothing.
+Readers for ui and bots: `measure(rules, state, seat, id)` (R11.4), `guardOf`, `countKind`,
+`kindCounts`, `honourStandings`, `scoreTown`; all read public information only.
+
+`windamereRuleset(rules)` wires these into a core `Ruleset` (Season end: `resolveRaid`, then the
+core runs `seasonEnd` effects in seat order, R3.6). Tested end to end for Winter's end: Raid,
+Season-end effects, game over with scores (R3.6, R12.1).
+
+**Not yet (waits for D2c, or for core changes in §14):**
+
+- the turn: deal sizes (`roundSpec`), picks and their validation, resolve steps, paying (R6),
+  trade, Yield (R4.5 step 4, Winter has none), and the handlers `yield`, `income`, `exchange`,
+  `discount`, `caravan`, `spendBonus`, `buildBonus`. They are `TURN_PENDING` in the ruleset.
+- the Great Work choice at setup (R2.4, R2.5, R15.10): needs §14 C3 and C4.
+- the Great Work check's place in the turn (after steps 2 and 4, R8.3): `greatWorkCheck` is
+  ready to be called from those steps.
+- Recall (R15.8, §14 C10), timeouts (R15.6).
+- `createWindamereEngine` still throws `WINDAMERE_NOT_READY` (and `createDraftEngine` refuses
+  the ruleset: it has no resolve steps).
+
+Tests use `src/engine/game/testing/fixture.ts`: made-up test content whose goods (reed, slate,
+honey) are not the game's, and `testing/helpers.ts` (`newWwGame` builds the starting state by
+hand until `createGame` can run). The content check passes on it; three deliberate bugs (tie-break
+order, bounty count, unmasked Raids) each made rule tests fail (checked by hand, reverted).
