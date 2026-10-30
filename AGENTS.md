@@ -35,7 +35,7 @@ Agent names are `ww-<lane>`; status and inbox files use the bare lane name.
 | online | Opus 5.5 | `src/ui/online/**`, `src/game/online/**` |
 | fx | Sonnet 5.5 | `src/ui/fx/**`, `src/audio/**`, `public/audio/**` |
 | tutorial | Sonnet 5.5 | `src/ui/tutorial/**`, `src/ui/help/**`, `docs/HOWTOPLAY.md` |
-| art | Sonnet 5.5 | `src/ui/theme/**`, `public/**`, `docs/design/ART.md`, `art-dev.html` |
+| art | Sonnet 5.5 | `src/ui/theme/**`, `public/**` except audio, `docs/design/ART.md`, `art-dev.html` |
 | net | Sonnet 5.5 | `src/net/**`, `src/server/**`, `wrangler.jsonc`, `docs/MULTIPLAYER.md` |
 | bots | Sonnet 5.5 | `src/bots/**`, `scripts/sim*` |
 | balance | Opus 5.5 | `docs/BALANCE.md`, `docs/balance/**`, `scripts/balance*` |
