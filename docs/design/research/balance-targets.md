@@ -60,7 +60,8 @@ inside, not outside.
 | S1g | Winner's largest R12.2 **group** (the six on the score sheet)                                                     | report; flag if one group is the largest for > 75% of winners (§6)           | What players see; catches "Town is the whole game"            |
 | S2  | Specialist bots (one per plan: Holdings→Halls, Lore, Watch/Valour, Markets/Caravans, Great Work) in a mixed field | each wins fair × 0.6-1.5                                                     | No plan should be dead (R4 originality review D4) or dominant |
 | S3  | Share of towns with a Lore run ≥ 3; ≥ 5                                                                           | ≥ 25%; 5-15%                                                                 | CARDS.md §9.4: runs of 5-6 "reachable but not routine"        |
-| S4  | Share of towns completing Great Work tier IV                                                                      | 20-50%                                                                       | CARDS.md §9.2: raise thresholds if most finish                |
+| S4  | Share of towns completing Great Work tier IV, **level 2** (§7)                                                    | 20-50%                                                                       | CARDS.md §9.2: raise thresholds if most finish                |
+| S4r | Great Work focus bot (level 1 that aims at labour) reaching tier IV (§7)                                          | ≥ 50% of its towns; level 1's own share: report only                         | Tier IV must stay reachable for a weak player who tries       |
 | S5  | Build rate of each card when seen; Spend rate                                                                     | flag cards built < 5% or > 60% of the times they are picked                  | Finds dominated cards (e.g. Spring Halls) and auto-picks      |
 
 ### 2.3 Snowball and comeback
@@ -218,6 +219,48 @@ as Landmark, not Valour. S2 (specialist plans) is the direct test.
   (bots: level 2 can't see a Lore run's future value), not a tunables one.
 - Ask for one more number from balance: sources at ≥ 10% of level-2 winners on l2-final-2, per
   seat count.
+
+## 7. At which bot level S4 is judged (answer to design, card R11)
+
+Design asked: S4 (tier IV in 20-50% of towns) fails both ways on main `86c28af`, with level 2 at
+57-72% and level 1 at 15-24% (under 20% at 2-3 seats). CARDS.md §17's thresholds-up lever (+1/+1/
++2/+3) brings level 2 to 41-57% but pushes level 1 lower. Which level counts?
+
+**Answer: judge S4 at level 2.** Drop the 20% floor for level 1 and replace it with a reach test,
+S4r: a level-1 bot that aims at its Great Work should reach tier IV in at least half its towns.
+Level 1's own share is reported, not judged.
+
+Why level 2:
+
+1. **S4 is about players who play the game.** The band says tier IV should be an achievement:
+   not routine (then the track is a flat bonus every town gets), not rare (then tier IV and its
+   Renown are dead content). That is a statement about a player who pursues it some of the time.
+   Level 2 does: it Spends for labour on purpose (BALANCE.md §4 item 4). Level 1 never aims at
+   labour; it builds the cheapest card that scores. So its 15-24% measures the labour a town
+   collects by accident, which says nothing about reach.
+2. **Level 2 is the competent stand-in, level 1 is not.** Level 2 beats level 1 in 98% of 2-seat
+   games (BALANCE.md §0.2). Tuning a target on level 1 tunes the game for a bot that almost never
+   wins. That is the same reasoning BALANCE.md gives for the other level-split targets.
+3. **The two levels can't both pass with one threshold set.** BALANCE.md (§5.3, §5.4) already found
+   no threshold change that fixes both. A target that no rule can meet is a bad target, not a design
+   fault.
+
+Why S4r and not nothing: the real risk on the low side is a new player who tries for the Great
+Work and still can't finish it. Level 1's own share can't test that, since it doesn't try. A
+focus bot can: level 1's rules, plus "when nothing scores, Spend the card with the most labour,
+and prefer Builds that give labour". S2 already names a Great Work plan, and balance has not run
+it yet. The 50% is a judgement number: half the towns of a weak player who aims at it.
+
+**What this means for the thresholds-up lever** (research view):
+
+- At level 2 it moves tier IV from 57-72% to 41-57% (CARDS.md §17): S4 passes at 2, 3, 5 and 6
+  seats and sits just over at 4 and 7. That is close enough to keep the lever.
+- Level 1 falling further under 20% is no longer a fail. Run S4r with the new thresholds before
+  shipping: if the focus bot stays at 50% or more, the lever is safe for beginners.
+- New players also get help outside the numbers: the First game (R19) and Learn to play's "Your
+  Great Work" lesson ("Labour from the cards you Spend fills its tiers").
+- Caveat: humans may sit between the two levels. If playtests show new players rarely reach tier
+  III, revisit S4r's number before the thresholds.
 
 ## Sources
 
