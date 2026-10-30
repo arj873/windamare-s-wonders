@@ -29,9 +29,9 @@ Agent names are `ww-<lane>`; status and inbox files use the bare lane name.
 |---|---|---|
 | research | Opus 5.5 | `docs/design/RESEARCH.md`, `docs/design/research/**` |
 | design | Opus 5.5 | `docs/RULES.md`, `docs/design/**` except research/UX/ART files, `src/content/**` (card data, once rules are approved) |
-| platform | Sonnet 5.5 | `package.json`, `pnpm-*`, `tsconfig*`, `vite.config.ts`, `vitest.config.ts`, `eslint.config.js`, `.prettier*`, `.github/**`, `scripts/gate.sh`, `index.html`, `src/main.ts`, `src/app.ts`, `src/shared/**`, `docs/ARCHITECTURE.md`, `docs/REUSE.md`, `LICENSE` |
+| platform | Sonnet 5.5 | `package.json`, `pnpm-*`, `tsconfig*`, `vite.config.ts`, `vitest.config.ts`, `eslint.config.js`, `.prettier*`, `.github/**`, `scripts/gate.sh`, `index.html`, `src/shared/**`, `docs/ARCHITECTURE.md`, `docs/REUSE.md`, `LICENSE` |
 | engine | Opus 5.5 | `src/engine/**`, `docs/ENGINE.md` |
-| ui | Opus 5.5 | `src/ui/**` except theme, `src/render/**`, `src/game/**`, `docs/design/UX.md` |
+| ui | Opus 5.5 | `src/main.ts`, `src/app.ts`, `src/ui/**` except theme, `src/render/**`, `src/game/**`, `docs/design/UX.md` |
 | art | Sonnet 5.5 | `src/ui/theme/**`, `public/**`, `docs/design/ART.md`, `art-dev.html` |
 | net | Sonnet 5.5 | `src/net/**`, `src/server/**`, `wrangler.jsonc`, `docs/MULTIPLAYER.md` |
 | bots | Sonnet 5.5 | `src/bots/**`, `scripts/sim*` (later) |
