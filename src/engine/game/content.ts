@@ -35,8 +35,10 @@ export function countsIndex(seats: number): number {
 export const DEFAULT_TUNABLES: WwTunables = {
   startingCoins: 5,
   honoursPerGame: 3,
+  greatWorksOffered: 2,
   handSize: 6,
   turnsPerSeason: 5,
+  twoSeatHandSize: 10,
   bankPrice: 5,
   exchangeRate: 2,
   buyLimit: 2,
@@ -218,10 +220,20 @@ export function checkContent(content: WwContent): string[] {
     errors.push('valourBySeason needs one per Season');
   }
   if (t.marketPrice.length !== SEASONS.length) errors.push('marketPrice needs one per Season');
+  const maxSeats = SEAT_COUNTS[SEAT_COUNTS.length - 1] ?? 7;
+  if (t.greatWorksOffered < 1 || content.greatWorks.length < t.greatWorksOffered * maxSeats) {
+    errors.push(
+      `${content.greatWorks.length} Great Works: ${maxSeats} towns need ${t.greatWorksOffered * maxSeats} (R2.4)`,
+    );
+  }
   if (t.turnsPerSeason < 1 || t.handSize !== t.turnsPerSeason + 1) {
     errors.push('handSize must be turnsPerSeason + 1 (the last turn gleans one card, R3.5)');
   }
   if (t.exchangeRate < 1) errors.push('exchangeRate must be >= 1');
+  // R14.2, R14.4: two cards a turn, then pick + glean on the last turn.
+  if (t.twoSeatHandSize !== 2 * t.turnsPerSeason) {
+    errors.push('twoSeatHandSize must be 2 x turnsPerSeason (R14.2, R14.4)');
+  }
   // R2.7, R3.2: each Season deck deals a full hand to every seat, for 3 to 7 seats.
   for (const season of SEASONS) {
     const cards = content.cards.filter((c) => c.season === season);

@@ -145,8 +145,10 @@ describe('content check', () => {
     expect(DEFAULT_TUNABLES).toEqual({
       startingCoins: 5,
       honoursPerGame: 3,
+      greatWorksOffered: 2,
       handSize: 6,
       turnsPerSeason: 5,
+      twoSeatHandSize: 10,
       bankPrice: 5,
       exchangeRate: 2,
       buyLimit: 2,
@@ -166,6 +168,7 @@ describe('content check', () => {
     ]);
     expect(checkContent({ ...FIXTURE, tunables: { turnsPerSeason: 4 } })).toEqual([
       'handSize must be turnsPerSeason + 1 (the last turn gleans one card, R3.5)',
+      'twoSeatHandSize must be 2 x turnsPerSeason (R14.2, R14.4)',
     ]);
   });
 

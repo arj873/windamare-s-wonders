@@ -5,7 +5,17 @@
 import { checkRuleset } from './effects';
 import { cloneJson, cloneState, isJson } from './clone';
 import { makeCtx } from './ctx';
-import { afterStage, allPicked, continueAfter, deal, openHead, reveal, totalRounds } from './flow';
+import {
+  afterStage,
+  allPicked,
+  continueAfter,
+  deal,
+  openGroup,
+  openHead,
+  resolveOrder,
+  reveal,
+  totalRounds,
+} from './flow';
 import { checkInvariants } from './invariants';
 import { Rng } from './rng';
 import { isSeat } from './seats';
@@ -97,6 +107,7 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
         pick: null,
         tableau: [],
         zones: Object.fromEntries(zoneNames.map((z) => [z, []])),
+        recall: [],
         data: null as S,
       })),
       deck: [],
@@ -115,9 +126,9 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
     draft.table = rules.setupTable(ctx);
     for (const s of draft.seats) s.data = rules.setupSeat(ctx, s.id);
     ctx.log(null, 'start', `Game started with ${draft.seats.length} players.`);
-    deal(ctx, 0);
+    if (rules.startBeforeDeal !== true) deal(ctx, 0);
     rules.onGameStart?.(ctx);
-    afterStage(ctx, 'start');
+    afterStage(ctx, 'start'); // with startBeforeDeal, round 0 is dealt once start prompts end
     draft.rng = rng.state;
     assertInvariants(draft);
     return draft;
@@ -195,18 +206,31 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
       }
       case 'answer': {
         const phase = draft.phase;
-        const head = draft.prompts[0];
-        if (phase.kind !== 'prompt' || !head) return fail('no prompt is open');
-        if (action.prompt !== head.id) return fail(`prompt ${String(action.prompt)} is not open`);
-        if (seat !== head.seat) return fail('the open prompt is not yours');
+        const open = openGroup(draft as DraftState<unknown, unknown>);
+        if (phase.kind !== 'prompt' || open.length === 0) return fail('no prompt is open');
+        const p = open.find((x) => x.id === action.prompt);
+        if (!p) return fail(`prompt ${String(action.prompt)} is not open`);
+        if (seat !== p.seat) return fail('the open prompt is not yours');
         if (!isJson(action.answer)) return fail('answer must be JSON');
-        const handler = rules.prompts[head.kind];
-        if (!handler) throw new Error(`unknown prompt kind: ${head.kind}`);
-        const err = handler.validate(draft, head, action.answer);
+        const handler = rules.prompts[p.kind];
+        if (!handler) throw new Error(`unknown prompt kind: ${p.kind}`);
+        const err = handler.validate(draft, p, action.answer);
         if (err) return fail(err);
         draft.seq += 1;
-        draft.prompts.shift();
-        handler.apply(ctx, head, cloneJson(action.answer));
+        // Hidden until the group is complete; a seat may answer again until then.
+        p.answer = cloneJson(action.answer);
+        p.answered = true;
+        if (!open.every((x) => x.answered)) break;
+        // The whole group applies at once, in resolve order: arrival order never matters.
+        draft.prompts.splice(0, open.length);
+        for (const s of resolveOrder(rules, draft)) {
+          for (const q of open) {
+            if (q.seat !== s) continue;
+            const h = rules.prompts[q.kind];
+            if (!h) throw new Error(`unknown prompt kind: ${q.kind}`);
+            h.apply(ctx, q, q.answer);
+          }
+        }
         if (draft.prompts.length === 0) continueAfter(ctx, phase.then);
         else openHead(ctx);
         break;
@@ -229,15 +253,20 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
     return rules.legalPicks(state, seat).filter((p) => checkPick(state, seat, p) === null);
   }
 
+  /** The seat's prompt in the open group, if any. */
+  function openPromptOf(state: DraftState<S, T>, seat: SeatId) {
+    if (state.phase.kind !== 'prompt') return undefined;
+    return openGroup(state as DraftState<unknown, unknown>).find((p) => p.seat === seat);
+  }
+
   function legalAnswers(state: DraftState<S, T>, seat: SeatId): DraftAction[] {
-    const head = state.prompts[0];
-    if (state.phase.kind !== 'prompt' || !head || head.seat !== seat) return [];
-    const handler = rules.prompts[head.kind];
-    if (!handler) return [];
+    const p = openPromptOf(state, seat);
+    const handler = p && rules.prompts[p.kind];
+    if (!p || !handler) return [];
     return handler
-      .answers(state, head)
-      .filter((a) => handler.validate(state, head, a) === null)
-      .map((answer) => ({ type: 'answer', seat, prompt: head.id, answer }));
+      .answers(state, p)
+      .filter((a) => handler.validate(state, p, a) === null)
+      .map((answer) => ({ type: 'answer', seat, prompt: p.id, answer }));
   }
 
   function legalActions(state: DraftState<S, T>, seat?: SeatId): DraftAction[] {
@@ -269,7 +298,9 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
       case 'gameOver':
         return [];
       case 'prompt':
-        return state.prompts[0] ? [state.prompts[0].seat] : [];
+        return openGroup(state as DraftState<unknown, unknown>)
+          .filter((p) => !p.answered)
+          .map((p) => p.seat);
       case 'pick': {
         const submitted = (i: number) =>
           isDraftView(state) ? state.view.submitted[i] === true : state.seats[i]?.pick !== null;
@@ -284,13 +315,13 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
       const pick = defaultPick(state, seat);
       return pick ? { type: 'pick', seat, pick } : null;
     }
-    const head = state.prompts[0];
-    const handler = head && rules.prompts[head.kind];
-    if (!head || !handler) return null;
+    const p = openPromptOf(state, seat);
+    const handler = p && rules.prompts[p.kind];
+    if (!p || !handler) return null;
     const answers = legalAnswers(state, seat);
-    const preferred: Json | undefined = handler.defaultAnswer?.(state, head);
-    if (preferred !== undefined && handler.validate(state, head, preferred) === null) {
-      return { type: 'answer', seat, prompt: head.id, answer: preferred };
+    const preferred: Json | undefined = handler.defaultAnswer?.(state, p);
+    if (preferred !== undefined && handler.validate(state, p, preferred) === null) {
+      return { type: 'answer', seat, prompt: p.id, answer: preferred };
     }
     return answers[0] ?? null;
   }

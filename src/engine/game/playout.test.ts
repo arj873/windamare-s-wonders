@@ -35,7 +35,7 @@ function playout(
 }
 
 describe('playouts (R3, R4, R12)', () => {
-  for (const seats of [3, 4, 5, 6, 7]) {
+  for (const seats of [2, 3, 4, 5, 6, 7]) {
     it(`${seats} towns play 4 Seasons of 5 turns to a scored end`, () => {
       const { end, actions } = playout(seats, seats, seats <= 4);
       expect(actions).toBe(4 * 5 * seats);

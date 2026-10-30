@@ -37,9 +37,11 @@ export interface WwPickArgs {
   discount?: GoodId[];
   /** Build: how each missing good is paid (R6.3, R6.6), in goods order. */
   pay?: Payment[];
+  /** 2 seats, turns 1 to 4: the other card from the hand, burned (R14.2). */
+  burn?: CardId;
 }
 
-const ARG_KEYS = new Set(['any', 'glean', 'cover', 'discount', 'pay']);
+const ARG_KEYS = new Set(['any', 'glean', 'cover', 'discount', 'pay', 'burn']);
 const isRecord = (x: unknown): x is Record<string, unknown> =>
   typeof x === 'object' && x !== null && !Array.isArray(x);
 
@@ -47,10 +49,22 @@ export function argsOf(pick: Pick): WwPickArgs {
   return (isRecord(pick.args) ? pick.args : {}) as WwPickArgs;
 }
 
+const lastTurn = (state: WwState) => state.turn === state.roundPicks - 1;
+
+/** R14.2: with 2 seats a town also burns a card on every turn but the last. */
+export function burnsThisTurn(state: WwState): boolean {
+  return state.seats.length === 2 && !lastTurn(state);
+}
+
 /** R3.5: on the last turn of a Season, the hand's other card is the glean. */
 export function gleanOf(state: WwState, seat: SeatId, card: CardId): Card | null {
-  if (state.turn !== state.roundPicks - 1) return null;
+  if (!lastTurn(state)) return null;
   return townOf(state, seat).hand.find((c) => c.id !== card) ?? null;
+}
+
+/** R15.6 default Burn: the first card in hand order that is not the picked one. */
+function defaultBurn(state: WwState, seat: SeatId, card: CardId): CardId | undefined {
+  return townOf(state, seat).hand.find((c) => c.id !== card)?.id;
 }
 
 /** R5.4: the `spendBonus` gains for Spending a card of the def's kind. */
@@ -138,6 +152,10 @@ export function normalizePick(rules: WwRules, state: WwState, seat: SeatId, pick
     const def = rules.card(card.def);
     const glean = gleanOf(state, seat, pick.card);
     const gleanDef = glean ? rules.card(glean.def) : null;
+    if (burnsThisTurn(state) && !('burn' in args)) {
+      const burn = defaultBurn(state, seat, pick.card);
+      if (burn !== undefined) args.burn = burn;
+    }
     if (pick.use === SPEND) {
       args.any ??= defaultAny(rules, town.data.store, [], anyCount(def.spend));
       if (gleanDef) {
@@ -229,6 +247,15 @@ export function validatePick(
   const gleanDef = glean ? rules.card(glean.def) : null;
   const gleanErr = checkGoods(rules, args.glean, gleanDef ? anyCount(gleanDef.spend) : 0, 'glean');
   if (gleanErr) return gleanErr;
+  if (burnsThisTurn(state)) {
+    if (typeof args.burn !== 'number') return 'with 2 towns, also burn a card (R14.2)';
+    if (args.burn === pick.card) return 'burn a different card from the one you pick';
+    if (!town.hand.some((c) => c.id === args.burn)) return `card ${args.burn} is not in your hand`;
+  } else if ('burn' in args) {
+    return state.seats.length === 2
+      ? 'nothing is burned on the last turn (R14.4)'
+      : 'only 2 towns burn cards (R14.2)';
+  }
 
   if (pick.use === SPEND) {
     // R17.2: a Spend is always legal.
@@ -254,23 +281,36 @@ export function validatePick(
   return payErr ? `cannot pay for ${def.name}: ${payErr}` : null;
 }
 
-/** Spend every card, and Build every card the town can pay for (default choices; R7.9 both ways). */
+/**
+ * Spend every card, and Build every card the town can pay for (default choices; R7.9 both ways).
+ * With 2 seats, each of those with every other card of the hand as the Burn (R14.2).
+ */
 export function legalPicks(rules: WwRules, state: WwState, seat: SeatId): Pick[] {
+  const hand = townOf(state, seat).hand;
   const out: Pick[] = [];
-  for (const card of townOf(state, seat).hand) {
-    out.push(normalizePick(rules, state, seat, { card: card.id, use: SPEND }));
+  for (const card of hand) {
     const build = normalizePick(rules, state, seat, { card: card.id, use: BUILD });
-    out.push(build);
+    const base = [normalizePick(rules, state, seat, { card: card.id, use: SPEND }), build];
     if (argsOf(build).cover != null) {
-      out.push(
+      base.push(
         normalizePick(rules, state, seat, { card: card.id, use: BUILD, args: { cover: null } }),
       );
+    }
+    for (const p of base) {
+      if (!burnsThisTurn(state)) {
+        out.push(p);
+        continue;
+      }
+      for (const other of hand) {
+        if (other.id !== card.id)
+          out.push({ ...p, args: { ...(p.args as object), burn: other.id } });
+      }
     }
   }
   return out.filter((p) => validatePick(rules, state, seat, p) === null);
 }
 
-/** R15.6 fallback pick: Build nothing; Spend the first card in hand order. */
+/** R15.6 fallback pick: Build nothing; Spend the first card in hand order (2 seats: Burn the second). */
 export function defaultPick(rules: WwRules, state: WwState, seat: SeatId): Pick {
   const first = townOf(state, seat).hand[0];
   return normalizePick(rules, state, seat, { card: first?.id ?? -1, use: SPEND });

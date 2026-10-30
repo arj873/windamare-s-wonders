@@ -12,6 +12,7 @@ import type {
   DraftState,
   GameConfig,
   GameResult,
+  Prompt,
   PromptStage,
   RevealedPick,
   Ruleset,
@@ -141,11 +142,18 @@ export function afterStage<S, T>(ctx: Ctx<S, T>, stage: PromptStage): void {
   }
 }
 
-/** The first queued prompt is now the open one: let its handler refresh its data. */
+/** The open group: the queue's head and the prompts of its group (they are queued together). */
+export function openGroup(state: DraftState<unknown, unknown>): Prompt[] {
+  const head = state.prompts[0];
+  return head ? state.prompts.filter((p) => p.group === head.group) : [];
+}
+
+/** The head group is now the open one: let each prompt's handler refresh its data. */
 export function openHead<S, T>(ctx: Ctx<S, T>): void {
-  const head = ctx.state.prompts[0];
-  const refresh = head && ctx.rules.prompts[head.kind]?.refresh;
-  if (head && refresh) head.data = refresh(ctx.state, head);
+  for (const p of openGroup(ctx.state as DraftState<unknown, unknown>)) {
+    const refresh = ctx.rules.prompts[p.kind]?.refresh;
+    if (refresh) p.data = refresh(ctx.state, p);
+  }
 }
 
 /** The flow after `stage` and its prompts are done. */
@@ -153,6 +161,8 @@ export function continueAfter<S, T>(ctx: Ctx<S, T>, stage: PromptStage): void {
   const draft = ctx.state;
   switch (stage) {
     case 'start':
+      // `startBeforeDeal`: the start prompts came before the first deal (docs/ENGINE.md §5).
+      if (ctx.rules.startBeforeDeal === true) deal(ctx, 0);
       enterPick(ctx);
       return;
     case 'turn':
@@ -185,8 +195,14 @@ function passHands<S, T>(ctx: Ctx<S, T>): void {
   const draft = ctx.state;
   const hands = draft.seats.map((s) => s.hand);
   draft.seats.forEach((s, i) => {
-    const to = draft.seats[passTarget(draft, s.id)];
-    if (to) to.hand = hands[i] ?? [];
+    const target = passTarget(draft, s.id);
+    const hand = hands[i] ?? [];
+    // Recall: the seat saw this hand as it passed it on (copies; the cards move on).
+    if (ctx.rules.recall === true && hand.length > 0) {
+      s.recall.push({ turn: draft.turn, to: target, cards: hand.map((c) => ({ ...c })) });
+    }
+    const to = draft.seats[target];
+    if (to) to.hand = hand;
   });
   ctx.log(null, 'pass', `Hands pass ${draft.passDirection}.`);
 }
@@ -194,6 +210,7 @@ function passHands<S, T>(ctx: Ctx<S, T>): void {
 function roundEnd<S, T>(ctx: Ctx<S, T>): void {
   const { state: draft, rules } = ctx;
   ctx.log(null, 'roundEnd', `Round ${draft.round + 1} ends.`);
+  for (const s of draft.seats) s.recall = [];
   rules.onRoundEnd?.(ctx);
   for (const s of draft.seats) {
     for (const spec of effectsOf(rules, draft, s.id))

@@ -180,6 +180,16 @@ export const FX_GREAT_WORKS: GreatWorkDef[] = [
       ],
     ),
   },
+  // Plain ones, so that 7 towns can each be offered 2 (R2.4).
+  ...Array.from({ length: 11 }, (_, i): GreatWorkDef => ({
+    id: `tg-plain-${i + 1}`,
+    name: `Test Plain ${i + 1}`,
+    perk: [{ type: 'income', coins: 1 }],
+    tiers: tiers(
+      [3, 6, 10, 15],
+      [1, 2, 3, 4].map((n) => [{ type: 'renown', amount: n }]),
+    ),
+  })),
 ];
 
 export const FIXTURE: WwContent = {

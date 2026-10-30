@@ -43,6 +43,7 @@ export function newWwGame(seats = 3, seed: number | string = 1, rules: WwRules =
       pick: null,
       tableau: [],
       zones: Object.fromEntries(Object.keys(ruleset.zones ?? {}).map((z) => [z, []])),
+      recall: [],
       data: null as unknown as WwSeat,
     })),
     deck: [],
@@ -102,11 +103,26 @@ export function toSeason(state: WwState, season: number): void {
 /** The real engine over the test fixture (the turn, R3-R6). */
 export const fxEngine = createWindamereEngine(FIXTURE);
 
-export function newGame(seats = 3, seed: number | string = 1): WwState {
+/** A new game in the Great Work choice (R2.4, R2.5): no hands yet. */
+export function atChoice(seats = 3, seed: number | string = 1): WwState {
   return fxEngine.createGame({
     seed,
     seats: Array.from({ length: seats }, (_, i) => ({ name: `P${i}` })),
   });
+}
+
+/** A new game at its first pick: every town took its first offered Great Work. */
+export function newGame(seats = 3, seed: number | string = 1): WwState {
+  let s = atChoice(seats, seed);
+  while (s.phase.kind === 'prompt') {
+    const seat = fxEngine.waitingOn(s)[0];
+    const action = seat === undefined ? null : fxEngine.defaultAction(s, seat);
+    if (!action) throw new Error('newGame: stuck in the Great Work choice');
+    const r = fxEngine.applyAction(s, action);
+    if (!r.ok) throw new Error(r.error);
+    s = r.state;
+  }
+  return s;
 }
 
 /** Give the seat's hand these faces (the dealt ids stay; only faces change). Mutates `state`. */

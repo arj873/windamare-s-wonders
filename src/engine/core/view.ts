@@ -38,20 +38,35 @@ export function viewFor<S, T>(
       ...s,
       hand: own ? s.hand : hide(s.hand),
       pick: own ? s.pick : null,
+      recall: own ? s.recall : [],
       zones,
       data: rules.maskSeat ? rules.maskSeat(s.data, viewer, s.id) : s.data,
     };
   });
+  const mask = rules.maskRevealArgs;
+  const lastReveal =
+    state.lastReveal && mask
+      ? {
+          ...state.lastReveal,
+          picks: state.lastReveal.picks.map((p) =>
+            p.seat === seat || p.args === undefined
+              ? p
+              : { ...p, args: mask(p.args, viewer, p.seat) },
+          ),
+        }
+      : state.lastReveal;
 
   return {
     ...state,
+    lastReveal,
     config: { ...state.config, seed: HIDDEN_SEED },
     seats,
     deck: hide(state.deck),
     discard: rules.discardVisibility === 'public' ? state.discard : hide(state.discard),
     box: hide(state.box),
     table: rules.maskTable ? rules.maskTable(state.table, viewer) : state.table,
-    prompts: state.prompts.map((p) => (p.seat === seat ? p : { ...p, data: null })),
+    // Others' options and waiting answers are hidden; whether they answered is public.
+    prompts: state.prompts.map((p) => (p.seat === seat ? p : { ...p, data: null, answer: null })),
     log: state.log.filter((e) => !e.to || (seat !== null && e.to.includes(seat))),
     rng: [0, 0, 0, 0],
     view: {

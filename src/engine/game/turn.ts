@@ -38,7 +38,8 @@ export function roundSpec(rules: WwRules, state: WwState, round: number): RoundS
     for (let k = 0; k < (c.counts[i] ?? 0); k++) deck.push(c.id);
   }
   return {
-    handSize: rules.tunables.handSize,
+    // R14.1: 2 seats deal 10 from the 4-seat deck; the rest stays undealt and unseen.
+    handSize: state.seats.length === 2 ? rules.tunables.twoSeatHandSize : rules.tunables.handSize,
     picks: rules.tunables.turnsPerSeason,
     pass: round % 2 === 0 ? 'left' : 'right', // R3.3
     deck,
@@ -89,6 +90,11 @@ export function resolveSteps(rules: WwRules): Step[] {
       addGains(town.data, gains);
       ctx.toDiscard(ctx.take(g.id));
       ctx.log(seat, 'glean', `${town.name} gleans a card.`, { data: { gains } });
+    }
+    // R14.2, R14.3: the burned card leaves the hand face down, with no effect (before the pass).
+    if (args.burn !== undefined) {
+      ctx.toDiscard(ctx.take(args.burn));
+      ctx.log(seat, 'burn', `${town.name} burns a card.`);
     }
   };
 

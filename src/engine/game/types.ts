@@ -51,8 +51,8 @@ export interface WwCardDef extends CardDef {
   upgrade?: { of: CardDefId[]; cost: Gains };
   /** The Spend band (R5). */
   spend: Gains;
-  /** Copies at 3, 4, 5, 6, 7 seats; 2 seats use the 3-seat count (R14.1). */
-  counts: number[];
+  /** Copies at 3, 4, 5, 6, 7 seats; 2 seats use the 4-seat count (R14.1). */
+  counts: readonly number[];
 }
 
 export interface GreatWorkTier {
@@ -89,10 +89,14 @@ export interface WwTunables {
   startingCoins: number;
   /** R2.3 */
   honoursPerGame: number;
+  /** R2.4: Great Works dealt to each town to choose from. */
+  greatWorksOffered: number;
   /** R3.2, 3-7 seats. One more than `turnsPerSeason`: the last turn's spare card is the glean. */
   handSize: number;
   /** R3.4 */
   turnsPerSeason: number;
+  /** R14.1: hand size with 2 seats (two cards a turn on turns 1 to 4, pick + glean on the last). */
+  twoSeatHandSize: number;
   /** R6.3: coins per missing good bought from the bank. */
   bankPrice: number;
   /** R6.3: goods an Exchange gives for one missing good. */
@@ -119,11 +123,11 @@ export interface WwTunables {
 /** Everything the Windamere rules read as data (design lane: `src/content/`). */
 export interface WwContent {
   /** In goods order (R1.3). */
-  goods: GoodDef[];
-  cards: WwCardDef[];
-  greatWorks: GreatWorkDef[];
-  raids: RaidDef[];
-  honours: HonourDef[];
+  goods: readonly GoodDef[];
+  cards: readonly WwCardDef[];
+  greatWorks: readonly GreatWorkDef[];
+  raids: readonly RaidDef[];
+  honours: readonly HonourDef[];
   tunables?: Partial<WwTunables>;
 }
 
