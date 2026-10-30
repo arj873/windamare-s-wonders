@@ -9,6 +9,8 @@
  */
 import {
   createLookahead,
+  type Lookahead,
+  type WwRules,
   gleanOf,
   passTarget,
   Rng,
@@ -20,7 +22,7 @@ import {
   type WwPickArgs,
 } from '../engine';
 import type { WwSeat, WwTable } from '../engine';
-import { windamere, windamereRules } from './windamere';
+import { windamereRules } from './windamere';
 import { rateGreatWork } from './windamereAdapter';
 import { bestUse, DEFAULT_TUNE, townValue, valueOf, type EvalTune } from './windamereEval';
 import type { Bot } from './types';
@@ -54,9 +56,13 @@ export function createWindamereBot(
   denialWeight = DENIAL_WEIGHT,
   search: SearchOptions | null = null,
   tune: EvalTune = DEFAULT_TUNE,
+  /** The compiled rules the bot prices with (default: shipped; pass an overlay's for balance runs). */
+  rules: WwRules = windamereRules,
 ): Bot<WwSeat, WwTable> {
-  const rules = windamereRules;
-  const la = createLookahead(windamere.ruleset);
+  // The lookahead plays out under the rules of the engine that asks (set on the first decision).
+  let la: Lookahead<WwSeat, WwTable> | null = null;
+  let laFor: unknown = null;
+  let defaultPick: ((s: DraftState<WwSeat, WwTable>, seat: SeatId) => Pick | null) | undefined;
   /** The one-ply picker on a full (determinized) state: a cheap stand-in for every seat. */
   const smart = (state: DraftState<WwSeat, WwTable>, s: SeatId): Pick => {
     const hand = state.seats[s]?.hand ?? [];
@@ -72,17 +78,22 @@ export function createWindamereBot(
         }
       }
     }
-    return best ?? (windamere.ruleset.defaultPick?.(state, s) as Pick);
+    return best ?? (defaultPick?.(state, s) as Pick);
   };
   return {
     name: name ?? `level${level}`,
     act({ engine, view, seat, rng }) {
+      if (search && laFor !== engine.ruleset) {
+        la = createLookahead(engine.ruleset);
+        laFor = engine.ruleset;
+        defaultPick = engine.ruleset.defaultPick as typeof defaultPick;
+      }
       const moves = engine.legalActions(view, seat).filter((a) => a.type !== 'unpick');
       if (moves.length === 0) return null;
       const picks = moves.filter(
         (a): a is Extract<DraftAction, { type: 'pick' }> => a.type === 'pick',
       );
-      if (picks.length === 0) return answer(moves, view, rng);
+      if (picks.length === 0) return answer(rules, moves, view, rng);
 
       const hand = view.seats[seat]?.hand ?? [];
       const defOf = (id: number): WwCardDef | undefined => {
@@ -135,18 +146,19 @@ export function createWindamereBot(
           best = a;
         }
       }
-      if (search && scored.length > 1 && view.view.viewer !== null) {
+      const look = la;
+      if (search && look && scored.length > 1 && view.view.viewer !== null) {
         scored.sort((x, y) => y.score - x.score);
         const top = scored.slice(0, search.candidates);
         const totals = top.map(() => 0);
         const srng = new Rng((rng.int(1 << 30) + 1) >>> 0);
         for (let k = 0; k < search.samples; k++) {
-          const base = la.determinize(view, srng);
+          const base = look.determinize(view, srng);
           top.forEach((c, i) => {
-            const st = la.fork(base);
+            const st = look.fork(base);
             const first = st.seats.map((_, s) => (s === seat ? c.a.pick : null));
-            la.playTurn(st, first);
-            la.playOut(st, 'round', search.smartPolicy ? smart : undefined);
+            look.playTurn(st, first);
+            look.playOut(st, 'round', search.smartPolicy ? smart : undefined);
             let rivals = 0;
             for (const o of st.seats) if (o.id !== seat) rivals += townValue(rules, st, o.id);
             const mean = st.seats.length > 1 ? rivals / (st.seats.length - 1) : 0;
@@ -172,6 +184,7 @@ export function createWindamereBot(
 
 /** A prompt (the Great Work choice): the offer the rating rule likes best, ties at random. */
 function answer(
+  rules: WwRules,
   moves: DraftAction[],
   view: { prompts: { id: number; kind: string }[] },
   rng: { pick<T>(xs: readonly T[]): T },
@@ -180,7 +193,7 @@ function answer(
     if (a.type !== 'answer') return [];
     const kind = view.prompts.find((p) => p.id === a.prompt)?.kind;
     return kind === 'greatWork' && typeof a.answer === 'string'
-      ? [{ a, score: rateGreatWork(windamereRules.content, a.answer) }]
+      ? [{ a, score: rateGreatWork(rules.content, a.answer) }]
       : [];
   });
   if (rated.length === 0) return rng.pick(moves);

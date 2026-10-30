@@ -316,3 +316,17 @@ are 0 and the shipped bots are unchanged. Reading: the missing Valour is not a p
 the first Guard point. More likely the bot lacks the goods for a Watch when one is in hand (hands
 pass, so a Watch seen now is not there next turn), which needs a plan for goods across turns, not
 a better price per pick. Honour planning: not done. Untried.
+
+## 12. D10b types and rules argument (post-E7)
+
+- Evaluator: `scoreNeighbourMin` flows through `scoreTown` (neighbour towns are public in the
+  view); `onBuildNeighbourMin` pays `gains` once per uncovered card of the kind at the weaker
+  neighbour, as in R4.8 (public tableaux, so exact); `scoreSales` adds 0.7 x amount per `per`
+  goods for an assumed 0.25 sales per turn left (the sales so far are in `scoreTown`). Level 1
+  counts all three as scoring. Tested against `PENDING_CARDS` compiled into a rules object; the
+  cards are not in the shipped deck yet, so no sim covers them.
+- `createWindamereBot(level, name, denialWeight, search, tune, rules)`: the 6th argument is the
+  compiled rules the bot prices with (default the shipped ones), and a search-enabled bot builds
+  its lookahead from the engine that asks it (`ctx.engine.ruleset`), so a balance overlay is
+  played out under its own rules. `pickFor` still routes only the shipped engine to the smart
+  levels. Untested with a real overlay: the unit test covers the shipped engine only.

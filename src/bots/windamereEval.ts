@@ -13,6 +13,7 @@ import {
   guardOf,
   loreRanks,
   loreRuns,
+  neighboursOf,
   marketPrice,
   scoreTown,
   type EffectSpec,
@@ -186,6 +187,11 @@ function econValue(
       return tl * 0.3 * gainsValue(gains, lp, gf);
     case 'buildBonus':
       return tl * 0.3 * gainsValue(gains, lp, gf);
+    case 'scoreSales': {
+      // Renown per `per` goods sold from now on; the sales so far are already in scoreTown.
+      const sales = 0.25 * tl;
+      return (sales / (spec.per as number)) * (spec.amount as number) * 0.7;
+    }
     case 'sellBonus':
       return (tl / 5) * (spec.coins as number) * COIN * 1.5;
     default:
@@ -319,7 +325,16 @@ export function valueOf(
     town.tableau.push(card);
     for (const e of it.def.effects) {
       if (e.type === 'onBuild') addGains(rules, data, e.gains as Record<string, number>);
-      else if (e.type === 'onBuildPerKind') {
+      else if (e.type === 'onBuildNeighbourMin') {
+        // The weaker neighbour's uncovered cards of the kind, as the Build step began (public).
+        const times = Math.min(
+          ...neighboursOf(state, seat).map(
+            (n) =>
+              state.seats[n]?.tableau.filter((c) => rules.card(c.def).kind === e.kind).length ?? 0,
+          ),
+        );
+        for (let i = 0; i < times; i++) addGains(rules, data, e.gains as Record<string, number>);
+      } else if (e.type === 'onBuildPerKind') {
         const n = town.tableau.filter((c) => rules.card(c.def).kind === e.kind).length;
         for (let i = 0; i < n; i++) addGains(rules, data, e.gains as Record<string, number>);
       } else econ += econValue(rules, state, seat, e, lp, gf, neighbours);
