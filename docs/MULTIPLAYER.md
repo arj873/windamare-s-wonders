@@ -386,3 +386,24 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
   and I may not edit that. To get Normal like hotseat, the lobby can send `botLevels` of `medium`
   (online), or online changes the test and net flips `botLevel()`'s default (one line, session.ts).
   Timeout picks stay Easy (R15.6).
+
+## 14. N7: Durable Object write volume per game (measured, nothing changed)
+
+Method: `RoomCore` on a fake runtime with the real Windamere engine, two humans who act at once
+(about 1 s per move) plus server bots (0.9 s), Normal clock, playing to `gameOver`; counting each
+`storage.save` and its text length, and each `setAlarm` write. Measured 2026-10-30 on main 86c28af
+(throwaway test, not kept):
+
+| towns | saves | bytes written | alarm writes | final value |
+| ----- | ----- | ------------- | ------------ | ----------- |
+| 3     | 64    | 1.7 MB        | 34           | 50 KB       |
+| 7     | 64    | 4.5 MB        | 34           | 143 KB      |
+
+About 4 saves per turn (two picks, bot picks, the resolve). Saves only happen when the snapshot
+text changed, so `sync`/ping/hello that change nothing write nothing. 64 writes of one row per
+game is small; the bytes are the larger number (a save rewrites the whole value, so bytes grow
+with the log). Not looked up: Cloudflare's billing for rows written vs bytes, so I do not claim a
+cost. Coalescing (one write per resolved turn plus on alarm) would cut about 4 to 1 per turn, but
+risks losing the pending picks on eviction (R15.2 picks are changeable, so a lost pick is
+re-sent by the client, but a bot pick is not), so I recommend leaving it unless billing says
+otherwise.
