@@ -60,12 +60,12 @@
   --kind-landmark: #2b2d6e; /* deep indigo, burst shape */
   --kind-landmark-ink: #fff;
 
-  /* Goods: Colonizers of Windamere's look (catan src/ui/icons.ts, theme --rf-*). */
-  --good-lumber: #3c9a49;
-  --good-brick: #c4532d;
-  --good-wool: #bde37d;
-  --good-grain: #f0c53f;
-  --good-ore: #8795a5;
+  /* Goods (RULES.md "Goods (final names)"): reed, peat, salt, wax, horn. Each is also told apart by glyph. */
+  --good-reed: #8fa83a;
+  --good-peat: #4a3426;
+  --good-salt: #dfeaf5;
+  --good-wax: #f2d04a;
+  --good-horn: #f4ecd8;
   --labour: #6b4a2a;
   --guard: #56b4e9;
   --valour: #e69f00;

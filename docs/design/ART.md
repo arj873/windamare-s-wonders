@@ -68,10 +68,13 @@ eye. Colour-blind safety is by palette and shape only, no simulator run.
 
 ## Goods and counters (`public/art/goods/`, 32×32)
 
-Goods (lumber, brick, wool, grain, ore) reuse Colonizers of Windamere's glyphs (catan
-`src/ui/icons.ts`) on a pale tinted tile, so both games share a world. Then coin, **labour**
-(hammer-and-wedge disc), **Guard** (tower, sky blue), **Valour** (star, amber), **Renown**
-(indigo hexagon). Goods are distinguished by glyph, not just tile colour.
+Goods per RULES.md "Goods (final names)", in goods order: **reed** (straw-green bundle of stalks),
+**peat** (dark turf block), **salt** (white crystal cubes on pale blue), **wax** (yellow cake with
+a wick), **horn** (ivory curved horn). Same pale rounded tile as before; each is distinguished by
+silhouette, not only tile colour (salt vs horn vs wax are all pale). Drawn from scratch, none
+reuses a Colonizers or 7 Wonders glyph. Then coin, **labour** (hammer-and-wedge disc), **Guard**
+(tower), **Valour** (star), **Renown** (indigo hexagon). Not yet checked by a human or a
+colour-blind simulator; at 22px (cost column) salt/horn are the likeliest to blur.
 
 ## Lore ranks, Raid, Great Work, Honours (`public/art/badges/`, `honours/`)
 
