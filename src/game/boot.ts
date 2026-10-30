@@ -56,7 +56,7 @@ export function debugConfig(seats: number, seed?: string): NewGameConfig {
       color: SEAT_COLORS[i % SEAT_COLORS.length]?.color ?? '#888888',
       controller: 'human',
     })),
-    pickTimerSec: null,
+    clock: 'off',
     ...(seed ? { seed } : {}),
   };
 }
@@ -144,6 +144,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
       onStart: start,
       ...(play ? { onBack: showPlay } : { onBack: showHome, backLabel: 'Back' }),
       ...(nickname ? { playerName: nickname } : {}),
+      ...(opts.game?.clock ? { clockHint: opts.game.clock.hint } : {}),
     });
     menu.setItems(prefs);
     root.replaceChildren(setup.element, corner);
@@ -165,9 +166,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     if (opts.onStart) return opts.onStart(cfg);
     if (!opts.game) {
       showToast(
-        `No game yet (the ruleset is not in): ${cfg.players.length} players, ${
-          cfg.pickTimerSec ? `${cfg.pickTimerSec} s picks` : 'no timer'
-        }`,
+        `No game yet (the ruleset is not in): ${cfg.players.length} players, clock ${cfg.clock}`,
       );
       return;
     }

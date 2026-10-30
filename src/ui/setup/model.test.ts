@@ -15,12 +15,12 @@ import {
   setController,
   setSeatName,
   setSeed,
-  setTimerIdx,
+  setClock,
   setupError,
   shuffleSeats,
   STORAGE_KEY,
   summaryLine,
-  TIMER_STEPS,
+  CLOCKS,
   withPlayerName,
   type SetupStorage,
 } from './model';
@@ -118,25 +118,36 @@ describe('setup draft', () => {
     expect(setupError(d)).toMatch(/human/);
   });
 
-  it('builds a config with unique trimmed names, bot levels and the timer', () => {
+  it('builds a config with unique trimmed names, bot levels and the clock', () => {
     let d = defaultSetup();
+    expect(d.clock).toBe('off'); // R15.3: Off in hotseat by default
     d = setSeatName(d, 1, '  Ana ');
     d = setSeatName(d, 2, 'ana');
     d = setSeatName(d, 3, '   ');
-    d = setTimerIdx(d, TIMER_STEPS.indexOf(45));
+    d = setClock(d, 'normal');
     const cfg = buildConfig(d);
     expect(cfg.players.map((p) => p.name)).toEqual(['Player 1', 'Ana', 'ana 2', 'Player 4']);
     expect(cfg.players[0]).not.toHaveProperty('botLevel');
     expect(cfg.players[1]!.botLevel).toBe('normal');
-    expect(cfg.pickTimerSec).toBe(45);
+    expect(cfg.clock).toBe('normal');
     expect(cfg).not.toHaveProperty('seed');
     expect(buildConfig(setSeed(d, ' abc ')).seed).toBe('abc');
   });
 
+  it('offers exactly R15.3 clock options with their scales', () => {
+    expect(CLOCKS.map((c) => [c.id, c.scale])).toEqual([
+      ['off', 0],
+      ['relaxed', 1.5],
+      ['normal', 1],
+      ['fast', 0.5],
+    ]);
+    expect(setClock(defaultSetup(), 'nope' as never).clock).toBe('off');
+  });
+
   it('summarises the table for the footer', () => {
     expect(summaryLine(defaultSetup())).toBe('Standard · 4 players (3 bots)');
-    expect(summaryLine(setTimerIdx(defaultSetup(), TIMER_STEPS.indexOf(60)))).toBe(
-      'Standard · 4 players (3 bots) · 1 min picks',
+    expect(summaryLine(setClock(defaultSetup(), 'fast'))).toBe(
+      'Standard · 4 players (3 bots) · Fast clock',
     );
   });
 });
@@ -144,7 +155,7 @@ describe('setup draft', () => {
 describe('setup storage', () => {
   it('round-trips the draft but never the seed', () => {
     const store = memory();
-    const d = setSeed(setTimerIdx(addSeat(defaultSetup()), 2), 'replay-me');
+    const d = setSeed(setClock(addSeat(defaultSetup()), 'relaxed'), 'replay-me');
     saveSetup(store, d);
     const back = loadSetup(store);
     expect(back).toEqual({ ...d, seed: '' });
@@ -162,7 +173,7 @@ describe('setup storage', () => {
     const red = SEAT_COLORS[0]!.color;
     const d = sanitizeSetup({
       mode: 'nope',
-      timerIdx: 99,
+      timerIdx: 99, // saved before R15.3: any timer becomes Normal
       seats: [
         { name: 'A', color: red, controller: 'human', botLevel: 'godlike' },
         { name: 'B', color: red, controller: 'robot' },
@@ -170,7 +181,9 @@ describe('setup storage', () => {
       ],
     });
     expect(d.mode).toBe('standard');
-    expect(d.timerIdx).toBe(TIMER_STEPS.length - 1);
+    expect(d.clock).toBe('normal');
+    expect(sanitizeSetup({ clock: 'fast' }).clock).toBe('fast');
+    expect(sanitizeSetup({ clock: 'warp' }).clock).toBe('off');
     expect(d.seats).toHaveLength(MIN_PLAYERS);
     expect(new Set(d.seats.map((s) => s.color)).size).toBe(MIN_PLAYERS);
     expect(d.seats[0]).not.toHaveProperty('botLevel');

@@ -21,8 +21,8 @@ export interface LocalGameOptions<S, T> {
   config: GameConfig;
   /** Seats the computer plays. Every other seat is a human on this device. */
   bots: readonly SeatId[];
-  /** Seconds per pick for human seats; null = no timer. */
-  pickTimerSec: number | null;
+  /** Seconds for the decision `state` waits on (R15.3: per turn), or null = no clock. */
+  clockSec?: (state: DraftState<S, T>) => number | null;
   /** How long a bot "thinks" before it acts, ms. */
   botDelayMs: () => number;
   /** Seed of the placeholder bots' choices (used without `botAction`). */
@@ -174,10 +174,11 @@ export class LocalGame<S, T> {
 
   /** One clock per decision for every human in it; on expiry the engine's default plays. */
   private armClock(waiting: readonly SeatId[]): void {
-    const sec = this.opts.pickTimerSec;
     const key = decisionKey(this.state);
-    if (sec === null || key === null) return this.stopClock();
+    if (key === null) return this.stopClock();
     if (this.deadline?.key === key) return;
+    const sec = this.opts.clockSec?.(this.state) ?? null;
+    if (sec === null || sec <= 0) return this.stopClock();
     if (!this.humans.some((s) => waiting.includes(s))) return this.stopClock();
     this.stopClock();
     const totalMs = sec * 1000;

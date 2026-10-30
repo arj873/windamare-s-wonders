@@ -26,7 +26,7 @@ describe('SetupScreen', () => {
     expect(rows()).toHaveLength(4);
     q('start')!.click();
     expect(onStart).toHaveBeenCalledOnce();
-    expect(onStart.mock.calls[0]![0]).toMatchObject({ mode: 'standard', pickTimerSec: null });
+    expect(onStart.mock.calls[0]![0]).toMatchObject({ mode: 'standard', clock: 'off' });
     expect(storage.data.has(STORAGE_KEY)).toBe(true);
   });
 
@@ -65,11 +65,19 @@ describe('SetupScreen', () => {
 
   it('keeps focus on the clicked control across a re-render', () => {
     const { q } = mount();
-    q('timer-2')!.focus();
-    q('timer-2')!.click();
-    expect(document.activeElement?.getAttribute('data-k')).toBe('timer-2');
-    expect(q('timer-2')!.getAttribute('aria-pressed')).toBe('true');
-    expect(q('summary')!.textContent).toMatch(/45 s picks/);
+    q('clock-normal')!.focus();
+    q('clock-normal')!.click();
+    expect(document.activeElement?.getAttribute('data-k')).toBe('clock-normal');
+    expect(q('clock-normal')!.getAttribute('aria-pressed')).toBe('true');
+    expect(q('summary')!.textContent).toMatch(/Normal clock/);
+  });
+
+  it('explains a clock option with the game’s numbers (R15.3)', () => {
+    const { q } = mount({ clockHint: (scale) => `${Math.ceil(45 * scale)} s on a fresh hand` });
+    q('clock-relaxed')!.click();
+    expect(document.querySelector('.su-timer + .su-hint')?.textContent).toMatch(
+      /^68 s on a fresh hand\. One clock/,
+    );
   });
 
   it('disables Start with the reason when no human is seated', () => {

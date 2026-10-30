@@ -222,15 +222,15 @@ a sticky footer with a one-line summary and **Start game**. The draft is saved o
 │  [+ Add player]   ⟨3–7⟩ players · seats sit in this order around the table          │
 │  ⓘ 2 humans on one device: you pass the device for every pick (§9).               │
 │                                                                                  │
-│ PICK TIMER ─────────────────────────────────────────────────────────────────────  │
-│  [Off] [30 s] [45 s] [60 s] [90 s]       When time runs out: ⟨auto-pick rule⟩      │
+│ TURN CLOCK ─────────────────────────────────────────────────────────────────────  │
+│  [Off] [Relaxed] [Normal] [Fast]   Normal: 45 s on a fresh hand … 25 s; 60 s choice │
 │                                                                                  │
 │ RULE OPTIONS ───────────────────────────────────────────────────────────────────  │
 │  ⟨toggle tiles from design, e.g. variants, Great Work: choose 1 of 2 / random⟩     │
 │                                                                                  │
 │ ▸ More options:  seed [______]   Great Work assignment ⟨random | choose⟩           │
 ├──────────────────────────────────────────────────────────────────────────────────┤
-│ Standard · 4 players (3 bots) · 45 s picks         Sound ▾  Theme ▾ [Start game] │
+│ Standard · 4 players (3 bots) · Normal clock       Sound ▾  Theme ▾ [Start game] │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -240,8 +240,10 @@ a sticky footer with a one-line summary and **Start game**. The draft is saved o
   drafting game (neighbours), so the section title says "table order" and seats can be
   reordered by drag or ↑/↓ keys. A ↻ button shuffles the order.
 - **Mode** tiles: one per ruleset ww-design ships. Until then: one "Standard" tile.
-- **Pick timer**: off by default when there is one human (bots never need a timer); 45 s
-  default online. What happens on time-out is a rule (⟨auto-pick rule⟩), shown under the timer.
+- **Turn clock** (RULES.md R15.3): Off / Relaxed (× 1.5) / Normal / Fast (× 0.5), rounded up.
+  Normal is 45, 40, 35, 30, 25 s by turn of the Season and 60 s for the Great Work choice; the
+  hint under the buttons says so for the chosen option. Default Off in hotseat, Normal online.
+  On time-out the engine's default pick plays (R15.6).
 - **Hotseat note**: appears when 2+ seats are Human, with the cost (one pass cover per human per
   pick, §9).
 - **Footer summary**: Catan `renderSummary`. An invalid setup shows the reason (role=alert) and
@@ -279,7 +281,7 @@ belongs to ww-net (`docs/MULTIPLAYER.md`); this section is the screen.
 │ ⟨setup screen §5 sections: mode, timer,    │                                     │
 │  options; inert + dimmed for guests⟩       │                                     │
 ├──────────────────────────────────────────────────────────────────────────────────┤
-│ Standard · 3 players + 1 bot · 45 s picks                          [Start game]  │
+│ Standard · 3 players + 1 bot · Normal clock                        [Start game]  │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -288,8 +290,8 @@ belongs to ww-net (`docs/MULTIPLAYER.md`); this section is the screen.
   (needs someone seated); "Copy link" turns into "Copied!" in place; settings are the setup
   screen wrapped (seats, seed, footer hidden), `inert` for guests.
 - A member without a seat sees "You're watching. [Sit here]" at the top.
-- Online the pick timer is on by default (one slow player holds up everyone). Length: ⟨timer
-  default⟩; ui proposes 45 s, net's N0 guessed 60 s. Design decides.
+- Online the turn clock is Normal by default (R15.3: one slow player holds up everyone), with
+  the same four options and lengths as hotseat.
 - Lobby again after a game: host's "Back to lobby" is the rematch path.
 
 ---

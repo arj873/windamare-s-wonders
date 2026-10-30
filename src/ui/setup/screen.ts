@@ -28,12 +28,12 @@ import {
   setSeatName,
   setSeed,
   withPlayerName,
-  setTimerIdx,
+  setClock,
   setupError,
   shuffleSeats,
   summaryLine,
-  TIMER_STEPS,
-  timerLabel,
+  CLOCKS,
+  clockScale,
   type BotLevel,
   type NewGameConfig,
   type SetupDraft,
@@ -49,6 +49,8 @@ export interface SetupScreenOptions {
   backLabel?: string;
   /** The home screen's nickname: names the first human seat while it has a default name. */
   playerName?: string;
+  /** What a clock option means in this game ("45 s on a fresh hand, 25 s at the end"). */
+  clockHint?: (scale: number) => string;
   /** "Learn to play" in the header (UX.md §11.6); absent hides it. */
   onTutorial?: () => void;
   /** Where the draft is remembered (default localStorage; null = nowhere). */
@@ -389,32 +391,34 @@ export class SetupScreen {
     );
   }
 
+  /** RULES.md R15.3: Off / Relaxed / Normal / Fast; the game says what each means in seconds. */
   private timerSection(): HTMLElement {
     const d = this.draft;
+    const hint = d.clock === 'off' ? '' : (this.opts.clockHint?.(clockScale(d.clock)) ?? '');
     return this.section(
-      'Pick timer',
+      'Turn clock',
       'timer',
       h(
         'div',
-        { class: 'seg su-timer', attrs: { role: 'group', 'aria-label': 'Pick timer' } },
-        ...TIMER_STEPS.map((_, idx) =>
+        { class: 'seg su-timer', attrs: { role: 'group', 'aria-label': 'Turn clock' } },
+        ...CLOCKS.map((c) =>
           h(
             'button',
             {
-              class: `seg-btn${idx === d.timerIdx ? ' is-on' : ''}`,
-              attrs: { 'aria-pressed': String(idx === d.timerIdx), 'data-k': `timer-${idx}` },
-              on: { click: () => this.set(setTimerIdx(this.draft, idx)) },
+              class: `seg-btn${c.id === d.clock ? ' is-on' : ''}`,
+              attrs: { 'aria-pressed': String(c.id === d.clock), 'data-k': `clock-${c.id}` },
+              on: { click: () => this.set(setClock(this.draft, c.id)) },
             },
-            timerLabel(idx),
+            c.label,
           ),
         ),
       ),
       h(
         'p',
         { class: 'muted su-hint' },
-        TIMER_STEPS[d.timerIdx]
-          ? 'One clock for the whole table. When it runs out, a card is picked for whoever has not picked yet.'
-          : 'No clock: the table waits for every human. Bots never need one.',
+        d.clock === 'off'
+          ? 'No clock: the table waits for every human. Bots never need one.'
+          : `${hint ? `${hint}. ` : ''}One clock for the whole table; when it runs out, a card is picked for whoever has not picked yet.`,
       ),
     );
   }

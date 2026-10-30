@@ -11,7 +11,6 @@ function game(over: Partial<Opts> = {}) {
     engine: toy,
     config: toyConfig(3),
     bots: [1, 2],
-    pickTimerSec: null,
     botDelayMs: () => 100,
     onChange,
     ...over,
@@ -64,7 +63,7 @@ describe('LocalGame', () => {
 
   it('plays the engine default for a human whose clock runs out', () => {
     const onTimeout = vi.fn();
-    const { g } = game({ pickTimerSec: 30, botDelayMs: () => 50, onTimeout });
+    const { g } = game({ clockSec: () => 30, botDelayMs: () => 50, onTimeout });
     expect(g.clock()).toEqual({ remainingMs: 30_000, totalMs: 30_000 });
     vi.advanceTimersByTime(10_000);
     expect(g.clock()?.remainingMs).toBe(20_000);
@@ -78,7 +77,7 @@ describe('LocalGame', () => {
 
   it('pauses the clock (pass cover, setup screen) and resumes with the time that was left', () => {
     const onTimeout = vi.fn();
-    const { g } = game({ pickTimerSec: 30, onTimeout });
+    const { g } = game({ clockSec: () => 30, onTimeout });
     vi.advanceTimersByTime(10_000);
     g.pause();
     expect(g.paused).toBe(true);
@@ -90,6 +89,15 @@ describe('LocalGame', () => {
     expect(onTimeout).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1_000);
     expect(onTimeout).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for each decision its own length (R15.3: shorter later in the Season)', () => {
+    const { g } = game({ clockSec: (s) => 45 - 5 * s.turn, botDelayMs: () => 10 });
+    expect(g.clock()?.totalMs).toBe(45_000);
+    humanPicks(g);
+    vi.advanceTimersByTime(10);
+    expect(g.state.turn).toBe(1);
+    expect(g.clock()?.totalMs).toBe(40_000);
   });
 
   it('runs no clock without a timer', () => {
@@ -110,7 +118,7 @@ describe('LocalGame', () => {
   });
 
   it('stops bots and the clock on dispose', () => {
-    const { g, onChange } = game({ pickTimerSec: 30 });
+    const { g, onChange } = game({ clockSec: () => 30 });
     humanPicks(g);
     const calls = onChange.mock.calls.length;
     g.dispose();

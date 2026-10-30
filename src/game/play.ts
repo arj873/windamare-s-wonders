@@ -4,10 +4,10 @@
  * game and re-renders on every change; the timer ring ticks between renders.
  */
 import { pickFor, type BotLevel as BotStrength } from '../bots';
-import type { DraftAction, DraftEngine, GameConfig, Json, SeatId } from '../engine';
+import type { DraftAction, DraftEngine, DraftState, GameConfig, Json, SeatId } from '../engine';
 import { motionOn, showToast, type NewGameConfig } from '../ui';
 import type { RevealHook } from './fx';
-import type { BotLevel } from '../ui/setup/model';
+import { clockScale, type BotLevel } from '../ui/setup/model';
 import { tableModel, type SeatLook } from '../ui/table/model';
 import type { Presenter } from '../ui/table/present';
 import { DraftTable } from '../ui/table/table';
@@ -21,7 +21,18 @@ export interface GameBinding<S, T> {
   options?: Record<string, Json>;
   /** The ruleset's reveal animation and sound (fx lane, via src/game/fx.ts). */
   fx?: RevealHook<S, T>;
+  /**
+   * R15.3 turn clock: seconds for the decision a state waits on at clock `scale` (Normal = 1),
+   * and the setup screen's words for a scale. Absent: a flat 45 s × scale.
+   */
+  clock?: {
+    seconds(state: DraftState<S, T>, scale: number): number;
+    hint(scale: number): string;
+  };
 }
+
+/** Without a game-specific clock: Normal is a flat 45 s per decision. */
+export const FLAT_CLOCK_SEC = 45;
 
 export interface PlayHooks<S = unknown, T = unknown> {
   botDelayMs: () => number;
@@ -136,7 +147,11 @@ export function playLocal<S, T>(
     engine,
     config,
     bots,
-    pickTimerSec: cfg.pickTimerSec,
+    clockSec: (state) => {
+      const scale = clockScale(cfg.clock);
+      if (scale <= 0) return null;
+      return binding.clock?.seconds(state, scale) ?? Math.ceil(FLAT_CLOCK_SEC * scale);
+    },
     botDelayMs: hooks.botDelayMs,
     // Each bot decides from its own view only (bots lane, docs/BOTS.md).
     botAction: (state, seat) =>
