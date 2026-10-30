@@ -6,7 +6,7 @@ Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this fil
 Status (2026-10-30): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
 what the code does. **§15 is the Windamere game (E2): playable for 2 to 7 towns on the D2c rules
 and the shipped content, Great Work choice, Recall and the First game option (§15.5) included.**
-§16 is the lookahead for bots (E5). §14 keeps three optional core changes (C7, C8, C11) the game does without (it does that
+§16 is the lookahead for bots (E5). Log lines name their seats so a client can say "You" (E8, §4). §14 keeps three optional core changes (C7, C8, C11) the game does without (it does that
 work in `src/engine/game/`).
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
@@ -183,13 +183,35 @@ interface LogEntry {
   seq: number;
   round: number;
   turn: number;
-  seat: SeatId | null; // who it is about; null = the table
+  seat: SeatId | null; // who it is about (the actor); null = the table
   kind: string; // 'reveal', 'pass', 'roundEnd', ruleset kinds ...
   text: string; // plain English, safe to show to everyone it is shown to
   data?: Json; // structured payload for UI
   to?: SeatId[]; // private entry: only these seats see it (views drop it for others)
+  targets?: SeatId[]; // E8: the other seats it involves (a buyer, a payer, leaders, winners)
+  parts?: LogPart[]; // E8: `text` in pieces, present when the line names a seat
 }
 
+// E8: a seat piece reads `you` for that seat's player and `text` for everyone else.
+type LogPart = string | { seat: SeatId; text: string; you: string };
+```
+
+**Saying "You" (E8).** A client that knows its viewer shows `logText(entry, viewer)` (core
+export) instead of `entry.text`: "You sell 1 wax to Player 2 for 3." for the seller, "Player 1
+sells 1 wax to you for 3." for the buyer, `text` for everyone else, spectators and `null`. In
+hotseat, pass the seat on screen. Joining the pieces with every seat piece's `text` gives `text`
+exactly, so old readers see the same lines as before. The engine writes the second person
+(verbs agree: "You are plundered", "Your defenders", "you and Player 3 share"), so a client never
+conjugates. A seat piece also tells a client which span to colour for that seat. A line that names
+no seat ("Hands pass left.") has no `parts`: `logText` returns `text`. `seat` is the actor and
+`targets` the other seats involved; every seat a line names is one of them (tested). States saved
+before E8 have neither field: `logText` falls back to `text`.
+
+Cost: the pieces repeat the text, so the log grows by about 43%. A random 7-town game on the
+shipped content ends with a 156 KB state (log 146 KB) against 112 KB (log 102 KB) before E8; at
+3 towns, 62 KB against 47 KB. A view is the same size.
+
+```ts
 interface GameResult {
   scores: { seat: SeatId; categories: Record<string, number>; total: number; tiebreak: number[] }[];
   ranking: SeatId[][]; // best first; tied seats share a group
@@ -477,7 +499,7 @@ ctx.take(cardId)                 // remove a card from wherever it is; the calle
 ctx.trigger(seat, specs, source, args?) // run onPlay of arbitrary specs (a Great Work tier)
 ctx.prompt(seat, kind, data)     // queue a prompt (a group of one)
 ctx.promptGroup([{ seat, kind, data }, ...]) // queue one group, answered at once (§6)
-ctx.log(seat, kind, text, { data?, to? })
+ctx.log(seat, kind, text | parts, { data?, to?, targets? })  // parts: E8, §4; named(seat, text, you)
 ctx.left(seat), ctx.right(seat), ctx.neighbours(seat)
 ```
 
@@ -543,7 +565,10 @@ legalActions soundness and view-safety on random playouts (2-5 seats).
   scans for them).
 - 2-player: the rules use no neutral seat (R14): §15.3.
 - Pick changes before the reveal stay (R15.2): `unpick` and re-picking are kept.
-- The log is not trimmed (a game is ~20 turns); revisit if states get large.
+- The log is not trimmed (a game is ~20 turns); revisit if states get large. With E8's pieces
+  (§4) it is about 94% of a 7-town state at game end (146 of 156 KB). Net sends a whole view
+  on every action, so sending only the log entries after the client's last `seq` would remove
+  most of each message (net's choice).
 
 ## 14. Contract changes for E2 (E1b: planned, not implemented)
 
@@ -756,6 +781,25 @@ log entry (§4) with `kind` = the event's `type`, `data` = the event, `seat` = w
 a plain-English `text`. So it is in the state, in every view, and redacted by the core like any
 log entry (`to`; no Windamere event needs it today, since every event is public, R1.11).
 
+**"You" in the log (E8, §4).** Every event that is about a town names it as a seat piece, so
+`logText(entry, viewer)` reads "You build Mill." for that town's player. `seat` is the actor and
+`targets` lists the other towns involved:
+
+| event  | `seat` (actor) | `targets`            | the actor reads                    | a target reads                  |
+| ------ | -------------- | -------------------- | ---------------------------------- | ------------------------------- |
+| trade  | seller         | [buyer]              | You sell 1 wax to P2 for 3.        | ... to you for 3.               |
+|        |                |                      | You are out of wax: P2 buys it ... | ...: you buy it ...             |
+| bounty | taker (`to`)   | [payer (`from`)]     | You take a bounty of 2 from P2.    | ... from you.                   |
+| toll   | collector      | `from` (who built)   | You collect 2 in tolls.            | (not named in the line)         |
+| pay    | builder        | towns it bought from | You pay for Mill.                  | (not named in the line)         |
+| honour | null           | leaders              | (none)                             | You lead / You and P2 share ... |
+
+The rest name only their town: "You spend / glean / burn / build / complete X tier 1 / yield /
+hold / are plundered / will raise X", "Your defenders are rewarded.", "You gather your stores."
+`raidRevealed` and "Nobody leads X." name no town (no pieces). The core's `gameOver` line has the
+winners as `targets` ("Game over: you win." / "Game over: P1 and you tie."). `eventsOf` entries
+carry `parts` and `targets` too, so `logText` takes them as they are.
+
 ```ts
 type WwEvent =
   | { type: 'greatWork'; seat; greatWork } //                      R2.5, all towns at once
@@ -793,12 +837,15 @@ then the end-of-turn `honour` changes, then on the last turn the Season end (Rai
 held bonuses, Season-end gains, Honours) and the next Season's `raidRevealed`. All entries of one
 action share its `seq`.
 
-Readers (work on views): `eventsOf(state)` → `{ seq, round, turn, text, event }[]`, every event;
-`latestEvents(state)` → the events of the latest action that had any (what to animate);
-`EVENT_TYPES`. `table.leaders` keeps the current Honour leaders. Tests: one turn's exact sequence
-and payloads, Exchanges/bank/cover, tiers, a Season end, the Great Work reveal, a 2-player burn,
-and over a whole random game: every view gets the same events, and every card an event names was
-revealed in a pick first.
+Readers (work on views): `eventsOf(state)` → `{ seq, round, turn, text, parts?, targets?, event }[]`,
+every event; `latestEvents(state)` → the events of the latest action that had any (what to
+animate); `EVENT_TYPES`. `table.leaders` keeps the current Honour leaders. Tests: one turn's exact
+sequence and payloads, Exchanges/bank/cover, tiers, a Season end, the Great Work reveal, a
+2-player burn, and over a whole random game: every view gets the same events, and every card an
+event names was revealed in a pick first. E8 (`logtext.test.ts`, `core/log.test.ts`): each table
+row above as each town and a spectator read it, Honours shared and lost, ties at game over, and
+over whole games at 3 and 7 towns: the pieces join to `text`, name only the actor and targets,
+and every other viewer reads `text`. Mutation check: dropping trade's target failed 2 tests.
 
 **Shipped content** (`shipped.ts`): `windamereContent()` maps design's `src/content/windamere`
 (goods, cards, Great Works, Raids, Honours, its R16 `TUNABLES`) to `WwContent`; design keeps its

@@ -1,5 +1,12 @@
 /** R2.4, R2.5 the Great Work choice and R8 the labour track. */
-import type { Ctx, EffectSpec, Json, PromptHandler, SeatId } from '../core';
+import {
+  named,
+  type Ctx,
+  type EffectSpec,
+  type Json,
+  type PromptHandler,
+  type SeatId,
+} from '../core';
 import type { WwRules } from './content';
 import { emit, gained, holdings } from './events';
 import { updateHonourLeaders } from './honours';
@@ -36,7 +43,10 @@ function keepGreatWork(rules: WwRules, ctx: Ctx<WwSeat, WwTable>, seat: SeatId, 
   const town = townOf(ctx.state, seat);
   const gw = rules.greatWork(id);
   town.data.greatWork = gw.id;
-  emit(ctx, { type: 'greatWork', seat, greatWork: gw.id }, `${town.name} will raise ${gw.name}.`);
+  emit(ctx, { type: 'greatWork', seat, greatWork: gw.id }, [
+    named(seat, `${town.name} will`, 'You will'),
+    ` raise ${gw.name}.`,
+  ]);
   // Towns keep theirs in seat order; after the last town, the Perks may move an Honour.
   if (seat === ctx.state.seats.length - 1) updateHonourLeaders(rules, ctx);
 }
@@ -92,7 +102,10 @@ export function greatWorkCheck(rules: WwRules, ctx: Ctx<WwSeat, WwTable>, seat: 
         tier: town.tiers,
         gains: gained(before, holdings(town)),
       },
-      `${townOf(ctx.state, seat).name} completes ${gw.name} tier ${town.tiers}.`,
+      [
+        named(seat, `${townOf(ctx.state, seat).name} completes`, 'You complete'),
+        ` ${gw.name} tier ${town.tiers}.`,
+      ],
     );
     next = nextThreshold(rules, town);
   }

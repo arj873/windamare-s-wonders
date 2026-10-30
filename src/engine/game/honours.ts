@@ -1,5 +1,5 @@
 /** R11 Honours. Measures are public (R1.11), so these work on views too (R11.3). */
-import type { Ctx, SeatId } from '../core';
+import { andList, named, type Ctx, type LogPart, type SeatId } from '../core';
 import type { WwRules } from './content';
 import { emit } from './events';
 import { measure, townOf } from './town';
@@ -48,13 +48,17 @@ export function updateHonourLeaders(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): 
     if (sameSeats(was, h.leaders)) return;
     table.leaders[i] = h.leaders;
     const name = rules.honour(h.honour).name;
-    const who = h.leaders.map((s) => townOf(ctx.state, s).name).join(' and ');
-    emit(
-      ctx,
-      { type: 'honour', honour: h.honour, leaders: h.leaders, was, best: h.best },
-      who
-        ? `${who} ${h.leaders.length > 1 ? 'share' : 'leads'} ${name} (${h.best}).`
-        : `Nobody leads ${name}.`,
-    );
+    const town = (s: SeatId) => townOf(ctx.state, s).name;
+    const [only, ...more] = h.leaders;
+    const who: LogPart[] =
+      only === undefined
+        ? ['Nobody leads']
+        : more.length === 0
+          ? [named(only, `${town(only)} leads`, 'You lead')]
+          : [...andList(h.leaders, town, true), ' share'];
+    emit(ctx, { type: 'honour', honour: h.honour, leaders: h.leaders, was, best: h.best }, [
+      ...who,
+      only === undefined ? ` ${name}.` : ` ${name} (${h.best}).`,
+    ]);
   });
 }

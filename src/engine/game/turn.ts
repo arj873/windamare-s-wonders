@@ -15,7 +15,7 @@
  * Each step records what it did as events (events.ts).
  */
 import type { Card, CardDefId, Ctx, Pick, ResolveStep, RoundSpec, SeatId } from '../core';
-import { neighboursOf } from '../core';
+import { named, neighboursOf } from '../core';
 import { placeBuild } from './build';
 import { countsIndex, type WwRules } from './content';
 import { emit, gained, holdings, isEmpty } from './events';
@@ -85,19 +85,28 @@ export function resolveSteps(rules: WwRules): Step[] {
       const gains = spendGains(rules, ctx.state, seat, def, args.any ?? []);
       addGains(town.data, gains);
       ctx.toDiscard(card); // R5.3
-      emit(ctx, { type: 'spend', seat, card, gains }, `${town.name} spends ${def.name}.`);
+      emit(ctx, { type: 'spend', seat, card, gains }, [
+        named(seat, `${town.name} spends`, 'You spend'),
+        ` ${def.name}.`,
+      ]);
     }
     for (const g of [...(town.zones[GLEAN] ?? [])]) {
       const def = rules.card(g.def);
       const gains = spendGains(rules, ctx.state, seat, def, args.glean ?? []);
       addGains(town.data, gains);
       ctx.toDiscard(ctx.take(g.id));
-      emit(ctx, { type: 'glean', seat, gains }, `${town.name} gleans a card.`);
+      emit(ctx, { type: 'glean', seat, gains }, [
+        named(seat, `${town.name} gleans`, 'You glean'),
+        ' a card.',
+      ]);
     }
     // R14.2, R14.3: the burned card leaves the hand face down, with no effect (before the pass).
     if (args.burn !== undefined) {
       ctx.toDiscard(ctx.take(args.burn));
-      emit(ctx, { type: 'burn', seat }, `${town.name} burns a card.`);
+      emit(ctx, { type: 'burn', seat }, [
+        named(seat, `${town.name} burns`, 'You burn'),
+        ' a card.',
+      ]);
     }
   };
 
@@ -135,11 +144,10 @@ export function resolveSteps(rules: WwRules): Step[] {
     if (town.coins < 0 || Object.values(town.store).some((n) => n < 0)) {
       throw new Error(`seat ${seat}: a checked Build could not be paid (R4.7)`);
     }
-    emit(
-      ctx,
-      { type: 'pay', seat, card, goods, exchanges, bank, buys, coins },
-      `${owner.name} pays for ${rules.card(card.def).name}.`,
-    );
+    emit(ctx, { type: 'pay', seat, card, goods, exchanges, bank, buys, coins }, [
+      named(seat, `${owner.name} pays`, 'You pay'),
+      ` for ${rules.card(card.def).name}.`,
+    ]);
   };
 
   // 2b. Sell (R6.6, R6.7), run for each seller: fill its neighbours' purchases from what its own
@@ -186,8 +194,18 @@ export function resolveSteps(rules: WwRules): Step[] {
           ctx,
           { type: 'trade', seller: seat, buyer, good, price, filled, bonus: filled ? bonus : 0 },
           filled
-            ? `${seller.name} sells 1 ${good} to ${name} for ${price}.`
-            : `${seller.name} is out of ${good}: ${name} buys it from the bank for ${price}.`,
+            ? [
+                named(seat, `${seller.name} sells`, 'You sell'),
+                ` 1 ${good} to `,
+                named(buyer, name, 'you'),
+                ` for ${price}.`,
+              ]
+            : [
+                named(seat, `${seller.name} is`, 'You are'),
+                ` out of ${good}: `,
+                named(buyer, `${name} buys`, 'you buy'),
+                ` it from the bank for ${price}.`,
+              ],
         );
       }
     }
@@ -206,7 +224,10 @@ export function resolveSteps(rules: WwRules): Step[] {
       if (!self && e.spec.kind === def.kind) addGains(town.data, e.spec.gains as Gains);
     }
     const gains = gained(before, holdings(town.data));
-    emit(ctx, { type: 'build', seat, card, cover, gains }, `${town.name} builds ${def.name}.`);
+    emit(ctx, { type: 'build', seat, card, cover, gains }, [
+      named(seat, `${town.name} builds`, 'You build'),
+      ` ${def.name}.`,
+    ]);
   };
 
   const check: Step = (ctx, seat) => {
@@ -234,11 +255,10 @@ export function resolveSteps(rules: WwRules): Step[] {
     if (coins > 0) {
       const town = townOf(ctx.state, seat);
       town.data.coins += coins;
-      emit(
-        ctx,
-        { type: 'toll', seat, coins, from: neighbours.filter((s) => from.has(s)) },
-        `${town.name} collects ${coins} in tolls.`,
-      );
+      emit(ctx, { type: 'toll', seat, coins, from: neighbours.filter((s) => from.has(s)) }, [
+        named(seat, `${town.name} collects`, 'You collect'),
+        ` ${coins} in tolls.`,
+      ]);
     }
   };
 
@@ -254,7 +274,11 @@ export function resolveSteps(rules: WwRules): Step[] {
       town.data.coins += e.spec.coins as number;
     }
     const gains = gained(before, holdings(town.data));
-    if (!isEmpty(gains)) emit(ctx, { type: 'yield', seat, gains }, `${town.name} yields.`);
+    if (!isEmpty(gains)) {
+      emit(ctx, { type: 'yield', seat, gains }, [
+        named(seat, `${town.name} yields.`, 'You yield.'),
+      ]);
+    }
   };
 
   // R11.3: once every town has resolved the turn (the last seat in resolve order).

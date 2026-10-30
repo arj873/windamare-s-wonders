@@ -5,6 +5,7 @@
 import { range } from '../../shared';
 import { effectsOf, findDef } from './effects';
 import { locate } from './invariants';
+import { andList, named } from './log';
 import { passTarget } from './seats';
 import type {
   Card,
@@ -13,6 +14,7 @@ import type {
   GameConfig,
   GameResult,
   Json,
+  LogPart,
   Prompt,
   PromptStage,
   RevealedPick,
@@ -105,7 +107,10 @@ export function reveal<S, T>(ctx: Ctx<S, T>): void {
         continue;
       }
       draft.discard.push(...left);
-      ctx.log(s.id, 'leftovers', `${s.name} discards ${left.length} leftover card(s).`);
+      ctx.log(s.id, 'leftovers', [
+        named(s.id, `${s.name} discards`, 'You discard'),
+        ` ${left.length} leftover card(s).`,
+      ]);
     }
   }
 
@@ -257,9 +262,15 @@ function gameEnd<S, T>(ctx: Ctx<S, T>): void {
   const result = scoreGame(rules, draft);
   draft.result = result;
   draft.phase = { kind: 'gameOver' };
-  const names = result.winners.map((s) => draft.seats[s]?.name ?? `seat ${s}`).join(' and ');
-  ctx.log(null, 'gameOver', `Game over: ${names} ${result.winners.length > 1 ? 'tie' : 'wins'}.`, {
+  const name = (s: SeatId) => draft.seats[s]?.name ?? `seat ${s}`;
+  const [only, ...more] = result.winners;
+  const winners: LogPart[] =
+    only !== undefined && more.length === 0
+      ? [named(only, `${name(only)} wins`, 'you win')]
+      : [...andList(result.winners, name, false), ' tie'];
+  ctx.log(null, 'gameOver', ['Game over: ', ...winners, '.'], {
     data: { winners: result.winners },
+    targets: result.winners,
   });
 }
 
