@@ -325,6 +325,15 @@ yet changed). `RoomCore` gets the engine through `RoomPlatform.engine`.
   (`reveal` is derived from `lastReveal` changing); methods `start close leave retryNow pick
 unpick answer setName takeSeat leaveSeat configure kick startGame rematch chatSend react sync`.
   A fatal `error` frame followed by the socket close emits one `fatal` event and never retries.
-- **Not done:** the 2-tab browser e2e (needs the browser dependency, platform P9); the actual
-  WebSocket `Connect` factory and `RoomApi` (HTTP create/check), which belong with the UI wiring;
-  no run under `wrangler dev` or workerd; no deploy.
+- **Wire glue.** `src/net/ws.ts`: `webSocketConnect(base, roomId, make)` (a `Connect` over
+  WebSocket; a failed open reports 1006 so the client backs off) and `httpRoomApi(base, fetch)`
+  (`create`, `check`); the UI passes `globalThis.WebSocket`/`fetch`. Unit-tested with fakes.
+- **Server e2e under the real runtime.** `src/server/e2e/serverE2e.ts` starts `wrangler dev`
+  (workerd), creates a room over HTTP, seats two WebSocket clients (third seat a server bot), plays
+  a whole 3-town Windamere game on the Fast clock with autopilot clients, drops and reconnects Bob
+  mid-game, and checks every view for leaks. Run: `nice -n 19 pnpm exec tsx
+src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state in `.wrangler-e2e`,
+  removed afterwards). **Result: passed**, which is the first time any of this ran under workerd.
+  Not in `pnpm test`. A `pnpm e2e:server` script entry is platform's to add.
+- **Not done:** the 2-tab _browser_ e2e (playwright is on main, P9): the UI has no online screens
+  yet (home, lobby, table over `RoomClient`), so there is nothing to drive. No deploy.
