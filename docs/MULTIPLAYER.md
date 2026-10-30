@@ -307,3 +307,24 @@ yet changed). `RoomCore` gets the engine through `RoomPlatform.engine`.
   relayed per seat; `waiting` already lists every seat in the group. Untested until the engine
   implements groups (only sequential prompts exist today).
 - Not changed: single-pick vs pair needed nothing (the pick is opaque to net).
+
+## 10. N3: real games and the client (as built)
+
+- **Real engine.** `src/server/engine.ts` returns `createWindamereEngine(windamereContent())`
+  (shipped content, ENGINE.md §15). `src/server/windamere.test.ts` plays a full 4-town game through
+  `GameSession` (humans timing out, bots playing), checks the Great Work group (all towns answer
+  at once, hidden, 60 s clock, answers masked), and runs the **leak test over a whole game**:
+  every `game` message holds no card id from another seat's hand, the deck or the box, no other
+  seat's pick or recall, no seed, and only that seat's own legal actions. Recall (R15.8) is the
+  owner's own memory, so its faces are allowed for the owner only. Prompt groups (C3) are in the
+  engine now and work through the stage logic unchanged.
+- **Client.** `src/net/client.ts` (`RoomClient<S, T>`), `transport.ts` (token key
+  `windamere.mp.token.<room>`), `loopback.ts` (`RoomHost`, `FakeClock`, `hostConnect`): the
+  UX.md §17 API. Getters `status attempts fatal you room me mySeat isHost game chat`,
+  `timerLeftMs()`; events `status room game{game,prev} reveal chat reaction error fatal`
+  (`reveal` is derived from `lastReveal` changing); methods `start close leave retryNow pick
+unpick answer setName takeSeat leaveSeat configure kick startGame rematch chatSend react sync`.
+  A fatal `error` frame followed by the socket close emits one `fatal` event and never retries.
+- **Not done:** the 2-tab browser e2e (needs the browser dependency, platform P9); the actual
+  WebSocket `Connect` factory and `RoomApi` (HTTP create/check), which belong with the UI wiring;
+  no run under `wrangler dev` or workerd; no deploy.

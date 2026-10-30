@@ -1,12 +1,11 @@
 /**
- * The one place the room server learns which game it hosts. The Windamere ruleset (engine card
- * E2) is not on main yet; until it is, a deployed room cannot be created. Tests inject the toy
- * ruleset through `FakeRuntime`, so nothing here is exercised by them.
- *
- * When E2 lands: `import { engine } from '../engine'` and return it.
+ * The one place the room server learns which game it hosts: the shipped Windamere engine
+ * (docs/ENGINE.md §15, content from src/engine/game/shipped.ts). Tests inject the toy ruleset
+ * through `FakeRuntime`.
  */
-import type { DraftEngine } from '../engine';
+import { createWindamereEngine, windamereContent, type DraftEngine } from '../engine';
 
 export function roomEngine(): DraftEngine<unknown, unknown> {
-  throw new Error('no Windamere engine yet (engine card E2): the room server cannot host a game');
+  // A DraftEngine<WwSeat, WwTable> is not assignable to <unknown, unknown> (ENGINE.md §1).
+  return createWindamereEngine(windamereContent()) as unknown as DraftEngine<unknown, unknown>;
 }
