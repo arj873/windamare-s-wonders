@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toy } from '../engine/core/testing/helpers';
 import { toyPresenter } from '../ui/table/testing/toy';
 import { boot } from './boot';
+import { windamereBinding } from './windamere';
 
 beforeEach(() => {
   localStorage.clear();
@@ -57,6 +58,22 @@ describe('boot', () => {
     expect(root.querySelector('.setup')).not.toBeNull();
     click(root, '[data-k="back"]');
     expect(root.querySelector('.dt')).not.toBeNull();
+    app.play?.dispose();
+  });
+
+  it('plays Windamere: Start deals a 6-card hand, bots answer, picks resolve', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    click(root, '[data-k="start"]');
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(6);
+    expect(root.querySelector('.dt-round')?.textContent).toMatch(/^Spring · Pick 1 of 5/);
+    click(root, '.dt-card');
+    click(root, '[data-k^="use-"][data-k$="-spend"]');
+    vi.advanceTimersByTime(10);
+    expect(root.querySelector('.dt-round')?.textContent).toMatch(/^Spring · Pick 2 of 5/);
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(5);
     app.play?.dispose();
   });
 

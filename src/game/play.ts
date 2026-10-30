@@ -3,8 +3,10 @@
  * setup screen's NewGameConfig into an engine GameConfig, forwards the table's intents to the
  * game and re-renders on every change; the timer ring ticks between renders.
  */
+import { pickFor, type BotLevel as BotStrength } from '../bots';
 import type { DraftAction, DraftEngine, GameConfig, Json, SeatId } from '../engine';
 import { showToast, type NewGameConfig } from '../ui';
+import type { BotLevel } from '../ui/setup/model';
 import { tableModel, type SeatLook } from '../ui/table/model';
 import type { Presenter } from '../ui/table/present';
 import { DraftTable } from '../ui/table/table';
@@ -30,6 +32,9 @@ export interface PlayHandle<S, T> {
   table: DraftTable;
   dispose(): void;
 }
+
+/** Setup screen bot levels → the bots lane's levels (only 'easy' plays differently today). */
+const BOT_LEVEL: Record<BotLevel, BotStrength> = { easy: 'easy', normal: 'medium', hard: 'hard' };
 
 /** Timer ring refresh between renders, ms. */
 export const TICK_MS = 250;
@@ -64,6 +69,7 @@ export function playLocal<S, T>(
     bot: p.controller === 'bot',
   }));
   const bots = cfg.players.flatMap((p, i) => (p.controller === 'bot' ? [i] : []));
+  const botSalt = crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
   let locked = false;
 
   const send = (make: (seat: SeatId) => DraftAction) => {
@@ -92,6 +98,12 @@ export function playLocal<S, T>(
     bots,
     pickTimerSec: cfg.pickTimerSec,
     botDelayMs: hooks.botDelayMs,
+    // Each bot decides from its own view only (bots lane, docs/BOTS.md).
+    botAction: (state, seat) =>
+      pickFor(engine, engine.viewFor(state, seat), seat, {
+        level: BOT_LEVEL[cfg.players[seat]?.botLevel ?? 'normal'],
+        salt: botSalt,
+      }),
     onChange: (g) => {
       const view = g.view();
       const viewer = view.view.viewer;

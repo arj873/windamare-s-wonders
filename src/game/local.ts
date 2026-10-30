@@ -3,8 +3,8 @@
  * seats, runs the round clock and picks which human's view is on screen. No DOM; the screen
  * (play.ts) renders `view()` on every `onChange`.
  *
- * Bots here are a placeholder (a random legal action, from the bot's own view) until the bots
- * lane ships real ones. The clock is local: online it is the server's (MULTIPLAYER.md §2.1.1).
+ * Bots move through `botAction` (play.ts passes the bots lane's pickFor); without it, a random
+ * legal action. The clock is local: online it is the server's (MULTIPLAYER.md §2.1.1).
  */
 import {
   Rng,
@@ -25,8 +25,10 @@ export interface LocalGameOptions<S, T> {
   pickTimerSec: number | null;
   /** How long a bot "thinks" before it acts, ms. */
   botDelayMs: () => number;
-  /** Seed of the placeholder bots' choices. */
+  /** Seed of the placeholder bots' choices (used without `botAction`). */
   botSeed?: number;
+  /** A bot seat's move (the bots lane's pickFor); default: a random legal action. */
+  botAction?: (state: DraftState<S, T>, seat: SeatId) => DraftAction | null;
   /** Clock source (tests use fake timers). */
   now?: () => number;
   onChange(game: LocalGame<S, T>): void;
@@ -187,7 +189,9 @@ export class LocalGame<S, T> {
       const t = setTimeout(() => {
         this.botTimers.delete(seat);
         if (this.disposed || !this.engine.waitingOn(this.state).includes(seat)) return;
-        const action = randomAction(this.engine, this.state, seat, this.rng);
+        const action =
+          this.opts.botAction?.(this.state, seat) ??
+          randomAction(this.engine, this.state, seat, this.rng);
         if (action) this.apply(action);
       }, this.opts.botDelayMs());
       this.botTimers.set(seat, t);

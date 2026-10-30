@@ -39,7 +39,7 @@ describe('setup draft', () => {
   it('defaults to you + bots with unique colours', () => {
     const d = defaultSetup();
     expect(d.seats).toHaveLength(4);
-    expect(d.seats[0]).toMatchObject({ name: 'You', controller: 'human' });
+    expect(d.seats[0]).toMatchObject({ name: 'Player 1', controller: 'human' });
     expect(d.seats.slice(1).every((s) => s.controller === 'bot')).toBe(true);
     expect(new Set(colours(d)).size).toBe(4);
     expect(setupError(d)).toBeNull();
@@ -113,7 +113,7 @@ describe('setup draft', () => {
     d = setSeatName(d, 3, '   ');
     d = setTimerIdx(d, TIMER_STEPS.indexOf(45));
     const cfg = buildConfig(d);
-    expect(cfg.players.map((p) => p.name)).toEqual(['You', 'Ana', 'ana 2', 'Player 4']);
+    expect(cfg.players.map((p) => p.name)).toEqual(['Player 1', 'Ana', 'ana 2', 'Player 4']);
     expect(cfg.players[0]).not.toHaveProperty('botLevel');
     expect(cfg.players[1]!.botLevel).toBe('normal');
     expect(cfg.pickTimerSec).toBe(45);

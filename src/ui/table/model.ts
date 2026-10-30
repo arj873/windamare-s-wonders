@@ -16,7 +16,7 @@ import {
   type Pick,
   type SeatId,
 } from '../../engine';
-import type { CardFace, KindInfo, Presenter, SeatStat, UseInfo } from './present';
+import type { CardFace, ChoiceRow, KindInfo, Presenter, SeatStat, UseInfo } from './present';
 
 /** Per seat, from the setup screen: what the engine does not know. */
 export interface SeatLook {
@@ -72,6 +72,10 @@ export interface UseOption {
   pick: Pick | null;
   /** Why the use is not possible now (P7), or null when it is. */
   why: string | null;
+  /** What the pick costs or gives, one line ('' when the presenter says nothing). */
+  detail: string;
+  /** Choices inside the pick the player may change (sellers, upgrade or not). */
+  choices: ChoiceRow[];
 }
 
 export interface HandCard {
@@ -143,6 +147,13 @@ export interface TableModel {
   reveal: { title: string; lines: RevealLine[] } | null;
   log: { key: string; text: string }[];
   result: ResultModel | null;
+  /** Table-wide facts for the top bar (Raid, Honours, prices). */
+  banner: SeatStat[];
+  /**
+   * Re-check a pick the player changed inside the popover (another seller, no upgrade): the
+   * engine's verdict plus the presenter's detail and choices for it. null outside a pick.
+   */
+  refine(pick: Pick): UseOption | null;
 }
 
 /** How many log entries the sidebar keeps. */
@@ -272,6 +283,30 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
     },
     log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
     result: resultModel(input, seats),
+    banner: present.banner?.(view) ?? [],
+    refine: (pick) => (viewer === null ? null : useOption(input, viewer, pick)),
+  };
+}
+
+/** The engine's verdict on `pick` for `viewer`, with the presenter's words for it. */
+function useOption<S, T>(input: TableInput<S, T>, viewer: SeatId, raw: Pick): UseOption | null {
+  const { view, engine, present } = input;
+  const use = present.uses.find((u) => u.id === raw.use);
+  if (!use) return null;
+  if (view.phase.kind !== 'pick')
+    return { use, pick: null, why: 'Not the pick phase', detail: '', choices: [] };
+  const pick = engine.ruleset.normalizePick?.(view, viewer, raw) ?? raw;
+  const err = engine.ruleset.validatePick(view, viewer, pick);
+  if (err) {
+    const why = present.whyNot?.(view, viewer, pick, err) ?? capitalize(err);
+    return { use, pick: null, why, detail: '', choices: [] };
+  }
+  return {
+    use,
+    pick,
+    why: null,
+    detail: present.describe?.(view, viewer, pick) ?? '',
+    choices: present.choices?.(view, viewer, pick) ?? [],
   };
 }
 
@@ -288,11 +323,13 @@ function handCards<S, T>(
   return seat.hand.map((c) => {
     const face = present.card(c.def);
     const options = present.uses.map((use): UseOption => {
-      const pick = legal.find((p) => p.card === c.id && p.use === use.id) ?? null;
-      if (pick) return { use, pick, why: null };
-      if (!picking) return { use, pick: null, why: 'Not the pick phase' };
-      const err = engine.ruleset.validatePick(view, viewer, { card: c.id, use: use.id });
-      return { use, pick: null, why: capitalize(err ?? 'Not possible now') };
+      const none = { use, pick: null, detail: '', choices: [] };
+      if (!picking) return { ...none, why: 'Not the pick phase' };
+      const pick = legal.find((p) => p.card === c.id && p.use === use.id);
+      const option = useOption(input, viewer, pick ?? { card: c.id, use: use.id });
+      if (option?.pick && pick) return option;
+      // Not among the legal picks: say why (the engine's reason, in the presenter's words).
+      return { ...none, why: option?.why ?? 'Not possible now' };
     });
     return {
       id: c.id,

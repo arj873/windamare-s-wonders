@@ -442,7 +442,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: 240px;
+  width: 300px;
   padding: 10px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -549,33 +549,128 @@
   color: var(--ink-dim);
 }
 
-/* ---- final scores (UX.md §10.2) ---------------------------------------- */
-.dt-score {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
+/* ---- final scores: one card per town in Renown bands (UX.md §10.2) ----- */
+.dt-result {
+  width: min(860px, 100%);
 }
-.dt-score th,
-.dt-score td {
-  padding: 5px 8px;
-  text-align: right;
-  border-bottom: 1px solid var(--line);
+.dt-bands {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.dt-score tbody th {
-  text-align: left;
-  font-weight: 600;
+.dt-band-card {
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+  border: 2px solid var(--line);
 }
-.dt-score thead th {
-  white-space: nowrap;
+.dt-band-card.is-winner {
+  border-color: var(--seat, var(--accent));
+  box-shadow: 0 0 0 2px var(--accent);
 }
-.dt-score thead .dt-dot {
-  margin-right: 5px;
-}
-.dt-score .dt-total {
+.dt-band-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
   font-weight: 800;
 }
-.dt-score .is-winner {
+.dt-band-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dt-band-total {
+  font-size: 20px;
   color: var(--accent);
+}
+.dt-band-card dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  margin: 0;
+  font-size: 13px;
+}
+.dt-band-card dt {
+  color: var(--ink-dim);
+}
+.dt-band-card dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+}
+
+/* ---- ruleset extras: banner, store, Spend band, choice rows ------------ */
+.dt-banner {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: var(--surface-sunken);
+  white-space: nowrap;
+}
+.dt-store {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-weight: 600;
+  color: var(--ink-dim);
+}
+.dt-stat.is-dim {
+  opacity: 0.45;
+}
+.dt-side-fact {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+.dt-card-alt {
+  margin: 0 6px 4px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(31, 79, 160, 0.12);
+}
+.dt-use-ok {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dt-use-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+.dt-use-detail {
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.dt-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.dt-choice-label {
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+.dt-choice .seg-btn {
+  min-height: 32px;
+  font-size: 12px;
+}
+.dt-choice .seg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .dt-headline {
   margin: 14px 0 0;
