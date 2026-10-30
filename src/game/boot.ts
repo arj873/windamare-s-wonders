@@ -19,7 +19,14 @@ import {
 } from '../ui';
 import { HomeScreen, NAME_KEY } from '../ui/home/screen';
 import { browserStorage, loadPref } from '../ui/prefs';
-import { MAX_PLAYERS, MIN_PLAYERS, SEAT_COLORS, STORAGE_KEY } from '../ui/setup/model';
+import {
+  CLOCKS,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  SEAT_COLORS,
+  STORAGE_KEY,
+  type ClockId,
+} from '../ui/setup/model';
 import type { RevealHook } from './fx';
 import { playLocal, type GameBinding, type PlayHandle, type TutorialHandle } from './play';
 
@@ -30,9 +37,9 @@ export interface BootOptions<S, T> {
   game?: GameBinding<S, T>;
   /**
    * Playtest harness (`?debug=1`, UX.md §18): skip setup, start at once with every seat human,
-   * no timer and no pass covers, so a script can play each seat in turn.
+   * no timer (unless `clock`) and no pass covers, so a script can play each seat in turn.
    */
-  debug?: { seats: number; seed?: string };
+  debug?: DebugStart;
   /** Title key art behind the home screen (public/art). */
   homeArt?: string;
   /** Overrides the game binding's reveal hook (tests); see src/game/fx.ts. */
@@ -53,9 +60,34 @@ function returning(): boolean {
   return loadPref(store, NAME_KEY) !== null || loadPref(store, STORAGE_KEY) !== null;
 }
 
+/** The harness's start: seat count, and optionally a seed, R19 First game and an R15.3 clock. */
+export interface DebugStart {
+  seats: number;
+  seed?: string;
+  firstGame?: boolean;
+  clock?: ClockId;
+}
+
+/**
+ * `?debug=1[&seats=N][&seed=S][&first=1][&clock=off|relaxed|normal|fast]` → the harness's
+ * start, or null without `debug=1`. An unknown clock is ignored (Off).
+ */
+export function debugFromSearch(search: string): DebugStart | null {
+  const p = new URLSearchParams(search);
+  if (p.get('debug') !== '1') return null;
+  const seed = p.get('seed');
+  const clock = CLOCKS.find((c) => c.id === p.get('clock'))?.id;
+  return {
+    seats: Number(p.get('seats') ?? 4),
+    ...(seed ? { seed } : {}),
+    ...(p.get('first') === '1' ? { firstGame: true } : {}),
+    ...(clock ? { clock } : {}),
+  };
+}
+
 /** The all-human game `?debug=1` starts. */
-export function debugConfig(seats: number, seed?: string): NewGameConfig {
-  const n = Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Math.floor(seats) || 4));
+export function debugConfig(debug: DebugStart): NewGameConfig {
+  const n = Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Math.floor(debug.seats) || 4));
   return {
     mode: 'standard',
     players: Array.from({ length: n }, (_, i) => ({
@@ -63,8 +95,9 @@ export function debugConfig(seats: number, seed?: string): NewGameConfig {
       color: SEAT_COLORS[i % SEAT_COLORS.length]?.color ?? '#888888',
       controller: 'human',
     })),
-    clock: 'off',
-    ...(seed ? { seed } : {}),
+    clock: debug.clock ?? 'off',
+    ...(debug.firstGame ? { firstGame: true } : {}),
+    ...(debug.seed ? { seed: debug.seed } : {}),
   };
 }
 
@@ -265,7 +298,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
 
   if (opts.debug) {
     showSetup();
-    start(debugConfig(opts.debug.seats, opts.debug.seed));
+    start(debugConfig(opts.debug));
     // qa's playtest browser layer (playtest/README.md) reads state here, never from the engine.
     // Merged into any `__pt` the injected scanner already set.
     const w = window as unknown as { __pt?: Record<string, unknown> };

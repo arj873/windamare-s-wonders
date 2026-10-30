@@ -4,7 +4,7 @@ import '@fontsource/marcellus';
 import './ui/theme/tokens.css';
 import './ui/theme/chrome.css';
 import { sfx } from './audio';
-import { boot, type BootHandle } from './game/boot';
+import { boot, debugFromSearch, type BootHandle } from './game/boot';
 import { bootOnline, roomFromUrl } from './game/online';
 import { windamereBinding } from './game/windamere';
 import { mountAudition, wantsAudition } from './ui/fx/audition';
@@ -28,9 +28,9 @@ if (!document.querySelector('link[rel="icon"]')) {
 const root = document.getElementById('app');
 if (root) {
   document.body.style.margin = '0';
-  // ?debug=1[&seats=N][&seed=S]: the playtest harness's all-human start (UX.md §18).
-  const params = new URLSearchParams(location.search);
-  const debug = params.get('debug') === '1';
+  // ?debug=1[&seats=N][&seed=S][&first=1][&clock=C]: the playtest harness's all-human start
+  // (UX.md §18).
+  const debug = debugFromSearch(location.search);
   // Online play (online lane): Play online / Join on the home screen; leaving a room goes home.
   let app: BootHandle<WwSeat, WwTable> | null = null;
   const online = bootOnline(windamereBinding('online'), {
@@ -44,14 +44,7 @@ if (root) {
     game: windamereBinding(),
     online,
     homeArt: `${import.meta.env.BASE_URL}art/table/title-key-art.svg`,
-    ...(debug
-      ? {
-          debug: {
-            seats: Number(params.get('seats') ?? 4),
-            ...(params.get('seed') ? { seed: params.get('seed') ?? '' } : {}),
-          },
-        }
-      : {}),
+    ...(debug ? { debug } : {}),
   });
   // An invite link (?room=CODE) opens that room's join card straight away.
   const code = debug ? null : roomFromUrl(location.search);

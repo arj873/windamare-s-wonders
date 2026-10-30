@@ -980,9 +980,11 @@ new server message is needed (MULTIPLAYER.md §3 already marks a `reveal` messag
 Stable hooks for scripts that drive a browser game (qa Q2). Implemented in U4; changing one is a
 breaking change for qa: say so in the status file.
 
-**Start.** `/?debug=1[&seats=N][&seed=S]` skips the setup screen and starts a game with N human
-seats (default 4, clamped to the player range), named `P1`…`PN`, no pick timer and **no pass
-covers**: the table shows whichever seat the game waits for, so a script plays each seat in turn.
+**Start.** `/?debug=1[&seats=N][&seed=S][&first=1][&clock=off|relaxed|normal|fast]` skips the
+setup screen and starts a game with N human seats (default 4, clamped to the player range), named
+`P1`…`PN`, **no pass covers**, no pick timer unless `clock` names one (R15.3; an unknown value is
+Off), and R19 First game with `first=1`. The table shows whichever seat the game waits for, so a
+script plays each seat in turn.
 In debug mode only, `window.ww` is the app handle (`ww.play.game.state` = the full state, for
 assertions; never read it to choose moves), and `window.__pt.view(seat?)` returns the `DraftView`
 on screen (or seat `seat`'s) as a JSON copy, null with no game. `__pt` is merged into whatever an

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toy } from '../engine/core/testing/helpers';
 import { toyPresenter } from '../ui/table/testing/toy';
-import { boot } from './boot';
+import { boot, debugFromSearch } from './boot';
 import { BOT_LEVEL } from './play';
 import { windamereBinding } from './windamere';
 
@@ -127,6 +127,29 @@ describe('boot', () => {
     click(root, '[data-k^="use-"][data-k$="-sell"]');
     expect(title()).toContain('Pass to Player 2');
     expect(root.querySelectorAll('.dt-card')).toHaveLength(0);
+    app.play?.dispose();
+  });
+
+  it('reads ?debug=1 with seats, seed, First game and clock (qa Q2b-3)', () => {
+    expect(debugFromSearch('')).toBeNull();
+    expect(debugFromSearch('?seats=3')).toBeNull();
+    expect(debugFromSearch('?debug=1')).toEqual({ seats: 4 });
+    expect(debugFromSearch('?debug=1&seats=2&seed=s&first=1&clock=fast')).toEqual({
+      seats: 2,
+      seed: 's',
+      firstGame: true,
+      clock: 'fast',
+    });
+    expect(debugFromSearch('?debug=1&clock=warp')).toEqual({ seats: 4 });
+    const root = mount();
+    const app = boot(root, {
+      game: windamereBinding(),
+      debug: { seats: 3, firstGame: true, clock: 'normal' },
+    });
+    const g = app.play!.game;
+    expect(g.state.config.options).toEqual({ firstGame: true });
+    expect(g.state.phase.kind).toBe('pick'); // the Great Work is dealt, no choice
+    expect(g.clock()?.totalMs).toBe(45_000);
     app.play?.dispose();
   });
 
