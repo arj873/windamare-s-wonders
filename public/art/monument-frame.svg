@@ -1,16 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 220">
-<title>Monument frame template</title>
-<!-- Personal monument: a stepped plinth with N stage sockets (default 3). Sockets: ids stage-1..3. -->
-<defs><linearGradient id="stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9dcc0"/><stop offset="1" stop-color="#c9b48c"/></linearGradient></defs>
-<path d="M10 210h460v-14H10z" fill="#5e2914" stroke="#1e0c04" stroke-width="3"/>
-<path d="M30 196h420v-16H30z" fill="url(#stone)" stroke="#1e0c04" stroke-width="3"/>
-<path d="M60 180h360V30L240 6 60 30z" fill="url(#stone)" stroke="#1e0c04" stroke-width="3" stroke-linejoin="round"/>
-<path d="M60 30L240 6l180 24" fill="none" stroke="var(--accent,#f5b82e)" stroke-width="4"/>
-<g stroke="#1e0c04" stroke-width="2.5" fill="#fff" opacity=".95">
-<rect id="stage-1" x="80" y="50" width="100" height="112" rx="8"/>
-<rect id="stage-2" x="190" y="50" width="100" height="112" rx="8"/>
-<rect id="stage-3" x="300" y="50" width="100" height="112" rx="8"/>
-</g>
-<g fill="var(--accent,#f5b82e)" stroke="#1e0c04" stroke-width="2"><circle cx="130" cy="172" r="7"/><circle cx="240" cy="172" r="7"/><circle cx="350" cy="172" r="7"/></g>
-<circle cx="240" cy="22" r="10" fill="var(--accent,#f5b82e)" stroke="#1e0c04" stroke-width="2.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 300">
+<title>Great Work frame (4 tiers)</title>
+<!-- A slim tower of four stacked bands, built bottom-up as labour fills tiers. Ids tier-1..4 (tier-1 is the base); fill a tier with the host's own colour when complete. -->
+<rect x="6" y="276" width="148" height="18" rx="6" fill="#5e2914" stroke="#1e0c04" stroke-width="3"/>
+<rect id="tier-1" x="20" y="200" width="120" height="76" rx="8" fill="#ecdcc0" stroke="#1e0c04" stroke-width="3"/>
+<rect id="tier-2" x="32" y="130" width="96" height="70" rx="8" fill="#ecdcc0" stroke="#1e0c04" stroke-width="3"/>
+<rect id="tier-3" x="44" y="68" width="72" height="62" rx="8" fill="#ecdcc0" stroke="#1e0c04" stroke-width="3"/>
+<rect id="tier-4" x="56" y="16" width="48" height="52" rx="8" fill="#ecdcc0" stroke="#1e0c04" stroke-width="3"/>
+<g fill="#1e0c04" font-family="Marcellus, serif" font-size="20" text-anchor="middle"><text x="80" y="246">I</text><text x="80" y="172">II</text><text x="80" y="106">III</text><text x="80" y="50">IV</text></g>
+<circle cx="80" cy="10" r="6" fill="var(--accent,#f5b82e)" stroke="#1e0c04" stroke-width="2"/>
 </svg>
