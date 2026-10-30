@@ -4,7 +4,7 @@ import type { WwState } from '../../engine';
 import { tableModel } from '../../ui/table/model';
 import { DraftTable } from '../../ui/table/table';
 import { windamere } from './content';
-import { windamereFx } from './fx';
+import { cardLook, windamereFx } from './fx';
 import { windamerePresenter } from './present';
 
 const { rules, engine } = windamere();
@@ -46,5 +46,14 @@ describe('windamereFx', () => {
     }
     fx.dispose?.();
     table.destroy();
+  });
+
+  it('gives fx F5 sprites the card face’s art and kind; nothing for goods', () => {
+    const look = cardLook(rules, present);
+    const card = rules.content.cards[0]!;
+    const face = present.card(card.id);
+    expect(look(card.id)).toEqual({ kind: card.kind, ...(face.art ? { art: face.art } : {}) });
+    expect(look(card.id)?.art).toMatch(/\.svg$/);
+    expect(look(rules.content.goods[0]!.id)).toBeNull();
   });
 });

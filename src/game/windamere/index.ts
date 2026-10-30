@@ -11,7 +11,7 @@ import {
 import type { GameBinding } from '../play';
 import { windamere } from './content';
 import { windamereClock } from './clock';
-import { windamereFx } from './fx';
+import { cardLook, windamereFx } from './fx';
 import { windamerePresenter } from './present';
 
 export { windamere } from './content';
@@ -25,10 +25,14 @@ export function windamereBinding(
   mode: 'hotseat' | 'online' = 'hotseat',
 ): GameBinding<WwSeat, WwTable> {
   const { rules, engine } = windamere();
+  const present = windamerePresenter(rules, engine);
   return {
     engine,
-    present: windamerePresenter(rules, engine),
-    fx: windamereFx(rules, { local: mode === 'online' ? 'viewer' : 'humans' }),
+    present,
+    fx: windamereFx(rules, {
+      local: mode === 'online' ? 'viewer' : 'humans',
+      face: cardLook(rules, present),
+    }),
     clock: windamereClock,
     // RULES.md R19 / ENGINE.md §15.5: the engine skips the Great Work choice and the Honours.
     firstGame: {

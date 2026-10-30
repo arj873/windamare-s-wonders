@@ -292,7 +292,9 @@ belongs to ww-net (`docs/MULTIPLAYER.md`); this section is the screen.
 - A member without a seat sees "You're watching. [Sit here]" at the top.
 - Online the turn clock is Normal by default (R15.3: one slow player holds up everyone), with
   the same four options and lengths as hotseat.
-- Lobby again after a game: host's "Back to lobby" is the rematch path.
+- Lobby again after a game: host's "Back to lobby" is the rematch path. The final scores'
+  buttons read "Back to lobby" / "Leave room" online (`DraftTableHandlers.labels`; hotseat keeps
+  "Rematch" / "New game").
 
 ---
 

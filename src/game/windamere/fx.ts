@@ -16,10 +16,27 @@ import {
   playRevealWithSound,
   seasonTransition,
   tierMoment,
+  type CardLook,
   type TableFx,
 } from '../../ui/fx';
 import '../../ui/fx/fx.css';
+import type { Presenter } from '../../ui/table/present';
 import type { RevealHook } from '../fx';
+
+/**
+ * fx F5: a card def's art and kind for the reveal sprites, from the presenter that draws the
+ * card faces, so a flying card looks like the one in the hand. Null for anything not a card.
+ */
+export function cardLook(
+  rules: WwRules,
+  present: Presenter<WwSeat, WwTable>,
+): (def: string) => CardLook | null {
+  return (def) => {
+    if (!rules.content.cards.some((c) => c.id === def)) return null;
+    const f = present.card(def);
+    return { kind: f.kind, ...(f.art ? { art: f.art } : {}) };
+  };
+}
 
 const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -41,6 +58,8 @@ export interface WindamereFxOptions {
    * the default); 'viewer' = only the player on this screen (online).
    */
   local?: 'humans' | 'viewer';
+  /** fx F5: a card's art and kind for the reveal sprites, from the table's own card faces. */
+  face?: (def: string) => CardLook | null;
 }
 
 export function windamereFx(
@@ -86,7 +105,12 @@ export function windamereFx(
               tier: (s) => anchors.monument(s) ?? anchors.town(s),
             },
             who,
-            { label, instant, cancelled: () => !live() },
+            {
+              label,
+              instant,
+              cancelled: () => !live(),
+              ...(opts.face ? { face: opts.face } : {}),
+            },
           );
         }
         // Great Work tiers completed this action (the reveal already sounded them).

@@ -78,6 +78,9 @@ export interface SeatModel {
   zones: ZoneModel[];
   /** The seat's Great Work (monument), or null before it has one. */
   monument: MonumentInfo | null;
+  /** Its neighbours (a spectator following this town sees them beside it); null = itself. */
+  left: SeatId | null;
+  right: SeatId | null;
 }
 
 export interface UseOption {
@@ -209,6 +212,16 @@ export function listNames(names: readonly string[]): string {
 
 export const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** A seat's left and right towns, as the table draws them (no repeat, never itself). */
+function neighbours<S, T>(
+  view: DraftView<S, T>,
+  seat: SeatId,
+): { left: SeatId | null; right: SeatId | null } {
+  const l = leftOf(view, seat);
+  const r = rightOf(view, seat);
+  return { left: l === seat ? null : l, right: r === seat || r === l ? null : r };
+}
+
 /**
  * The open prompt group (docs/ENGINE.md §6: prompts with the first prompt's group answer
  * together, hidden; a seat may change its answer until the last one is in).
@@ -277,17 +290,13 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
       columns,
       zones,
       monument: present.monument?.(view, s.id) ?? null,
+      ...neighbours(view, s.id),
     };
   });
 
   const me = viewer === null ? null : (seats[viewer] ?? null);
-  const leftSeat = viewer === null ? null : leftOf(view, viewer);
-  const rightSeat = viewer === null ? null : rightOf(view, viewer);
-  const left = leftSeat === null || leftSeat === viewer ? null : (seats[leftSeat] ?? null);
-  const right =
-    rightSeat === null || rightSeat === viewer || rightSeat === leftSeat
-      ? null
-      : (seats[rightSeat] ?? null);
+  const left = me?.left == null ? null : (seats[me.left] ?? null);
+  const right = me?.right == null ? null : (seats[me.right] ?? null);
 
   const hand = viewer === null ? [] : handCards(input, viewer, kindOf);
   const ownPick = viewer === null ? null : (view.seats[viewer]?.pick ?? null);
