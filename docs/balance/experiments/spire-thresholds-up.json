@@ -1,0 +1,5 @@
+{
+  "name": "spire-thresholds-up",
+  "hypothesis": "Same problem as spire-renown-down (Spire 1.55x fair, tier IV 81%), other lever: thresholds 6/12/19/27 -> 7/14/22/31 bring its tier IV rate near the others' 30-50% and its win ratio under 1.25x. Thresholds do not change greedy's choice rule, so the same towns hold the Spire.",
+  "greatWorks": { "the-stonewrights-spire": { "thresholds": [7, 14, 22, 31] } }
+}

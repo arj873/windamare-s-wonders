@@ -1,0 +1,5 @@
+{
+  "name": "honours-flatter",
+  "hypothesis": "Blowouts are worst at 2-3 seats (40-58%), where Honours are 11-17% of all Renown and pay 5 to a sole leader. Honours 5 sole / 2 tied -> 3 / 1 shrink the winner's Honours lead and the share of blowouts at 2-4 seats. Greedy ignores Honours, so this changes the score sheet only.",
+  "tunables": { "honourSole": 3, "honourTied": 1 }
+}

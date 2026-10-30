@@ -1,0 +1,15 @@
+{
+  "name": "lore-cheaper",
+  "hypothesis": "Lore runs are short because Lore cards cost 2-5 goods heavy in wax and horn, and greedy builds the cheapest scoring card. One good off every Lore card from Summer on (one coin off the Almanac House and the Rune Stone; the Tally Hut stays 1 wax) lifts Lore runs >= 3 above 25% of towns.",
+  "cards": {
+    "rune-stone": { "cost": { "peat": 1 } },
+    "almanac-house": { "cost": { "wax": 1, "coins": 1 } },
+    "star-chamber": { "cost": { "wax": 1, "horn": 1 } },
+    "map-room": { "cost": { "wax": 1, "horn": 1 } },
+    "ferrymans-charts": { "cost": { "wax": 1 } },
+    "skywatch-loft": { "cost": { "wax": 1, "horn": 1 } },
+    "chronicle-house": { "cost": { "peat": 1, "wax": 1, "horn": 1 } },
+    "sealed-archive": { "cost": { "salt": 1, "wax": 1, "horn": 1 } },
+    "orrery": { "cost": { "peat": 1, "wax": 1, "horn": 2 } }
+  }
+}
