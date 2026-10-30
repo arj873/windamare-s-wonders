@@ -8,12 +8,11 @@ import { makeCtx } from './ctx';
 import {
   afterStage,
   allPicked,
-  continueAfter,
   deal,
+  defaultAnswer,
   openGroup,
-  openHead,
-  resolveOrder,
   reveal,
+  settleGroup,
   totalRounds,
 } from './flow';
 import { checkInvariants } from './invariants';
@@ -25,7 +24,6 @@ import type {
   DraftState,
   DraftView,
   GameConfig,
-  Json,
   Pick,
   Ruleset,
   SeatId,
@@ -220,19 +218,8 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
         // Hidden until the group is complete; a seat may answer again until then.
         p.answer = cloneJson(action.answer);
         p.answered = true;
-        if (!open.every((x) => x.answered)) break;
         // The whole group applies at once, in resolve order: arrival order never matters.
-        draft.prompts.splice(0, open.length);
-        for (const s of resolveOrder(rules, draft)) {
-          for (const q of open) {
-            if (q.seat !== s) continue;
-            const h = rules.prompts[q.kind];
-            if (!h) throw new Error(`unknown prompt kind: ${q.kind}`);
-            h.apply(ctx, q, q.answer);
-          }
-        }
-        if (draft.prompts.length === 0) continueAfter(ctx, phase.then);
-        else openHead(ctx);
+        if (open.every((x) => x.answered)) settleGroup(ctx, open, phase.then);
         break;
       }
       default:
@@ -316,14 +303,8 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
       return pick ? { type: 'pick', seat, pick } : null;
     }
     const p = openPromptOf(state, seat);
-    const handler = p && rules.prompts[p.kind];
-    if (!p || !handler) return null;
-    const answers = legalAnswers(state, seat);
-    const preferred: Json | undefined = handler.defaultAnswer?.(state, p);
-    if (preferred !== undefined && handler.validate(state, p, preferred) === null) {
-      return { type: 'answer', seat, prompt: p.id, answer: preferred };
-    }
-    return answers[0] ?? null;
+    const answer = p && defaultAnswer(rules, state, p);
+    return p && answer !== undefined ? { type: 'answer', seat, prompt: p.id, answer } : null;
   }
 
   return {

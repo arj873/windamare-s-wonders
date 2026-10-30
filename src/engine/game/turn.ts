@@ -143,8 +143,10 @@ export function resolveSteps(rules: WwRules): Step[] {
   };
 
   // 2b. Sell (R6.6, R6.7), run for each seller: fill its neighbours' purchases from what its own
-  // Build left, one good at a time, alternating buyers from its left neighbour. A good it cannot
-  // fill comes from the bank at the same price (the buyer already paid; those coins are gone).
+  // Build left (its step-1 Spend gains included, R17.9), one good at a time, alternating buyers
+  // from its left neighbour. A good it cannot fill comes from the bank at the same price (the
+  // buyer already paid; those coins are gone). How many could be bought was already checked
+  // against its store at the start of the turn (R6.6a).
   const sell: Step = (ctx, seat) => {
     const seller = townOf(ctx.state, seat);
     const price = marketPrice(rules, ctx.state);

@@ -5,8 +5,9 @@ Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this fil
 
 Status (2026-10-30): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
 what the code does. **§15 is the Windamere game (E2): playable for 2 to 7 towns on the D2c rules
-and the shipped content, Great Work choice and Recall included.** §14 keeps three optional core
-changes (C7, C8, C11) the game does without (it does that work in `src/engine/game/`).
+and the shipped content, Great Work choice and Recall included.** §16 is the lookahead for bots
+(E5). §14 keeps three optional core changes (C7, C8, C11) the game does without (it does that
+work in `src/engine/game/`).
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
 resolution order, hand passing, rounds, prompts, scoring hooks and per-seat views. It does not
@@ -62,6 +63,10 @@ steps are contravariant), so cast it as net already does for the toy engine.
 
 `legalPicks`, `defaultPick` and `defaultAction` work on a full state or on that seat's view
 (§6 view-safe), so a server, a client and a bot get the same answer.
+
+**Lookahead for bots:** `createLookahead(engine.ruleset)` samples full states from a view and
+plays turns on cheap private copies (§16). It is not an engine function: lookahead states never
+go back to `applyAction`.
 
 **Arrival order never matters.** Picks arrive one `pick` action at a time, but nothing resolves
 until the last one is in, and the reveal resolves them in `resolveOrder` (seat order by default),
@@ -391,6 +396,7 @@ interface Ruleset<S, T> {
   maskSeat?(data: S, viewer: Viewer, owner: SeatId): S;
   maskRevealArgs?(args: Json, viewer: Viewer, owner: SeatId): Json; // others' revealed args
   maskTable?(table: T, viewer: Viewer): T;
+  sampleHidden?(state, rng: Rng): void; // lookahead: draw what maskSeat/maskTable hid (§16)
 }
 
 type ResolveStep<S, T> = (ctx: Ctx<S, T>, seat: SeatId, pick: Pick, card: Card) => void;
@@ -460,6 +466,7 @@ Inside resolve steps, effect handlers, prompt handlers and hooks, ruleset code g
 ctx.state                        // the draft
 ctx.rules                        // the ruleset
 ctx.rng                          // Rng over draft.rng (written back by the core)
+ctx.quiet                        // true in a lookahead (§16): log writes nothing, moves unchecked
 ctx.def(card | defId)            // CardDef; throws on unknown ids
 ctx.play(seat, card, args?)      // → tableau, then each spec's onPlay(…, args) (e.g. pick choices)
 ctx.place(seat, zone, card)      // → a seat zone (no triggers)
@@ -474,7 +481,10 @@ ctx.left(seat), ctx.right(seat), ctx.neighbours(seat)
 ```
 
 `play`, `place`, `toDiscard` and `toBox` take a card that is in no list (just revealed, or
-`take`n first) and throw otherwise, so a card can never be in two places.
+`take`n first) and throw otherwise, so a card can never be in two places. (Not checked when
+`ctx.quiet`: lookahead turns trust the rules code that the real engine has already tested.)
+Ruleset code may skip work done only for the log when `ctx.quiet`; game outcomes must never
+depend on it.
 
 Ruleset code must not touch `deck`/`hands` dealing, `phase`, `seq`, `round`, `turn`, `prompts`
 (except through `ctx.prompt`) or ids: the core owns them.
@@ -492,7 +502,8 @@ Ruleset code must not touch `deck`/`hands` dealing, `phase`, `seq`, `round`, `tu
   the seat whose turn it is on the shared screen). `lastReveal` changes once per turn: animate it.
   `view.submitted` shows who has locked in.
 - **bots:** `legalActions(view, seat)` works on a view (§6). Use your own `Rng` (`new Rng(seed)`),
-  never `state.rng`, so bots do not change the game's randomness.
+  never `state.rng`, so bots do not change the game's randomness. To look ahead, sample full
+  states from the view and play on them with `createLookahead` (§16).
 
 ## 10. Randomness
 
@@ -503,8 +514,9 @@ copy); the core writes the state back. Nobody else reads or writes `state.rng`; 
 ## 11. Cloning
 
 `applyAction` deep-copies the state (`cloneState`: a hand-written plain-JSON copy that keeps key
-order); `config` is shared between states (fixed after createGame, never mutate it). Simulation
-cost is not measured yet; it will be once bots exist.
+order); `config` is shared between states (fixed after createGame, never mutate it). That copy
+includes the log, so a turn through `applyAction` gets dearer as the game goes on (84-517 µs per
+turn mid-game, 2-7 seats). Simulation uses the lookahead's `fork` instead (§16).
 
 ## 12. Tests and the toy ruleset
 
@@ -654,7 +666,7 @@ interface WwPickArgs {
 type Payment =
   | { good; via: 'buy'; from: SeatId } // a neighbour, at the Season's price (R6.6)
   | { good; via: 'exchange'; give: GoodId } // 2 of `give` (R6.3)
-  | { good; via: 'bank' }; // 5 coins
+  | { good; via: 'bank' }; // bankPrice coins (6)
 ```
 
 `normalizePick` fills whatever `args` leaves out with the R15.7 defaults, so `{ card, use }` is a
@@ -672,6 +684,12 @@ purchases from what its own Build left, alternating buyers from its left; a shor
 from the bank at the same price, R6.7; `sellBonus`) · 2c Build (cover, place, "when built",
 `buildBonus`) · Great Work check · 3 Tolls · 4 Yield (`yield`, `income`; not in Winter) · Great
 Work check.
+
+**Two stores per purchase (R6.7, R17.9 as of design's D8):** how many a buyer may buy is set by
+the seller's store at the start of the turn (checked when the pick is made); what fills it is
+the seller's store after its own Build is paid (2a), which includes its step-1 Spend or glean
+gains. This turn's Yield (step 4) comes too late to fill anything. Prices come from the
+tunables: `marketPrice` by Season (R16: 1, 3, 4, 5) and `bankPrice` (6), always dearer.
 
 **For ui and bots:** `checkPayment(pc, plan)` and `defaultPayment(pc)` with
 `pc = { rules, state, seat, cost, purse }` (`buildCostAfterDiscount`, `purseOf`), `missingGoods`,
@@ -769,3 +787,91 @@ whole random games for 3-7 towns check soundness and view-safety of `legalAction
 `defaultAction` at every step. Mutation checks by hand (each reverted): tie-break order, bounty
 count, unmasked Raids, fill order of purchases, Yield in Winter, the default plan's order; each
 made rule tests fail.
+
+## 16. Lookahead for bots (E5; `core/lookahead.ts`)
+
+A bot that looks ahead needs full states (its view hides other hands) and many cheap turns.
+`createLookahead(ruleset)` gives both. It is game-agnostic (the core); Windamere adds only
+`sampleHidden` for its face-down Raids.
+
+```ts
+import { createLookahead, Rng } from '../engine';
+const la = createLookahead(engine.ruleset);
+
+la.determinize(view, rng): DraftState  // a full state the seat's view allows (pick phase only)
+la.fork(state): DraftState             // a private copy to play on (cards shared, log dropped)
+la.playTurn(state, picks): DraftState  // one turn in place: picks[seat] for every seat with cards
+la.playOut(state, until, policy?)      // turns in place until 'turn' | 'round' | 'game'
+type Policy = (state, seat) => Pick    // default: the ruleset's defaultPick
+```
+
+**determinize(view, rng)** samples with the bot's own `rng` and reads only the view:
+
+- the seat's own hand, every public thing (tableaux, public zones, ruleset data, table) and
+  `round`/`turn` are kept as they are;
+- **hands the seat passed on are exact** (Recall, R15.8): the hand it passed k turns ago is k
+  seats along, less the picks those seats revealed since (the view's `reveal` log entries). With
+  2 towns the other hand is exact from a Season's second turn. With n towns all are exact from
+  turn n, so at 6 and 7 towns some hands stay unknown all Season (5 turns);
+- the other hands are dealt at random from this round's deck (`roundSpec(...).deck`) less every
+  card the seat can place: its hand, the hands above, and every pick revealed this round. The
+  rest of that pool (undealt cards, burned cards) is not placed anywhere;
+- sampled cards get fresh ids (from `nextCardId`); nobody has picked; others' `recall` is empty;
+- deck, box, a hidden discard and other seats' hidden zones are emptied (their cards are
+  unknown); then `ruleset.sampleHidden(state, rng)` fills what `maskSeat`/`maskTable` hid
+  (Windamere: each face-down Raid is drawn again from its Season, R2.6); `state.rng` is new.
+
+Limits: the sample is uniform over the unseen cards. It does not guess from what other towns
+picked. A ruleset whose round deck depends on hidden state, or whose rules read the discard, needs
+more than `sampleHidden` (Windamere needs neither). A trimmed log only makes the sample less
+exact: the hand behind a missing reveal entry is sampled instead.
+
+**fork(state)** copies every array and the ruleset data (`cloneJson` of each seat's `data` and
+of `table`) but shares the card objects (cards are never mutated) and drops the log.
+
+**playTurn(state, picks)** runs the real `reveal` (resolve steps, passing, round end, next deal,
+game end) with a quiet `Ctx` (§8): no log entries, no card-move checks, no invariant checks. A
+pick is trusted: give one from `legalPicks` (on the view or the sample). A pick without `args` is
+normalized (`{ card, use }` is enough, 2 towns get the default Burn), a `null` gets the ruleset's
+default pick. Prompts the turn raises get their default answers. `seq` is not counted.
+
+**Tested** (`core/lookahead.test.ts`, `game/lookahead.test.ts`): on full states, `playTurn` on a
+fork gives exactly the state `applyAction` gives (all but `log` and `seq`), turn after turn
+through whole random games (toy at 2, 3, 5 seats with its salvage prompt; Windamere at 2, 3, 5, 7
+towns, Season ends and scoring included). `fork` leaves a deep-frozen original alone. The
+determinize tests ran at every turn of random games at 2, 3, 4, 7 towns:
+
+- the own hand, hand sizes, tableaux and town data match the real state;
+- hands passed on match the real ones;
+- every sampled card is still unaccounted for, and ids are unique;
+- face-down Raids are drawn from their Season;
+- two states with the same view give the same sample;
+- a sample plays on to a scored end.
+  Mutation checks (reverted): not removing picks along a passed hand fails the Recall tests at 3+
+  towns. Skipping prompt answers fails the toy equivalence test.
+
+**Bench** (`game/lookahead.bench.ts`, shipped content, not in the gate): run
+`nice -n 19 pnpm exec tsx src/engine/game/lookahead.bench.ts`. The state is mid-game (Summer,
+turn 3, random legal picks), on the shared dev machine, 2026-10-30. Numbers moved by about 20%
+between two runs.
+
+| seats | turn via applyAction | turn via fork + playTurn | determinize | fork   | to Season end | to game end | `ruleset.legalPicks`, one seat |
+| ----- | -------------------- | ------------------------ | ----------- | ------ | ------------- | ----------- | ------------------------------ |
+| 2     | 84-105 µs            | 18-23 µs                 | 6-8 µs      | 1-2 µs | 41-55 µs      | 169-217 µs  | 93 µs                          |
+| 3     | 129-149 µs           | 17-20 µs                 | 6-8 µs      | 2 µs   | 55-61 µs      | 234-267 µs  | 41 µs                          |
+| 5     | 298-342 µs           | 20-21 µs                 | 8-9 µs      | 2-3 µs | 63-76 µs      | 269-297 µs  | 28 µs                          |
+| 7     | 517-560 µs           | 26-29 µs                 | 9 µs        | 3 µs   | 98-133 µs     | 471-606 µs  | 26 µs                          |
+
+The play-outs use default picks (Spend the first card). A level-3-sized decision costs 0.6-1.7 ms
+at 3-7 towns: every legal pick × 8 samples × (determinize + one turn). With 2 towns it costs
+9 ms, because the Burn choices make 60 legal picks.
+
+What this means for bots:
+
+- a turn on a fork is 4.5-20x cheaper than through `applyAction`, and the gap grows with seats
+  and with the log;
+- **one seat's `legalPicks` costs more than a whole lookahead turn**, so a play-out policy that
+  lists every seat's legal picks each turn spends most of its time there. Prefer cheap policies
+  (the default pick, or a few candidate `{ card, use }` picks, which `playTurn` normalizes);
+- inside a lookahead, `ruleset.legalPicks` is enough. `engine.legalPicks` validates every pick a
+  second time.

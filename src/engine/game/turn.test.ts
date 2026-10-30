@@ -7,6 +7,7 @@ import { FX_CARDS } from './testing/fixture';
 import {
   build,
   ctxOf,
+  fx,
   fxEngine as e,
   fxRuleset,
   newGame,
@@ -18,6 +19,9 @@ import {
 import type { WwState } from './types';
 
 const filler = Array(6).fill('tf-stall') as string[]; // Spend band: 1 coin, no goods
+/** R16 prices, read from the tunables (DEFAULT_TUNABLES: the fixture sets none). */
+const PRICE = fx.tunables.marketPrice;
+const BANK = fx.tunables.bankPrice;
 
 /** 3 towns, spring turn 1, every hand Stalls, every store empty, 5 coins, no Great Work. */
 function table(seats = 3): WwState {
@@ -136,10 +140,12 @@ describe('the pick (R4.1-R4.4, R15.6, R17.1, R17.2)', () => {
 
   it('R4.2 a Build is legal only if the town can pay for it', () => {
     const s = table();
-    const apiary = setHand(s, 0, ['tf-apiary'])[0]!; // 2 slate; the bank: 2 x 5 coins
+    const apiary = setHand(s, 0, ['tf-apiary'])[0]!; // 2 slate: 2 x the bank price
     expect(submit(s, 0, pk(apiary, 'build'))).toMatchObject({ ok: false });
     expect(e.legalPicks(s, 0).some((p) => p.card === apiary.id && p.use === 'build')).toBe(false);
-    townData(s, 0).coins = 10;
+    townData(s, 0).coins = 2 * BANK - 1;
+    expect(submit(s, 0, pk(apiary, 'build'))).toMatchObject({ ok: false });
+    townData(s, 0).coins = 2 * BANK;
     expect(stored(s, 0, pk(apiary, 'build')).pay).toEqual([
       { good: 'slate', via: 'bank' },
       { good: 'slate', via: 'bank' },
@@ -222,11 +228,16 @@ describe('paying and buying (R6, R15.7, R17.9-R17.11)', () => {
     expect(townData(after, 0).store.slate).toBe(0);
   });
 
-  it('R6.3 the bank sells a missing good for 5 coins', () => {
+  it('R6.3 the bank sells a missing good for 6 coins (bankPrice)', () => {
+    expect(BANK).toBe(6);
     const s = table();
-    townData(s, 0).coins = 10;
+    townData(s, 0).coins = 2 * BANK;
     const apiary = setHand(s, 0, ['tf-apiary'])[0]!;
     expect(townData(playTurn(s, { 0: pk(apiary, 'build') }), 0).coins).toBe(0);
+  });
+
+  it('R6.3 and R6.6c the bank is dearer than a neighbour in every Season', () => {
+    for (const price of PRICE) expect(price).toBeLessThan(BANK);
   });
 
   it('R6.3 an Exchange pays 2 of its good for a missing good (never the good itself)', () => {
@@ -264,12 +275,20 @@ describe('paying and buying (R6, R15.7, R17.9-R17.11)', () => {
     const after = playTurn(s, { 0: pk(apiary, 'build') });
     expect(townData(after, 0)).toMatchObject({ coins: 5 - 2, store: { slate: 0 } }); // R17.11
     expect(townData(after, 1)).toMatchObject({ coins: 5 + 1 + 2, store: { slate: 1 } }); // +1 Stall spend
-    // Summer's price is 2 (R6.6c).
-    const summer = table();
-    store(summer, 1, { slate: 3 });
-    summer.round = 1;
-    const a2 = setHand(summer, 0, ['tf-apiary'])[0]!;
-    expect(townData(playTurn(summer, { 0: pk(a2, 'build') }), 1).coins).toBe(5 + 1 + 4);
+  });
+
+  it('R6.6c the market price by Season is 1, 3, 4, 5 coins a good (marketPrice)', () => {
+    expect(PRICE).toEqual([1, 3, 4, 5]);
+    for (const [round, price] of PRICE.entries()) {
+      const s = table();
+      store(s, 1, { slate: 3 });
+      townData(s, 0).coins = 2 * price;
+      s.round = round;
+      const apiary = setHand(s, 0, ['tf-apiary'])[0]!;
+      const after = playTurn(s, { 0: pk(apiary, 'build') });
+      expect(townData(after, 0).coins, `season ${round}`).toBe(0); // the Apiary yields honey, not coins
+      expect(townData(after, 1).coins, `season ${round}`).toBe(5 + 1 + 2 * price);
+    }
   });
 
   it('R6.6b at most 2 goods from each neighbour a turn', () => {
@@ -332,17 +351,63 @@ describe('paying and buying (R6, R15.7, R17.9-R17.11)', () => {
     expect(after.seats[2]!.tableau).toHaveLength(1);
   });
 
-  it("R17.9 a purchase is checked against the seller's store at the start of the turn", () => {
+  it("R17.9 what may be bought is the seller's store at the start of the turn", () => {
     const s = table();
     townData(s, 0).coins = 0;
     const mint = setHand(s, 0, ['tf-mint'])[0]!;
-    setHand(s, 1, ['tf-apiary']); // seat 1 will Spend it for 2 honey this turn: too late to buy
+    setHand(s, 1, ['tf-apiary']); // seat 1 will Spend it for 2 honey this turn: no help to buy
     expect(
       submit(s, 0, pk(mint, 'build', { pay: [{ good: 'honey', via: 'buy', from: 1 }] })),
     ).toEqual({
       ok: false,
       error: 'cannot pay for tf-mint: P1 holds only 0 honey (R6.6a)',
     });
+    // Holding 1, the seller's Spend this turn does not raise the limit to 2.
+    store(s, 1, { slate: 1 });
+    const apiary = setHand(s, 0, ['tf-apiary'])[0]!; // 2 slate
+    setHand(s, 1, ['tf-quarry']); // its Spend: 2 slate
+    townData(s, 0).coins = 10;
+    const both = [1, 1].map(() => ({ good: 'slate', via: 'buy' as const, from: 1 }));
+    expect(submit(s, 0, pk(apiary, 'build', { pay: both }))).toEqual({
+      ok: false,
+      error: 'cannot pay for tf-apiary: P1 holds only 1 slate (R6.6a)',
+    });
+  });
+
+  it("R6.7 and R17.9 purchases are filled from the seller's store after step 2a, its Spend gains included", () => {
+    const s = table();
+    for (const seat of [0, 1, 2]) store(s, seat, { slate: 1 });
+    const quarry = setHand(s, 0, ['tf-quarry'])[0]!; // seat 0 Spends: +2 slate in step 1
+    const fromZero = { pay: [{ good: 'slate', via: 'buy' as const, from: 0 }] };
+    const a1 = setHand(s, 1, ['tf-apiary'])[0]!; // 2 slate: 1 own + 1 from seat 0
+    const a2 = setHand(s, 2, ['tf-apiary'])[0]!;
+    const after = playTurn(s, {
+      0: pk(quarry, 'spend'),
+      1: pk(a1, 'build', fromZero),
+      2: pk(a2, 'build', fromZero),
+    });
+    // At turn start seat 0 held 1 slate for two buyers; its Spend fills both (R6.7).
+    const trades = eventsOf(after).flatMap((x) => (x.event.type === 'trade' ? [x.event] : []));
+    expect(trades.map((t) => [t.buyer, t.filled])).toEqual([
+      [1, true],
+      [2, true],
+    ]);
+    expect(townData(after, 0)).toMatchObject({ coins: 5 + 2 * PRICE[0]!, store: { slate: 1 } });
+  });
+
+  it("R17.9 this turn's Yield comes too late to fill a purchase", () => {
+    const s = table();
+    build(s, 1, 'tf-quarry'); // seat 1 yields 1 slate in step 4
+    store(s, 1, { slate: 2 });
+    const own = setHand(s, 1, ['tf-apiary'])[0]!; // seat 1's own Build uses its 2 slate first
+    const apiary = setHand(s, 0, ['tf-apiary'])[0]!;
+    townData(s, 0).coins = 10;
+    const buy = { pay: [1, 1].map(() => ({ good: 'slate', via: 'buy' as const, from: 1 })) };
+    const after = playTurn(s, { 0: pk(apiary, 'build', buy), 1: pk(own, 'build') });
+    const trades = eventsOf(after).flatMap((x) => (x.event.type === 'trade' ? [x.event] : []));
+    expect(trades.map((t) => t.filled)).toEqual([false, false]); // short in step 2b
+    expect(townData(after, 1).store.slate).toBe(1); // the Yield arrived after
+    expect(townData(after, 0).coins).toBe(10 - 2 * PRICE[0]!); // the buyer paid the price it saw
   });
 
   it('R15.7 the default plan spends the fewest coins: Exchange, then the left neighbour, then the bank', () => {
@@ -389,6 +454,7 @@ describe('discounts, upgrades and Build effects (R6.1, R7.9, R13)', () => {
     const s = table();
     build(s, 0, 'tf-mason'); // Halls cost 1 good fewer
     store(s, 0, { flint: 1, slate: 1 });
+    townData(s, 0).coins = BANK;
     const hall = setHand(s, 0, ['tf-hall'])[0]!; // flint 2, slate 1
     expect(stored(s, 0, pk(hall, 'build'))).toMatchObject({ discount: ['flint'], pay: [] });
     expect(stored(s, 0, pk(hall, 'build', { discount: ['slate'] })).pay).toEqual([
