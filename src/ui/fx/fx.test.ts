@@ -93,6 +93,32 @@ const anchors = (): RevealAnchors => {
   return { layer: document.createElement('div'), town: () => el };
 };
 
+describe('card sprites', () => {
+  it('show the card name, kind colour and art from face()', async () => {
+    const a = anchors();
+    document.body.append(a.layer);
+    let seenHtml = '';
+    HTMLElement.prototype.animate = function (this: HTMLElement) {
+      seenHtml ||= this.innerHTML;
+      return { finished: Promise.resolve() };
+    } as unknown as HTMLElement['animate'];
+    try {
+      await playReveal([turn[0]!], a, {
+        instant: false,
+        speed: 100,
+        label: (id) => `Name of ${id}`,
+        face: () => ({ art: '/art/x.svg', kind: 'hall' }),
+      });
+    } finally {
+      // @ts-expect-error jsdom has no animate, so remove the stub
+      delete HTMLElement.prototype.animate;
+    }
+    expect(seenHtml).toContain('Name of mill');
+    expect(seenHtml).toContain('data-kind="hall"');
+    expect(seenHtml).toContain('/art/x.svg');
+  });
+});
+
 describe('playReveal', () => {
   it('instant mode only cues, in order, and leaves no sprites', async () => {
     const cues: string[] = [];
