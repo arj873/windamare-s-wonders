@@ -735,7 +735,8 @@ Target: WCAG 2.2 AA for everything in this spec. Owner of colours and contrast: 
   `motion.ts`, `html.is-low-power`).
 - Timer warning is announced once at 10 s. Hotseat and bot games default to no timer.
 - Layout holds at 200 % browser zoom (cards shrink to the compact size before anything
-  overflows). Touch targets ≥ 44×44 px (48 on the phone action sheet).
+  overflows). Touch targets ≥ 44×44 px for actions (48 on the phone action sheet). Dense
+  pickers (8 colour swatches in one phone row) may go to 32 px, above WCAG 2.5.8's 24 px.
 - No information is hover-only: everything with a hover has a focus and a long-press path.
 
 ---
