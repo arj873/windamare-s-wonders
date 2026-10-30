@@ -732,6 +732,9 @@ Breakpoints follow Catan's `hud.css`: wide > 1279 px (sidebar 360 px), 721–127
   on ≡ marks unread chat.
 - The reveal on a phone: your staged card flips in place; neighbour rows flash their new card's
   icon; other seats only via status chips + log. Same ≤ 1.2 s budget.
+- A host with its own bottom bar (online's dock) sets `--dt-bottom-inset` on `.dt` or an
+  ancestor: the pinned hand sits that far above the bottom and the page's bottom padding grows
+  to match. Default 0. Hosts set the variable, never override `.dt-hand` / `.dt` rules.
 
 ### 12.2 Phone landscape and small tablets
 

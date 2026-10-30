@@ -1177,18 +1177,21 @@
   /*
    * R6 #3: the hand is pinned to the bottom and the whole hand fits: compact cards in rows of
    * three (name, cost, Spend band, Build badge). The popover sheet shows the full text.
+   * `--dt-bottom-inset` (set by a host on .dt or an ancestor, e.g. online's bottom bar) lifts
+   * the hand and grows the page's bottom padding to match; default 0.
    */
   .dt {
-    padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px);
+    padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px + var(--dt-bottom-inset, 0px));
   }
   .dt.is-watching {
-    padding-bottom: 8px; /* a spectator has no pinned hand; the Watching row stays in flow */
+    /* a spectator has no pinned hand; the Watching row stays in flow */
+    padding-bottom: calc(8px + var(--dt-bottom-inset, 0px));
   }
   .dt-hand {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--dt-bottom-inset, 0px);
     z-index: 6;
     max-height: 48vh;
     overflow-y: auto;
