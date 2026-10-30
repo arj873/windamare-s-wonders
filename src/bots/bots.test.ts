@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toy, toyConfig } from '../engine/core/testing/helpers';
 import { Rng } from '../engine';
-import { createRandomBot, runGame, runSim } from './index';
+import { createRandomBot, pickFor, runGame, runSim } from './index';
 import type { ToySeat, ToyTable } from '../engine/core/testing/toy';
 import type { Bot as GenericBot } from './types';
 
@@ -88,5 +88,40 @@ describe('runner', () => {
     };
     runGame({ engine: toy, bots: spy, seats: 4, seed: 3 });
     expect(leaked).toBe(false);
+  });
+});
+
+describe('pickFor', () => {
+  it('returns a legal, deterministic action from a view, for every waiting seat', () => {
+    const state = toy.createGame(toyConfig(4));
+    for (const seat of toy.waitingOn(state)) {
+      const view = toy.viewFor(state, seat);
+      const a = pickFor(toy, view, seat);
+      expect(a).toEqual(pickFor(toy, view, seat));
+      expect(a?.type).not.toBe('unpick');
+      expect(toy.applyAction(state, a!).ok).toBe(true);
+    }
+  });
+
+  it('plays a whole game through pickFor alone', () => {
+    let s = toy.createGame(toyConfig(3, undefined, 11));
+    for (let i = 0; i < 500 && s.phase.kind !== 'gameOver'; i++) {
+      const seat = toy.waitingOn(s)[0]!;
+      const r = toy.applyAction(s, pickFor(toy, toy.viewFor(s, seat), seat)!);
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+    expect(s.phase.kind).toBe('gameOver');
+  });
+
+  it('returns null once the game is over', () => {
+    let s = toy.createGame(toyConfig(2, undefined, 3));
+    while (s.phase.kind !== 'gameOver') {
+      const seat = toy.waitingOn(s)[0]!;
+      const r = toy.applyAction(s, pickFor(toy, toy.viewFor(s, seat), seat)!);
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+    expect(pickFor(toy, toy.viewFor(s, 0), 0)).toBeNull();
   });
 });

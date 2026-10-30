@@ -26,6 +26,26 @@ interface Bot<S, T> {
   seat's view).
 - `Bot<S, T>` is generic. Bind it to the ruleset's state types: `createRandomBot<WSeat, WTable>()`.
 
+### Entry point for net and ui: `pickFor`
+
+```ts
+import { pickFor } from '../bots';
+const action = pickFor(engine, engine.viewFor(state, seat), seat, {
+  level: 'easy',
+  salt: roomBotSeed,
+});
+if (action) engine.applyAction(state, action); // the caller applies it to the full state
+```
+
+- Takes the seat's **view** (never the state), returns a `pick` or `answer` action, or `null` if the
+  seat has nothing to do (game over, no legal action). Never `unpick`.
+- Stateless and deterministic: the RNG is derived from `salt`, seat and the view's `seq`, `round`,
+  `turn`, so repeating a call gives the same action (safe across a server restart).
+- Call it once per seat that `engine.waitingOn(state)` lists. For a prompt it answers the open one.
+- `level`: `'easy' | 'medium' | 'hard'`. **Today every level is the same uniform random policy**; the
+  smarter levels arrive with B3/B5 behind the same signature, so net needs no change then.
+- Cost: one `viewFor`-sized `legalActions` call; untested at Windamere scale.
+
 Simulator: `src/bots/sim.ts` (`runGame`, `runSim`, `summarize`), CLI `scripts/sim.ts`:
 
     nice -n 19 npx tsx scripts/sim.ts --games 200 --seed 1 --seats 4 [--max-actions 5000]
