@@ -3,8 +3,8 @@
  * seats, runs the round clock and picks which human's view is on screen. No DOM; the screen
  * (play.ts) renders `view()` on every `onChange`.
  *
- * Bots here are a placeholder (a random legal action, from the bot's own view) until the bots
- * lane ships real ones. The clock is local: online it is the server's (MULTIPLAYER.md §2.1.1).
+ * Bots move through `botAction` (play.ts passes the bots lane's pickFor); without it, a random
+ * legal action. The clock is local: online it is the server's (MULTIPLAYER.md §2.1.1).
  */
 import {
   Rng,
@@ -25,8 +25,10 @@ export interface LocalGameOptions<S, T> {
   pickTimerSec: number | null;
   /** How long a bot "thinks" before it acts, ms. */
   botDelayMs: () => number;
-  /** Seed of the placeholder bots' choices. */
+  /** Seed of the placeholder bots' choices (used without `botAction`). */
   botSeed?: number;
+  /** A bot seat's move (the bots lane's pickFor); default: a random legal action. */
+  botAction?: (state: DraftState<S, T>, seat: SeatId) => DraftAction | null;
   /** Clock source (tests use fake timers). */
   now?: () => number;
   onChange(game: LocalGame<S, T>): void;
@@ -74,6 +76,8 @@ export class LocalGame<S, T> {
   private readonly botTimers = new Map<SeatId, ReturnType<typeof setTimeout>>();
   private deadline: { key: string; at: number; totalMs: number } | null = null;
   private clockTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Clock time left while paused (a hotseat cover or the setup screen is up); null = running. */
+  private pausedLeft: number | null = null;
   private disposed = false;
 
   constructor(private readonly opts: LocalGameOptions<S, T>) {
@@ -115,7 +119,32 @@ export class LocalGame<S, T> {
   /** The current decision's clock, or null (no timer, or nothing for a human to decide). */
   clock(): ClockInfo | null {
     const d = this.deadline;
-    return d ? { remainingMs: Math.max(0, d.at - this.now()), totalMs: d.totalMs } : null;
+    if (!d) return null;
+    const left = this.pausedLeft ?? Math.max(0, d.at - this.now());
+    return { remainingMs: left, totalMs: d.totalMs };
+  }
+
+  get paused(): boolean {
+    return this.pausedLeft !== null;
+  }
+
+  /** Stop the clock (UX.md §9: paused while a pass cover is up). Bots keep playing. */
+  pause(): void {
+    if (this.pausedLeft !== null) return;
+    this.pausedLeft = this.deadline ? Math.max(0, this.deadline.at - this.now()) : 0;
+    if (this.clockTimer !== null) clearTimeout(this.clockTimer);
+    this.clockTimer = null;
+  }
+
+  resume(): void {
+    const left = this.pausedLeft;
+    if (left === null) return;
+    this.pausedLeft = null;
+    const d = this.deadline;
+    if (!d || this.disposed) return;
+    d.at = this.now() + left;
+    const key = d.key;
+    this.clockTimer = setTimeout(() => this.expire(key), left);
   }
 
   private apply(action: DraftAction): string | null {
@@ -153,18 +182,20 @@ export class LocalGame<S, T> {
     this.stopClock();
     const totalMs = sec * 1000;
     this.deadline = { key, at: this.now() + totalMs, totalMs };
-    this.clockTimer = setTimeout(() => this.expire(key), totalMs);
+    if (this.pausedLeft !== null) this.pausedLeft = totalMs;
+    else this.clockTimer = setTimeout(() => this.expire(key), totalMs);
   }
 
   private stopClock(): void {
     if (this.clockTimer !== null) clearTimeout(this.clockTimer);
     this.clockTimer = null;
     this.deadline = null;
+    if (this.pausedLeft !== null) this.pausedLeft = 0;
   }
 
   private expire(key: string): void {
     this.clockTimer = null;
-    if (this.disposed || decisionKey(this.state) !== key) return;
+    if (this.disposed || this.pausedLeft !== null || decisionKey(this.state) !== key) return;
     for (const seat of this.humans) {
       if (decisionKey(this.state) !== key) break;
       if (!this.engine.waitingOn(this.state).includes(seat)) continue;
@@ -187,7 +218,9 @@ export class LocalGame<S, T> {
       const t = setTimeout(() => {
         this.botTimers.delete(seat);
         if (this.disposed || !this.engine.waitingOn(this.state).includes(seat)) return;
-        const action = randomAction(this.engine, this.state, seat, this.rng);
+        const action =
+          this.opts.botAction?.(this.state, seat) ??
+          randomAction(this.engine, this.state, seat, this.rng);
         if (action) this.apply(action);
       }, this.opts.botDelayMs());
       this.botTimers.set(seat, t);

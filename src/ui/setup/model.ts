@@ -97,7 +97,8 @@ export interface NewGameConfig {
 function newSeat(index: number, taken: ReadonlySet<string>): SeatDraft {
   const c = SEAT_COLORS.find((x) => !taken.has(x.color)) ?? RED;
   return {
-    name: index === 0 ? 'You' : `Bot ${c.name}`,
+    // Not "You": the engine writes names into log lines ("Player 1 builds …").
+    name: index === 0 ? 'Player 1' : `Bot ${c.name}`,
     color: c.color,
     controller: index === 0 ? 'human' : 'bot',
   };

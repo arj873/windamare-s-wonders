@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toy } from '../engine/core/testing/helpers';
 import { toyPresenter } from '../ui/table/testing/toy';
 import { boot } from './boot';
+import { windamereBinding } from './windamere';
 
 beforeEach(() => {
   localStorage.clear();
@@ -57,6 +58,48 @@ describe('boot', () => {
     expect(root.querySelector('.setup')).not.toBeNull();
     click(root, '[data-k="back"]');
     expect(root.querySelector('.dt')).not.toBeNull();
+    app.play?.dispose();
+  });
+
+  it('plays Windamere: choose a Great Work, then a 6-card hand, bots answer, picks resolve', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    click(root, '[data-k="start"]');
+    expect(root.querySelector('.dt-prompt h2')?.textContent).toBe('Choose your Great Work');
+    expect(root.querySelectorAll('.dt-answer')).toHaveLength(2);
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(0);
+    vi.advanceTimersByTime(10); // the bots choose theirs
+    click(root, '[data-k="answer-0"]');
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(6);
+    expect(app.play?.game.state.seats[0]?.data).toMatchObject({ greatWork: expect.any(String) });
+    expect(root.querySelector('.dt-round')?.textContent).toMatch(/^Spring · Pick 1 of 5/);
+    click(root, '.dt-card');
+    click(root, '[data-k^="use-"][data-k$="-spend"]');
+    vi.advanceTimersByTime(10);
+    expect(root.querySelector('.dt-round')?.textContent).toMatch(/^Spring · Pick 2 of 5/);
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(5);
+    app.play?.dispose();
+  });
+
+  it('covers the hand between two humans on one device (hotseat)', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: { engine: toy, present: toyPresenter } });
+    click(root, '[data-k="ctl-1-human"]'); // seat 2 becomes a human
+    click(root, '[data-k="start"]');
+    const title = () => root.querySelector('#dt-cover-title')?.textContent ?? null;
+    expect(title()).toContain('Pass to Player 1');
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(0);
+    click(root, '[data-k="reveal"]');
+    expect(title()).toBeNull();
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(4);
+    click(root, '.dt-card');
+    click(root, '[data-k^="use-"][data-k$="-sell"]');
+    expect(title()).toContain('Pass to Player 2');
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(0);
     app.play?.dispose();
   });
 

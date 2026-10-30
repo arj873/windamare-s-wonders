@@ -17,7 +17,9 @@ import type {
   SeatStatus,
   TableModel,
   TableauCard,
+  UseOption,
 } from './model';
+import type { SeatStat } from './present';
 import '../shell.css';
 import './table.css';
 
@@ -27,8 +29,16 @@ export interface DraftTableHandlers {
   answer(prompt: number, answer: Json): void;
   /** Final scores: "New game" (absent hides the button). */
   newGame?(): void;
+  /** Hotseat cover: the named player has the device and wants their hand shown. */
+  reveal?(): void;
   /** Final scores: same seats, new seed. */
   rematch?(): void;
+}
+
+/** Who the device goes to next (hotseat). */
+export interface CoverInfo {
+  name: string;
+  color: string;
 }
 
 export interface TimerState {
@@ -41,7 +51,7 @@ export interface TimerState {
 /** Last seconds shown in red (UX.md §7.1, Catan TIMER_WARN_SEC). */
 export const TIMER_WARN_SEC = 10;
 /** Matches `.dt-pop` width in table.css (used before the popover has a layout). */
-const POPOVER_W = 240;
+const POPOVER_W = 300;
 
 const STATUS_MARK: Record<SeatStatus, string> = { picked: '✓', thinking: '⋯', idle: '' };
 const STATUS_TEXT: Record<SeatStatus, string> = {
@@ -60,6 +70,12 @@ export class DraftTable {
   private model: TableModel | null = null;
   private selected: CardId | null = null;
   private readonly timerEl: HTMLElement;
+  /** Choices changed inside a popover (another seller, no upgrade), by `card:use`. */
+  private readonly overrides = new Map<string, Pick>();
+  /** The pick turn the overrides belong to (stores and sellers change at every reveal). */
+  private overridesFor = '';
+  /** Hotseat pass cover (UX.md §9): while set, no hand is in the DOM at all. */
+  private cover: CoverInfo | null = null;
 
   constructor(private readonly handlers: DraftTableHandlers) {
     this.timerEl = h('div', {
@@ -85,10 +101,22 @@ export class DraftTable {
 
   update(model: TableModel): void {
     this.model = model;
+    if (model.round !== this.overridesFor) {
+      this.overrides.clear();
+      this.overridesFor = model.round;
+    }
     if (this.selected !== null && !model.hand.some((c) => c.id === this.selected)) {
       this.selected = null;
     }
     this.render();
+  }
+
+  /** A use as the player set it up in the popover: their changed pick, re-checked, else the default. */
+  private optionFor(card: HandCard, use: string): UseOption | undefined {
+    const base = card.options.find((o) => o.use.id === use);
+    const changed = this.overrides.get(`${card.id}:${use}`);
+    const refined = changed && base?.pick ? this.model?.refine(changed) : null;
+    return refined?.pick ? refined : base;
   }
 
   /** The selected hand card (its action popover is open), for tests. */
@@ -117,6 +145,19 @@ export class DraftTable {
     this.render();
   }
 
+  /** Show or drop the hotseat pass cover. */
+  setCover(cover: CoverInfo | null): void {
+    const was = this.cover?.name;
+    this.cover = cover;
+    if (cover) this.selected = null;
+    this.render();
+    if (cover && cover.name !== was) this.focusKey('reveal');
+  }
+
+  get covered(): boolean {
+    return this.cover !== null;
+  }
+
   // ---- intents -----------------------------------------------------------
 
   private onClick(e: MouseEvent): void {
@@ -134,9 +175,19 @@ export class DraftTable {
   }
 
   private run(act: string): void {
-    const [verb, a = '', b = ''] = act.split(':');
+    const [verb, a = '', b = '', c = '', d = ''] = act.split(':');
     const m = this.model;
     switch (verb) {
+      case 'choose': {
+        // choose:<card>:<use>:<row>:<option>
+        const card = m?.hand.find((x) => x.id === Number(a));
+        const chosen = card && this.optionFor(card, b)?.choices[Number(c)]?.options[Number(d)];
+        if (card && chosen && !chosen.why) {
+          this.overrides.set(`${card.id}:${b}`, chosen.pick);
+          this.render();
+        }
+        break;
+      }
       case 'select':
         this.select(this.selected === Number(a) ? null : Number(a));
         break;
@@ -157,6 +208,9 @@ export class DraftTable {
       case 'new':
         this.handlers.newGame?.();
         break;
+      case 'reveal':
+        this.handlers.reveal?.();
+        break;
       case 'rematch':
         this.handlers.rematch?.();
         break;
@@ -164,9 +218,8 @@ export class DraftTable {
   }
 
   private pickUse(card: CardId, use: string): void {
-    const option = this.model?.hand
-      .find((c) => c.id === card)
-      ?.options.find((o) => o.use.id === use);
+    const hc = this.model?.hand.find((c) => c.id === card);
+    const option = hc && this.optionFor(hc, use);
     if (!option?.pick) return;
     this.select(null);
     this.handlers.pick(option.pick);
@@ -232,9 +285,9 @@ export class DraftTable {
       this.neighbour(m.left, 'left', m),
       this.town(m),
       this.neighbour(m.right, 'right', m),
-      this.hand(m),
+      this.cover ? this.hiddenHand() : this.hand(m),
       this.side(m),
-      ...(m.result ? [this.result(m.result)] : []),
+      ...(m.result ? [this.result(m.result)] : this.cover ? [this.coverScreen(this.cover)] : []),
     ]);
     if (focused && !this.element.contains(document.activeElement)) this.focusKey(focused);
     this.placePopover();
@@ -262,6 +315,9 @@ export class DraftTable {
       'header',
       { class: 'dt-top' },
       h('div', { class: 'dt-round' }, m.round, pass),
+      ...m.banner
+        .filter((b) => !b.group)
+        .map((b) => h('div', { class: 'dt-banner' }, this.stat(b))),
       h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
       this.timerEl,
       h(
@@ -288,21 +344,32 @@ export class DraftTable {
     );
   }
 
+  private stat(st: SeatStat): HTMLElement {
+    return h(
+      'span',
+      {
+        class: `dt-stat is-${st.id}${st.dim ? ' is-dim' : ''}`,
+        title: st.label,
+        attrs: { 'aria-label': `${st.label}: ${st.value}` },
+      },
+      st.icon &&
+        h('img', { class: 'dt-icon', attrs: { src: st.icon, alt: '', 'aria-hidden': 'true' } }),
+      st.value,
+    );
+  }
+
   private stats(s: SeatModel): HTMLElement {
+    const store = s.stats.filter((st) => st.group === 'store');
     return h(
       'div',
       { class: 'dt-stats' },
-      ...s.stats.map((st) =>
+      ...s.stats.filter((st) => !st.group).map((st) => this.stat(st)),
+      store.length > 0 &&
         h(
-          'span',
-          {
-            class: `dt-stat is-${st.id}`,
-            title: st.label,
-            attrs: { 'aria-label': `${st.label} ${st.value}` },
-          },
-          st.value,
+          'div',
+          { class: 'dt-store', attrs: { 'aria-label': 'Store' } },
+          ...store.map((st) => this.stat(st)),
         ),
-      ),
       ...s.counts.map((c) =>
         h(
           'span',
@@ -319,11 +386,12 @@ export class DraftTable {
   }
 
   private zones(s: SeatModel): Child {
-    if (s.zones.length === 0) return null;
+    const shown = s.zones.filter((z) => z.count > 0);
+    if (shown.length === 0) return null;
     return h(
       'div',
       { class: 'dt-zones' },
-      ...s.zones.map((z) =>
+      ...shown.map((z) =>
         h(
           'div',
           { class: 'dt-zone' },
@@ -417,8 +485,48 @@ export class DraftTable {
   }
 
   /** The face-down slot where your locked pick waits for the reveal (UX.md §7.2, §8.2). */
+  /** The hand row while a pass cover is up: no cards, no names, nothing to peek at. */
+  private hiddenHand(): HTMLElement {
+    return h(
+      'section',
+      { class: 'dt-hand is-hidden', attrs: { 'aria-label': 'Hand hidden' } },
+      h('header', { class: 'dt-hand-head' }, h('h2', {}, 'Hand hidden')),
+      h('div', { class: 'dt-cards' }),
+    );
+  }
+
+  /** UX.md §9: "Pass to Ana", then Ana shows her own hand. Port of catan's coverScreen. */
+  private coverScreen(c: CoverInfo): HTMLElement {
+    return h(
+      'div',
+      { class: 'ww-scrim dt-cover' },
+      h(
+        'div',
+        {
+          class: 'ww-dialog dt-cover-card',
+          style: { '--seat': c.color },
+          attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dt-cover-title' },
+        },
+        h('p', { class: 'muted' }, 'Hotseat: hide your cards'),
+        h('h2', { id: 'dt-cover-title' }, h('span', { class: 'dt-dot' }), ` Pass to ${c.name}`),
+        h(
+          'div',
+          { class: 'ww-dialog-actions' },
+          h(
+            'button',
+            {
+              class: 'btn btn-primary btn-lg',
+              attrs: { 'data-act': 'reveal', 'data-k': 'reveal' },
+            },
+            `I'm ${c.name}, show my hand`,
+          ),
+        ),
+      ),
+    );
+  }
+
   private stage(m: TableModel): HTMLElement {
-    const st = m.staged;
+    const st = this.cover ? null : m.staged;
     return h(
       'div',
       { class: `dt-stage${st ? ' is-full' : ''}` },
@@ -500,7 +608,7 @@ export class DraftTable {
             'data-k': `card-${c.id}`,
             'aria-pressed': String(open),
             'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
-            'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.staged ? '. Your locked pick' : ''}`,
+            'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.face.alt ? `. ${c.face.alt}` : ''}${c.staged ? '. Your locked pick' : ''}`,
           },
         },
         h(
@@ -511,6 +619,7 @@ export class DraftTable {
         ),
         c.face.cost && h('span', { class: 'dt-card-cost' }, c.face.cost),
         h('span', { class: 'dt-card-text' }, c.face.text),
+        c.face.alt && h('span', { class: 'dt-card-alt' }, c.face.alt),
         h('span', { class: 'dt-card-kind' }, c.kind.label),
         h(
           'span',
@@ -522,28 +631,42 @@ export class DraftTable {
     );
   }
 
-  /** One button per use; impossible uses stay visible, disabled, with the engine's reason. */
+  /**
+   * One button per use with what it costs or gives; under a legal use, its choice rows (who to
+   * buy a good from, upgrade or not). Impossible uses stay visible, disabled, with the reason.
+   */
   private popover(c: HandCard): HTMLElement {
+    const options = c.options.map((o) => this.optionFor(c, o.use.id) ?? o);
+    const primary = options.findIndex((x) => x.pick);
     return h(
       'div',
       { class: 'dt-pop', attrs: { role: 'group', 'aria-label': `${c.face.name}: choose a use` } },
       h('div', { class: 'dt-pop-title' }, c.face.name),
       h('div', { class: 'dt-pop-text' }, c.face.text),
-      ...c.options.map((o, i) =>
+      ...options.map((o, i) =>
         o.pick
           ? h(
-              'button',
-              {
-                class: `btn ${i === c.options.findIndex((x) => x.pick) ? 'btn-primary' : ''} dt-use`,
-                attrs: {
-                  'data-act': `pick:${c.id}:${o.use.id}`,
-                  'data-k': `use-${c.id}-${o.use.id}`,
-                  'aria-keyshortcuts': o.use.key.toUpperCase(),
+              'div',
+              { class: 'dt-use-ok' },
+              h(
+                'button',
+                {
+                  class: `btn ${i === primary ? 'btn-primary' : ''} dt-use`,
+                  attrs: {
+                    'data-act': `pick:${c.id}:${o.use.id}`,
+                    'data-k': `use-${c.id}-${o.use.id}`,
+                    'aria-keyshortcuts': o.use.key.toUpperCase(),
+                  },
                 },
-              },
-              o.use.label,
-              ' ',
-              h('kbd', {}, o.use.key.toUpperCase()),
+                h(
+                  'span',
+                  { class: 'dt-use-main' },
+                  h('span', { class: 'dt-use-label' }, o.use.label),
+                  o.detail && h('span', { class: 'dt-use-detail' }, o.detail),
+                ),
+                h('kbd', {}, o.use.key.toUpperCase()),
+              ),
+              ...o.choices.map((row, r) => this.choiceRow(c, o, row, r)),
             )
           : h(
               'div',
@@ -566,28 +689,79 @@ export class DraftTable {
     );
   }
 
+  private choiceRow(c: HandCard, o: UseOption, row: UseOption['choices'][number], r: number) {
+    return h(
+      'div',
+      { class: 'dt-choice', attrs: { role: 'radiogroup', 'aria-label': row.label } },
+      h('span', { class: 'dt-choice-label' }, row.label),
+      h(
+        'span',
+        { class: 'seg' },
+        ...row.options.map((opt, k) =>
+          h(
+            'button',
+            {
+              class: `seg-btn${opt.selected ? ' is-on' : ''}`,
+              disabled: opt.why !== null,
+              title: opt.why ?? '',
+              attrs: {
+                role: 'radio',
+                'aria-checked': String(opt.selected),
+                'data-act': `choose:${c.id}:${o.use.id}:${r}:${k}`,
+                'data-k': `choice-${c.id}-${o.use.id}-${r}-${k}`,
+              },
+            },
+            opt.label,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /**
+   * The viewer's open prompt in the hand row: one card-like button per answer. Answers to a
+   * group prompt (the Great Work choice) stay hidden and changeable until everyone has chosen.
+   */
   private prompt(p: PromptModel): HTMLElement {
+    const chosen = p.answers.find((a) => a.chosen);
     return h(
       'section',
       { class: 'dt-hand dt-prompt', attrs: { 'aria-label': p.title } },
-      h('header', { class: 'dt-hand-head' }, h('h2', {}, p.title)),
+      h(
+        'header',
+        { class: 'dt-hand-head' },
+        h('h2', {}, p.title),
+        h(
+          'span',
+          { class: 'muted dt-keys' },
+          chosen ? `You chose ${chosen.label}. You can still change it.` : p.hint,
+        ),
+      ),
       h(
         'div',
-        { class: 'dt-answers' },
+        { class: 'dt-answers', attrs: { role: 'radiogroup', 'aria-label': p.title } },
         ...p.answers.map((a, i) =>
           h(
             'button',
             {
-              class: `btn ${i === 0 ? 'btn-primary' : ''}`,
+              class: `btn dt-answer${a.chosen ? ' is-chosen' : ''}${
+                !p.answered && i === 0 ? ' btn-primary' : ''
+              }`,
               attrs: {
+                role: 'radio',
+                'aria-checked': String(a.chosen),
                 'data-act': `answer:${i}`,
                 'data-k': `answer-${i}`,
                 'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
               },
             },
-            a.label,
-            i < 9 && ' ',
-            i < 9 && h('kbd', {}, String(i + 1)),
+            h(
+              'span',
+              { class: 'dt-answer-head' },
+              h('span', { class: 'dt-answer-label' }, a.chosen ? `✓ ${a.label}` : a.label),
+              i < 9 && h('kbd', {}, String(i + 1)),
+            ),
+            a.detail && h('span', { class: 'dt-answer-detail' }, a.detail),
           ),
         ),
       ),
@@ -636,6 +810,9 @@ export class DraftTable {
             ),
           ),
         ),
+        ...m.banner
+          .filter((b) => b.group === 'side')
+          .map((b) => h('p', { class: 'dt-side-fact' }, this.stat(b))),
       ),
       m.reveal &&
         h(
@@ -677,42 +854,34 @@ export class DraftTable {
           attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dt-result-title' },
         },
         h('h2', { id: 'dt-result-title' }, 'Final scores'),
+        // UX.md §10.2: one card per town, best first, its score in bands (not a score pad).
         h(
-          'table',
-          { class: 'dt-score' },
-          h(
-            'thead',
-            {},
+          'ol',
+          { class: 'dt-bands' },
+          ...r.columns.map((c, i) =>
             h(
-              'tr',
-              {},
-              h('th', {}, ''),
-              ...r.columns.map((c) =>
-                h(
-                  'th',
-                  { class: c.winner ? 'is-winner' : '', style: { '--seat': c.color } },
-                  h('span', { class: 'dt-dot' }),
-                  c.you ? 'You' : c.name,
-                ),
-              ),
-            ),
-          ),
-          h(
-            'tbody',
-            {},
-            ...r.rows.map((row) =>
+              'li',
+              {
+                class: `dt-band-card${c.winner ? ' is-winner' : ''}`,
+                style: { '--seat': c.color },
+                attrs: { 'aria-label': `${c.rank}. ${c.you ? 'You' : c.name}: ${c.total}` },
+              },
               h(
-                'tr',
-                {},
-                h('th', { attrs: { scope: 'row' } }, row.label),
-                ...row.values.map((v) => h('td', {}, v)),
+                'div',
+                { class: 'dt-band-head' },
+                h('span', { class: 'dt-band-rank' }, `${c.rank}.`),
+                h('span', { class: 'dt-dot' }),
+                h('span', { class: 'dt-band-name' }, c.you ? 'You' : c.name),
+                h('span', { class: 'dt-band-total' }, c.total),
               ),
-            ),
-            h(
-              'tr',
-              { class: 'dt-total' },
-              h('th', { attrs: { scope: 'row' } }, 'Total'),
-              ...r.columns.map((c) => h('td', { class: c.winner ? 'is-winner' : '' }, c.total)),
+              h(
+                'dl',
+                {},
+                ...r.rows.flatMap((row) => [
+                  h('dt', {}, row.label),
+                  h('dd', {}, row.values[i] ?? 0),
+                ]),
+              ),
             ),
           ),
         ),

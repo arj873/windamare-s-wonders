@@ -14,9 +14,10 @@ import {
   type Json,
   type PassDirection,
   type Pick,
+  type Prompt,
   type SeatId,
 } from '../../engine';
-import type { CardFace, KindInfo, Presenter, SeatStat, UseInfo } from './present';
+import type { CardFace, ChoiceRow, KindInfo, Presenter, SeatStat, UseInfo } from './present';
 
 /** Per seat, from the setup screen: what the engine does not know. */
 export interface SeatLook {
@@ -72,6 +73,10 @@ export interface UseOption {
   pick: Pick | null;
   /** Why the use is not possible now (P7), or null when it is. */
   why: string | null;
+  /** What the pick costs or gives, one line ('' when the presenter says nothing). */
+  detail: string;
+  /** Choices inside the pick the player may change (sellers, upgrade or not). */
+  choices: ChoiceRow[];
 }
 
 export interface HandCard {
@@ -97,7 +102,10 @@ export interface RevealLine {
 export interface PromptModel {
   id: number;
   title: string;
-  answers: { label: string; answer: Json }[];
+  hint: string;
+  answers: { label: string; detail: string; answer: Json; chosen: boolean }[];
+  /** The viewer answered; the group waits for the others (the answer may still change). */
+  answered: boolean;
 }
 
 export interface ResultColumn {
@@ -143,6 +151,13 @@ export interface TableModel {
   reveal: { title: string; lines: RevealLine[] } | null;
   log: { key: string; text: string }[];
   result: ResultModel | null;
+  /** Table-wide facts for the top bar (Raid, Honours, prices). */
+  banner: SeatStat[];
+  /**
+   * Re-check a pick the player changed inside the popover (another seller, no upgrade): the
+   * engine's verdict plus the presenter's detail and choices for it. null outside a pick.
+   */
+  refine(pick: Pick): UseOption | null;
 }
 
 /** How many log entries the sidebar keeps. */
@@ -159,6 +174,16 @@ export function listNames(names: readonly string[]): string {
 
 export const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * The open prompt group (docs/ENGINE.md §6: prompts with the first prompt's group answer
+ * together, hidden; a seat may change its answer until the last one is in).
+ */
+export function openPrompts<S, T>(view: DraftView<S, T>): Prompt[] {
+  const head = view.prompts[0];
+  if (view.phase.kind !== 'prompt' || !head) return [];
+  return view.prompts.filter((p) => p.group === head.group);
+}
+
 export function totalRounds<S, T>(engine: DraftEngine<S, T>, view: DraftView<S, T>): number {
   const r = engine.ruleset.rounds;
   return typeof r === 'number' ? r : r(view.config);
@@ -174,10 +199,13 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
   const useOf = (id: string): UseInfo | undefined => present.uses.find((u) => u.id === id);
   const nameOf = (seat: SeatId): string => view.seats[seat]?.name ?? `Seat ${seat + 1}`;
   const fresh = new Set(view.lastReveal?.picks.map((p) => p.card.id) ?? []);
-  const promptSeat = phase === 'prompt' ? (view.prompts[0]?.seat ?? null) : null;
+  const open = openPrompts(view);
 
   const statusOf = (seat: SeatId): SeatStatus => {
-    if (phase === 'prompt') return seat === promptSeat ? 'thinking' : 'idle';
+    if (phase === 'prompt') {
+      const p = open.find((x) => x.seat === seat);
+      return !p ? 'idle' : p.answered ? 'picked' : 'thinking';
+    }
     if (phase !== 'pick') return 'idle';
     if (view.view.submitted[seat]) return 'picked';
     return (view.view.handCounts[seat] ?? 0) > 0 ? 'thinking' : 'idle';
@@ -234,9 +262,10 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
   return {
     phase,
     viewer,
-    round: `${present.roundName(view.round, totalRounds(engine, view))} · Pick ${
-      view.turn + 1
-    } of ${view.roundPicks}`,
+    // Before the first deal (a start prompt such as the Great Work choice) there are no picks yet.
+    round:
+      present.roundName(view.round, totalRounds(engine, view)) +
+      (view.roundPicks > 0 ? ` · Pick ${view.turn + 1} of ${view.roundPicks}` : ''),
     pass:
       viewer === null
         ? null
@@ -272,6 +301,30 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
     },
     log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
     result: resultModel(input, seats),
+    banner: present.banner?.(view) ?? [],
+    refine: (pick) => (viewer === null ? null : useOption(input, viewer, pick)),
+  };
+}
+
+/** The engine's verdict on `pick` for `viewer`, with the presenter's words for it. */
+function useOption<S, T>(input: TableInput<S, T>, viewer: SeatId, raw: Pick): UseOption | null {
+  const { view, engine, present } = input;
+  const use = present.uses.find((u) => u.id === raw.use);
+  if (!use) return null;
+  if (view.phase.kind !== 'pick')
+    return { use, pick: null, why: 'Not the pick phase', detail: '', choices: [] };
+  const pick = engine.ruleset.normalizePick?.(view, viewer, raw) ?? raw;
+  const err = engine.ruleset.validatePick(view, viewer, pick);
+  if (err) {
+    const why = present.whyNot?.(view, viewer, pick, err) ?? capitalize(err);
+    return { use, pick: null, why, detail: '', choices: [] };
+  }
+  return {
+    use,
+    pick,
+    why: null,
+    detail: present.describe?.(view, viewer, pick) ?? '',
+    choices: present.choices?.(view, viewer, pick) ?? [],
   };
 }
 
@@ -288,11 +341,13 @@ function handCards<S, T>(
   return seat.hand.map((c) => {
     const face = present.card(c.def);
     const options = present.uses.map((use): UseOption => {
-      const pick = legal.find((p) => p.card === c.id && p.use === use.id) ?? null;
-      if (pick) return { use, pick, why: null };
-      if (!picking) return { use, pick: null, why: 'Not the pick phase' };
-      const err = engine.ruleset.validatePick(view, viewer, { card: c.id, use: use.id });
-      return { use, pick: null, why: capitalize(err ?? 'Not possible now') };
+      const none = { use, pick: null, detail: '', choices: [] };
+      if (!picking) return { ...none, why: 'Not the pick phase' };
+      const pick = legal.find((p) => p.card === c.id && p.use === use.id);
+      const option = useOption(input, viewer, pick ?? { card: c.id, use: use.id });
+      if (option?.pick && pick) return option;
+      // Not among the legal picks: say why (the engine's reason, in the presenter's words).
+      return { ...none, why: option?.why ?? 'Not possible now' };
     });
     return {
       id: c.id,
@@ -314,10 +369,12 @@ function statusLine<S, T>(input: TableInput<S, T>, seats: SeatModel[]): string {
     case 'gameOver':
       return 'Game over';
     case 'prompt': {
-      const head = view.prompts[0];
-      if (!head) return '';
-      if (head.seat === viewer) return present.prompt(head).title;
-      return `Waiting for ${seats[head.seat]?.name ?? 'a player'}`;
+      const open = openPrompts(view);
+      const mine = open.find((p) => p.seat === viewer);
+      if (mine && !mine.answered) return present.prompt(mine).title;
+      const waiting = open.filter((p) => !p.answered && p.seat !== viewer);
+      const names = waiting.map((p) => seats[p.seat]?.name ?? 'a player');
+      return names.length ? `Waiting for ${listNames(names)}` : '';
     }
     case 'pick': {
       const mine = viewer === null ? null : seats[viewer];
@@ -330,16 +387,29 @@ function statusLine<S, T>(input: TableInput<S, T>, seats: SeatModel[]): string {
 
 function promptModel<S, T>(input: TableInput<S, T>): PromptModel | null {
   const { view, engine, present } = input;
-  const head = view.prompts[0];
   const viewer = view.view.viewer;
-  if (view.phase.kind !== 'prompt' || !head || viewer === null || head.seat !== viewer) return null;
-  const info = present.prompt(head);
-  const answers = engine
-    .legalActions(view, viewer)
-    .flatMap((a) =>
-      a.type === 'answer' ? [{ label: info.answer(a.answer), answer: a.answer }] : [],
-    );
-  return { id: head.id, title: info.title, answers };
+  const mine = openPrompts(view).find((p) => p.seat === viewer);
+  if (!mine || viewer === null) return null;
+  const info = present.prompt(mine);
+  const answers = engine.legalActions(view, viewer).flatMap((a) =>
+    a.type === 'answer'
+      ? [
+          {
+            label: info.answer(a.answer),
+            detail: info.detail?.(a.answer) ?? '',
+            answer: a.answer,
+            chosen: mine.answered && JSON.stringify(mine.answer) === JSON.stringify(a.answer),
+          },
+        ]
+      : [],
+  );
+  return {
+    id: mine.id,
+    title: info.title,
+    hint: info.hint ?? '',
+    answers,
+    answered: mine.answered,
+  };
 }
 
 function resultModel<S, T>(input: TableInput<S, T>, seats: SeatModel[]): ResultModel | null {

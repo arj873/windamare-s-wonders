@@ -116,14 +116,18 @@ describe('DraftTable', () => {
     expect(handlers.answer).toHaveBeenLastCalledWith(state.prompts[0]!.id, 'coins');
   });
 
-  it('shows final scores with New game and Rematch', () => {
+  it('shows final scores as one band card per town, best first, with New game and Rematch', () => {
     let state = newToyGame(3);
     while (state.phase.kind !== 'gameOver') {
       for (const seat of toy.waitingOn(state)) state = act(state, toy.defaultAction(state, seat)!);
     }
     const { el, handlers } = mount(state);
     expect($(el, '.dt-result h2')?.textContent).toBe('Final scores');
-    expect(el.querySelectorAll('.dt-score thead th')).toHaveLength(4);
+    const cards = [...el.querySelectorAll('.dt-band-card')];
+    expect(cards).toHaveLength(3);
+    const totals = cards.map((c) => Number(c.querySelector('.dt-band-total')?.textContent));
+    expect([...totals].sort((a, b) => b - a)).toEqual(totals);
+    expect(cards[0]!.querySelectorAll('dt').length).toBeGreaterThan(0);
     $(el, '[data-k="new"]')!.click();
     $(el, '[data-k="rematch"]')!.click();
     expect(handlers.newGame).toHaveBeenCalled();
@@ -146,6 +150,24 @@ describe('DraftTable', () => {
     // The ring survives a re-render (it is the same node).
     table.update(model(newToyGame(3)));
     expect($(el, '.dt-timer')).toBe(timer);
+  });
+
+  it('keeps the hand out of the DOM behind a pass cover', () => {
+    const state = newToyGame(3);
+    const { el, table, handlers } = mount(state, { reveal: vi.fn() });
+    table.select(state.seats[0]!.hand[0]!.id);
+    table.setCover({ name: 'Ana', color: '#e04848' });
+    expect(el.querySelectorAll('.dt-card')).toHaveLength(0);
+    expect($(el, '.dt-pop')).toBeNull();
+    expect($(el, '#dt-cover-title')?.textContent).toContain('Pass to Ana');
+    expect(document.activeElement?.getAttribute('data-k')).toBe('reveal');
+    key('1');
+    key('s');
+    expect(handlers.pick).not.toHaveBeenCalled();
+    $(el, '[data-k="reveal"]')!.click();
+    expect(handlers.reveal).toHaveBeenCalled();
+    table.setCover(null);
+    expect(el.querySelectorAll('.dt-card')).toHaveLength(4);
   });
 
   it('stops listening to keys once destroyed', () => {

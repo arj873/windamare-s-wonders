@@ -3,8 +3,10 @@
  * setup screen's NewGameConfig into an engine GameConfig, forwards the table's intents to the
  * game and re-renders on every change; the timer ring ticks between renders.
  */
+import { pickFor, type BotLevel as BotStrength } from '../bots';
 import type { DraftAction, DraftEngine, GameConfig, Json, SeatId } from '../engine';
 import { showToast, type NewGameConfig } from '../ui';
+import type { BotLevel } from '../ui/setup/model';
 import { tableModel, type SeatLook } from '../ui/table/model';
 import type { Presenter } from '../ui/table/present';
 import { DraftTable } from '../ui/table/table';
@@ -28,8 +30,15 @@ export interface PlayHandle<S, T> {
   element: HTMLElement;
   game: LocalGame<S, T>;
   table: DraftTable;
+  /** The table left the screen (setup opened over it): stop the clock. */
+  hide(): void;
+  /** Back on screen: the clock runs again unless a pass cover is up. */
+  show(): void;
   dispose(): void;
 }
+
+/** Setup screen bot levels → the bots lane's levels (only 'easy' plays differently today). */
+const BOT_LEVEL: Record<BotLevel, BotStrength> = { easy: 'easy', normal: 'medium', hard: 'hard' };
 
 /** Timer ring refresh between renders, ms. */
 export const TICK_MS = 250;
@@ -64,6 +73,7 @@ export function playLocal<S, T>(
     bot: p.controller === 'bot',
   }));
   const bots = cfg.players.flatMap((p, i) => (p.controller === 'bot' ? [i] : []));
+  const botSalt = crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
   let locked = false;
 
   const send = (make: (seat: SeatId) => DraftAction) => {
@@ -79,7 +89,30 @@ export function playLocal<S, T>(
     answer: (prompt, answer) => send((seat) => ({ type: 'answer', seat, prompt, answer })),
     newGame: () => hooks.onNewGame(),
     rematch: () => hooks.onRematch(),
+    reveal: () => {
+      shownTo = game.viewer;
+      syncCover(game);
+    },
   });
+
+  /**
+   * Hotseat (UX.md §9): with 2+ humans the hand on screen belongs to `shownTo`. When the game
+   * moves on to another human, a pass cover goes up and their clock waits until they say so.
+   */
+  let shownTo: SeatId | null = null;
+  const syncCover = (g: LocalGame<S, T>) => {
+    const next = g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
+    if (next === null) {
+      g.resume();
+      table.setCover(null);
+    } else {
+      g.pause();
+      table.setCover({
+        name: g.state.seats[next]?.name ?? 'the next player',
+        color: looks[next]?.color ?? '',
+      });
+    }
+  };
 
   const tick = () => {
     const c = game.clock();
@@ -92,10 +125,18 @@ export function playLocal<S, T>(
     bots,
     pickTimerSec: cfg.pickTimerSec,
     botDelayMs: hooks.botDelayMs,
+    // Each bot decides from its own view only (bots lane, docs/BOTS.md).
+    botAction: (state, seat) =>
+      pickFor(engine, engine.viewFor(state, seat), seat, {
+        level: BOT_LEVEL[cfg.players[seat]?.botLevel ?? 'normal'],
+        salt: botSalt,
+      }),
     onChange: (g) => {
       const view = g.view();
       const viewer = view.view.viewer;
       locked = viewer !== null && view.view.submitted[viewer] === true;
+      // Cover first, so the next human's hand is never rendered before the cover is up.
+      syncCover(g);
       table.update(tableModel({ view, engine, present, looks }));
       tick();
     },
@@ -117,6 +158,8 @@ export function playLocal<S, T>(
     element: table.element,
     game,
     table,
+    hide: () => game.pause(),
+    show: () => syncCover(game),
     dispose: () => {
       clearInterval(ticker);
       game.dispose();

@@ -3,7 +3,7 @@
  * (it reads only the engine's DraftView); a ruleset ships one Presenter with its names, kinds,
  * uses and numbers. The Windamere one comes with E2; dev pages use a toy one.
  */
-import type { CardDefId, DraftView, Json, Prompt, SeatId } from '../../engine';
+import type { CardDefId, DraftView, Json, Pick, Prompt, SeatId } from '../../engine';
 
 /** A card category. `mark` is a text placeholder for the kind's shape until art A3. */
 export interface KindInfo {
@@ -31,6 +31,8 @@ export interface CardFace {
   cost: string;
   /** One-line effect. */
   text: string;
+  /** What the card gives when used another way (Windamere's Spend band), '' = nothing. */
+  alt?: string;
 }
 
 /** A public number for a seat: coins, score estimate, ... The first one is shown everywhere. */
@@ -38,11 +40,36 @@ export interface SeatStat {
   id: string;
   label: string;
   value: string;
+  /** Stats of one group render on their own line ('store': a town's goods). */
+  group?: string;
+  /** Nothing there (0 of a good): drawn faded. */
+  dim?: boolean;
+  /** Icon URL drawn before the value (the label stays the accessible name). */
+  icon?: string;
+}
+
+/** One alternative for a choice inside a pick (who to buy a good from, an upgrade or not). */
+export interface ChoiceOption {
+  label: string;
+  /** The whole pick with this alternative chosen. */
+  pick: Pick;
+  selected: boolean;
+  /** Why this alternative is not possible, or null. */
+  why: string | null;
+}
+
+export interface ChoiceRow {
+  label: string;
+  options: ChoiceOption[];
 }
 
 export interface PromptInfo {
   title: string;
   answer(answer: Json): string;
+  /** Longer text under an answer (a Great Work's Perk and tiers); '' = none. */
+  detail?(answer: Json): string;
+  /** One line under the title ("Hidden until everyone has chosen. You can change it."). */
+  hint?: string;
 }
 
 export interface Presenter<S = unknown, T = unknown> {
@@ -58,4 +85,12 @@ export interface Presenter<S = unknown, T = unknown> {
   zones?: Readonly<Record<string, string>>;
   prompt(prompt: Prompt): PromptInfo;
   scoreLabel(category: string): string;
+  /** Table-wide facts for the top bar (this Season's Raid, Honours, prices). */
+  banner?(view: DraftView<S, T>): SeatStat[];
+  /** One line on what a legal pick costs or gives ("pay 2 Reed · buy 1 Salt from Ana, 2g"). */
+  describe?(view: DraftView<S, T>, seat: SeatId, pick: Pick): string;
+  /** The choices inside a legal pick the player may change (sellers, upgrade or not). */
+  choices?(view: DraftView<S, T>, seat: SeatId, pick: Pick): ChoiceRow[];
+  /** A player-facing reason for the engine's refusal `error` of `pick`. */
+  whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
 }
