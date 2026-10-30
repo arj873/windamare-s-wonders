@@ -93,7 +93,14 @@ describe('windamerePresenter', () => {
     expect(m.banner.find((b) => b.id === 'market')?.value).toBe('Market 1g');
     expect(m.banner.filter((b) => b.group === 'side')).toHaveLength(3); // three Honours
     const stats = m.me!.stats;
-    expect(stats.find((s) => s.id === 'coins')?.value).toBe('5g');
+    expect(stats.find((s) => s.id === 'coins')).toMatchObject({
+      value: '5',
+      icon: '/art/goods/coin.svg',
+    });
+    expect(stats.find((s) => s.id === 'work')?.value).toMatch(/ 0\/4$/);
+    for (const s of stats.filter((x) => x.group === 'store')) {
+      expect(s.icon).toBe(`/art/goods/${s.label.toLowerCase()}.svg`);
+    }
     expect(stats.filter((s) => s.group === 'store').map((s) => s.label)).toEqual([
       'Reed',
       'Peat',

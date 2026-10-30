@@ -64,6 +64,9 @@ const BAND_LABELS: Record<string, string> = {
 };
 
 const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Art A5's icons (public/art/goods/): the five goods plus coin, guard, labour, renown, valour. */
+const icon = (name: string): string => `${import.meta.env.BASE_URL}art/goods/${name}.svg`;
 const argsOf = (pick: Pick): WwPickArgs => (pick.args ?? {}) as WwPickArgs;
 const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
@@ -265,18 +268,33 @@ export function windamerePresenter(
       if (!s) return [];
       const d = s.data;
       const renown = Object.values(scoreTown(rules, view, seat)).reduce((a, b) => a + b, 0);
-      const work = d.greatWork ? `${rules.greatWork(d.greatWork).name} ${d.tiers}/4 · ` : '';
+      const work: SeatStat[] = d.greatWork
+        ? [
+            {
+              id: 'work',
+              label: 'Great Work tiers',
+              value: `${rules.greatWork(d.greatWork).name} ${d.tiers}/4`,
+            },
+          ]
+        : [];
       return [
-        { id: 'coins', label: 'Coins', value: `${d.coins}g` },
-        { id: 'score', label: 'Renown estimate', value: `~${renown}` },
-        { id: 'guard', label: 'Guard', value: `Guard ${guardOf(rules, view, seat)}` },
-        { id: 'labour', label: 'Great Work labour', value: `${work}Labour ${d.labour}` },
+        { id: 'coins', label: 'Coins', value: `${d.coins}`, icon: icon('coin') },
+        { id: 'score', label: 'Renown estimate', value: `~${renown}`, icon: icon('renown') },
+        {
+          id: 'guard',
+          label: 'Guard',
+          value: `${guardOf(rules, view, seat)}`,
+          icon: icon('guard'),
+        },
+        ...work,
+        { id: 'labour', label: 'Labour', value: `${d.labour}`, icon: icon('labour') },
         ...rules.goods.map((g) => ({
           id: `good-${g}`,
           label: goodName(rules, g),
-          value: `${d.store[g] ?? 0} ${goodName(rules, g)}`,
+          value: `${d.store[g] ?? 0}`,
           group: 'store',
           dim: !d.store[g],
+          icon: icon(g),
         })),
       ];
     },

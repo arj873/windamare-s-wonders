@@ -352,6 +352,8 @@ export class DraftTable {
         title: st.label,
         attrs: { 'aria-label': `${st.label}: ${st.value}` },
       },
+      st.icon &&
+        h('img', { class: 'dt-icon', attrs: { src: st.icon, alt: '', 'aria-hidden': 'true' } }),
       st.value,
     );
   }

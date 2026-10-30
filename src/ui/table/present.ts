@@ -44,6 +44,8 @@ export interface SeatStat {
   group?: string;
   /** Nothing there (0 of a good): drawn faded. */
   dim?: boolean;
+  /** Icon URL drawn before the value (the label stays the accessible name). */
+  icon?: string;
 }
 
 /** One alternative for a choice inside a pick (who to buy a good from, an upgrade or not). */

@@ -666,6 +666,16 @@
 .dt-cover-card .ww-dialog-actions {
   justify-content: center;
 }
+.dt-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.dt-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
 .dt-stat.is-dim {
   opacity: 0.45;
 }
