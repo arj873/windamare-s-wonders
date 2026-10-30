@@ -1,7 +1,9 @@
 # Balance report: full sim on the real Windamere ruleset (cards B3, B4)
 
-Owner: bots lane. Run 2026-10-30 on main `b50fccd` (engine with the Great Work choice, 2-seat
-variant, shipped tunables) + `agent/bots`. Targets: `docs/design/research/balance-targets.md`.
+Owner: bots lane. Run 2026-10-30 on main `9a7a293` (engine with the Great Work choice, 2-seat
+variant, shipped tunables, typed event log) + `agent/bots`. Rerun after the E3 event-log change:
+every number is identical to the run on `b50fccd`, which also shows the metrics read the new events
+correctly. Targets: `docs/design/research/balance-targets.md`.
 Bots: **random** (uniform over legal picks) and **greedy** (level 1: the cheapest legal Build that
 still scores, else the best Spend; the Great Work is chosen by a fixed rating rule; see
 `docs/BOTS.md`). 1000 seeded games per row (section 3 for 2-5 seats: pooled rosters, listed).
