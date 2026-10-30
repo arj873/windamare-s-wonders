@@ -12,6 +12,7 @@ import type {
   DraftState,
   GameConfig,
   GameResult,
+  Json,
   Prompt,
   PromptStage,
   RevealedPick,
@@ -122,7 +123,7 @@ export function reveal<S, T>(ctx: Ctx<S, T>): void {
         );
     }
   }
-  for (const p of picks) {
+  for (const p of ctx.quiet ? [] : picks) {
     if (locate(draft as DraftState<unknown, unknown>, p.card.id) === null) {
       throw new Error(
         `resolve steps left seat ${p.seat}'s card ${p.card.id} (${p.card.def}) nowhere`,
@@ -146,6 +147,38 @@ export function afterStage<S, T>(ctx: Ctx<S, T>, stage: PromptStage): void {
 export function openGroup(state: DraftState<unknown, unknown>): Prompt[] {
   const head = state.prompts[0];
   return head ? state.prompts.filter((p) => p.group === head.group) : [];
+}
+
+/**
+ * Every prompt of the open group is answered: take the group off the queue, apply the answers
+ * in resolve order (arrival order never matters), then open the next group or move on.
+ */
+export function settleGroup<S, T>(ctx: Ctx<S, T>, open: Prompt[], then: PromptStage): void {
+  const { state: draft, rules } = ctx;
+  draft.prompts.splice(0, open.length);
+  for (const s of resolveOrder(rules, draft)) {
+    for (const q of open) {
+      if (q.seat !== s) continue;
+      const h = rules.prompts[q.kind];
+      if (!h) throw new Error(`unknown prompt kind: ${q.kind}`);
+      h.apply(ctx, q, q.answer);
+    }
+  }
+  if (draft.prompts.length === 0) continueAfter(ctx, then);
+  else openHead(ctx);
+}
+
+/** A timeout's answer: the handler's `defaultAnswer` if valid, else its first valid answer. */
+export function defaultAnswer<S, T>(
+  rules: Ruleset<S, T>,
+  state: DraftState<S, T>,
+  p: Prompt,
+): Json | undefined {
+  const h = rules.prompts[p.kind];
+  if (!h) return undefined;
+  const preferred = h.defaultAnswer?.(state, p);
+  if (preferred !== undefined && h.validate(state, p, preferred) === null) return preferred;
+  return h.answers(state, p).find((a) => h.validate(state, p, a) === null);
 }
 
 /** The head group is now the open one: let each prompt's handler refresh its data. */

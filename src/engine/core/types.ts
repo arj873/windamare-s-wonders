@@ -225,6 +225,11 @@ export interface Ctx<S = unknown, T = unknown> {
   readonly state: DraftState<S, T>;
   readonly rules: Ruleset<S, T>;
   readonly rng: Rng;
+  /**
+   * true in a lookahead (docs/ENGINE.md §16): `log` writes nothing and card moves are not
+   * checked. Rules may skip work done only for the log; outcomes must never depend on it.
+   */
+  readonly quiet: boolean;
   def(card: Card | CardDefId): CardDef;
   /** Into the seat's tableau, then each of the card's effects' `onPlay` (given `args`). */
   play(seat: SeatId, card: Card, args?: Json): void;
@@ -345,4 +350,9 @@ export interface Ruleset<S = unknown, T = unknown> {
   /** The `args` of `owner`'s revealed pick as `viewer` sees it in `lastReveal` (e.g. a secret burn). */
   maskRevealArgs?(args: Json, viewer: Viewer, owner: SeatId): Json;
   maskTable?(table: T, viewer: Viewer): T;
+  /**
+   * Lookahead (docs/ENGINE.md §16): give what `maskSeat`/`maskTable` hid a random value the
+   * view allows, on a determinized copy (mutate it). The core already samples hidden hands.
+   */
+  sampleHidden?(state: DraftState<S, T>, rng: Rng): void;
 }

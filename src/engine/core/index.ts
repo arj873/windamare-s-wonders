@@ -6,3 +6,4 @@ export { checkRuleset, defOf, effectScore, effectsOf, findDef } from './effects'
 export { checkInvariants, locate } from './invariants';
 export { isSeat, leftOf, neighboursOf, passTarget, rightOf } from './seats';
 export { cloneJson, isJson } from './clone';
+export { createLookahead, type Lookahead, type Policy, type Until } from './lookahead';

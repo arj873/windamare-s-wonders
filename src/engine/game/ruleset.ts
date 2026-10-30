@@ -5,7 +5,7 @@ import type { WwRules } from './content';
 import { GREAT_WORK_CHOICE, greatWorkChoice, greatWorkSpecs, offerGreatWorks } from './greatWork';
 import { defaultPick, legalPicks, normalizePick, validatePick } from './pick';
 import { updateHonourLeaders } from './honours';
-import { resolveRaid, revealRaid, seasonEndEffects } from './raid';
+import { resolveRaid, revealRaid, sampleHiddenRaids, seasonEndEffects } from './raid';
 import { scoreTown, tiebreakOf } from './score';
 import { maskTable, setupSeat, setupTable } from './setup';
 import { GLEAN, onLeftovers, resolveSteps, roundSpec } from './turn';
@@ -51,6 +51,7 @@ export function windamereRuleset(rules: WwRules): Ruleset<WwSeat, WwTable> {
     zones: { [COVERED]: 'public', [GLEAN]: 'owner' },
     discardVisibility: 'hidden',
     maskTable,
+    sampleHidden: (state, rng) => sampleHiddenRaids(rules, state, rng),
     // R14.3: the other town sees that a card was burned, not which.
     maskRevealArgs: (args) =>
       args !== null && typeof args === 'object' && !Array.isArray(args) && 'burn' in args

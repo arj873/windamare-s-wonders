@@ -1,6 +1,6 @@
 /** R9 Raids: drawn at setup, revealed each Season, resolved at Season end. */
 import type { Ctx, Rng } from '../core';
-import { neighboursOf } from '../core';
+import { HIDDEN_CARD, neighboursOf } from '../core';
 import type { WwRules } from './content';
 import { emit, gained, holdings, isEmpty } from './events';
 import { addGains } from './gains';
@@ -14,12 +14,19 @@ import {
   type WwTable,
 } from './types';
 
+const drawRaid = (rules: WwRules, rng: Rng, season: number) =>
+  rng.pick(rules.content.raids.filter((r) => r.season === SEASONS[season])).id;
+
 /** R2.6: one Raid per Season, drawn at random from that Season's cards; all face down. */
 export function drawRaids(rules: WwRules, rng: Rng): WwTable['raids'] {
-  return SEASONS.map((season) => ({
-    id: rng.pick(rules.content.raids.filter((r) => r.season === season)).id,
-    revealed: false,
-  }));
+  return SEASONS.map((_, season) => ({ id: drawRaid(rules, rng, season), revealed: false }));
+}
+
+/** Lookahead (`sampleHidden`): each Raid a view hid is drawn again the same way (R2.6). */
+export function sampleHiddenRaids(rules: WwRules, state: WwState, rng: Rng): void {
+  state.table.raids.forEach((raid, season) => {
+    if (raid.id === HIDDEN_CARD) raid.id = drawRaid(rules, rng, season);
+  });
 }
 
 /** R2.6, R3.2: the Season's Raid turns face up at the start of the Season. */

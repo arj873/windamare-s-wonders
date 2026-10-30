@@ -5,7 +5,13 @@ import type { Rng } from './rng';
 import { isSeat, leftOf, neighboursOf, rightOf } from './seats';
 import type { Card, Ctx, DraftState, EffectSpec, Json, LogEntry, Ruleset, SeatId } from './types';
 
-export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng: Rng): Ctx<S, T> {
+/** `quiet` (lookahead, docs/ENGINE.md §16): no log entries and no card-move checks. */
+export function makeCtx<S, T>(
+  rules: Ruleset<S, T>,
+  draft: DraftState<S, T>,
+  rng: Rng,
+  quiet = false,
+): Ctx<S, T> {
   const seatOf = (seat: SeatId) => {
     const s = isSeat(draft, seat) ? draft.seats[seat] : undefined;
     if (!s) throw new Error(`no seat ${seat}`);
@@ -13,6 +19,7 @@ export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng
   };
   /** Cards enter a list only from limbo: a card already somewhere must be `take`n first. */
   const loose = (card: Card) => {
+    if (quiet) return card;
     const where = locate(draft as DraftState<unknown, unknown>, card.id);
     if (where !== null) throw new Error(`card ${card.id} is already in ${where}`);
     return card;
@@ -34,6 +41,7 @@ export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng
     state: draft,
     rules,
     rng,
+    quiet,
     def: (card) => defOf(rules, typeof card === 'string' ? card : card.def),
     play(seat, card, args) {
       seatOf(seat).tableau.push(loose(card));
@@ -84,6 +92,7 @@ export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng
       }
     },
     log(seat, kind, text, opts = {}) {
+      if (quiet) return;
       const entry: LogEntry = {
         seq: draft.seq,
         round: draft.round,
