@@ -67,7 +67,8 @@ export const LESSONS: readonly LessonDef[] = [
   {
     id: 'yield',
     title: 'Holdings pay out',
-    text: () =>
+    text: (_c, live) =>
+      (live ? '' : 'You did not build a Holding this game. ') +
       'After every turn your Holdings give you their Yield. Build them early and they pay many times. Winter has no Yield.',
     when: (c) => owns(c, 'holding'),
     recap: true,
@@ -76,7 +77,8 @@ export const LESSONS: readonly LessonDef[] = [
   {
     id: 'buy',
     title: 'Buy from a neighbour',
-    text: () =>
+    text: (_c, live) =>
+      (live ? '' : 'You did not need a neighbour’s goods this game. ') +
       'Missing a good for a Build? Buy it from a neighbour: it leaves their store and the coins go to them. At most 2 from each neighbour a turn, and the price rises every Season.',
     after: ['reveal'],
     when: (c) => turnsDone(c) >= 3 && picking(c),
@@ -112,7 +114,8 @@ export const LESSONS: readonly LessonDef[] = [
   {
     id: 'lore',
     title: 'Lore runs',
-    text: () =>
+    text: (_c, live) =>
+      (live ? '' : 'You built no Lore this game. ') +
       'Lore cards have a rank from 1 to 6. Consecutive ranks score as a run, and longer runs score far more. A second card of the same rank adds nothing.',
     when: (c) => owns(c, 'lore'),
     recap: true,
