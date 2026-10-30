@@ -415,6 +415,25 @@ describe('hardening (audit Q0-N1..N4)', () => {
     expect(net.last('c2', 'room')!.room.phase).toBe('playing');
   });
 
+  it('carries a bot level and a distinct colour per seat (N4)', () => {
+    const { net, session } = lobby();
+    net.send('c1', {
+      type: 'configure',
+      config: { seatCount: 3, timer: 'off', botLevels: ['easy', 'easy', 'hard'], colours: [2, 0] },
+    });
+    const seats = session.room().seats;
+    expect(seats.map((x) => x.botLevel)).toEqual(['easy', 'easy', 'hard']);
+    expect(seats.map((x) => x.colour)).toEqual([2, 0, 1]); // unchosen seats take the free slots
+    net.send('c1', { type: 'configure', config: { seatCount: 3, timer: 'off', colours: [1, 1] } });
+    expect(net.last('c1', 'error')!.code).toBe('bad_message');
+    net.send('c1', {
+      type: 'configure',
+      config: { seatCount: 3, timer: 'off', botLevels: ['god' as 'easy'] },
+    });
+    expect(net.last('c1', 'error')!.code).toBe('bad_message');
+    expect(session.room().seats[2]!.botLevel).toBe('hard');
+  });
+
   it('turns an engine that throws or a bad seat count into bad_config (N4)', () => {
     const { net, session } = lobby();
     net.send('c1', { type: 'configure', config: { seatCount: 9, timer: 'off' } });

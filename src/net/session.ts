@@ -15,6 +15,7 @@ import {
   LIMITS,
   PROTOCOL_VERSION,
   RATE_LIMITS,
+  SEAT_COLOURS,
   clockMs,
   cleanText,
   parseClientMessage,
@@ -27,6 +28,7 @@ import {
   type RoomInfo,
   type RoomPhase,
   type SeatInfo,
+  type BotLevel,
   type ServerMessage,
   type TimerInfo,
 } from './protocol';
@@ -366,6 +368,10 @@ export class GameSession<S, T> {
     };
     this.members.push(m);
     return m;
+  }
+
+  private botLevel(i: number): BotLevel {
+    return this.config.botLevels?.[i] ?? 'easy';
   }
 
   private resizeSeats(): void {
@@ -850,9 +856,10 @@ export class GameSession<S, T> {
       for (const i of new Set(due)) {
         // Bots and timeouts answer from the seat's own view, like a client would.
         const v = this.engine.viewFor(st, i);
-        // R15.6: the timeout pick is the Easy bot's; the engine default is the fallback.
+        // Bots play at their seat's level; R15.6: a timeout pick is always the Easy bot's.
+        const level = this.isBot(this.seatAt(i)) ? this.botLevel(i) : 'easy';
         const a =
-          pickFor(this.engine, v, i, { level: 'easy', salt: saltOf(st.config.seed) }) ??
+          pickFor(this.engine, v, i, { level, salt: saltOf(st.config.seed) }) ??
           this.engine.defaultAction(v, i);
         if (a === null) continue;
         const r = this.engine.applyAction(next, a);
@@ -874,9 +881,21 @@ export class GameSession<S, T> {
 
   // ---- outbound views ------------------------------------------------------
 
+  /** Chosen colours first; seats without one get the lowest unused slots, so all differ. */
+  private seatColours(): number[] {
+    const chosen = this.config.colours ?? [];
+    const free = Array.from({ length: SEAT_COLOURS }, (_, c) => c).filter(
+      (c) => !chosen.includes(c),
+    );
+    return this.seats.map((_, i) => chosen[i] ?? (free.shift() as number));
+  }
+
   room(): RoomInfo {
-    const seats: SeatInfo[] = this.seats.map((s) => ({
+    const colours = this.seatColours();
+    const seats: SeatInfo[] = this.seats.map((s, i) => ({
       occupant: s.occupant,
+      botLevel: this.botLevel(i),
+      colour: colours[i] as number,
       status:
         this.phase === 'lobby'
           ? s.occupant
