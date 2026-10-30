@@ -109,7 +109,7 @@ export interface PlayHandle<S, T> {
   table: DraftTable;
   /** The table left the screen (setup opened over it): stop the clock. */
   hide(): void;
-  /** Back on screen: the clock runs again unless a pass cover is up. */
+  /** Back on screen: the clock runs again unless a pass cover or the Season card is up. */
   show(): void;
   /** "How to play" (the tutorial lane's rules overlay), when the game has one. */
   openRules?(): void;
@@ -192,7 +192,19 @@ export function playLocal<S, T>(
       shownTo = game.viewer;
       syncCover(game);
     },
+    seasonClosed: () => holdClock(game),
   });
+
+  /** The table is off screen (setup over it). */
+  let hidden = false;
+  /**
+   * The clock waits while nobody can act on it: a pass cover, the Season-end card being read
+   * (R7 #1), or setup over the table. Bots keep playing.
+   */
+  const holdClock = (g: LocalGame<S, T>) => {
+    if (hidden || table.covered || table.seasonOpen) g.pause();
+    else g.resume();
+  };
 
   /**
    * Hotseat (UX.md §9): with 2+ humans the hand on screen belongs to `shownTo`. When the game
@@ -202,16 +214,12 @@ export function playLocal<S, T>(
   const syncCover = (g: LocalGame<S, T>) => {
     const covers = hooks.covers ?? true;
     const next = covers && g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
-    if (next === null) {
-      g.resume();
-      table.setCover(null);
-    } else {
-      g.pause();
-      table.setCover({
-        name: g.state.seats[next]?.name ?? 'the next player',
-        color: looks[next]?.color ?? '',
-      });
-    }
+    table.setCover(
+      next === null
+        ? null
+        : { name: g.state.seats[next]?.name ?? 'the next player', color: looks[next]?.color ?? '' },
+    );
+    holdClock(g);
   };
 
   const tick = () => {
@@ -243,6 +251,7 @@ export function playLocal<S, T>(
       syncCover(g);
       const model = tableModel({ view, engine, present, looks });
       table.update(model);
+      holdClock(g);
       // The fx lane animates each new action once the table shows it (never the first render).
       if (fxKey !== null && model.actionKey !== fxKey && !table.covered) {
         fx?.onAction({
@@ -278,8 +287,14 @@ export function playLocal<S, T>(
     element: table.element,
     game,
     table,
-    hide: () => game.pause(),
-    show: () => syncCover(game),
+    hide: () => {
+      hidden = true;
+      game.pause();
+    },
+    show: () => {
+      hidden = false;
+      syncCover(game);
+    },
     ...(help ? { openRules: () => help.openRules() } : {}),
     dispose: () => {
       clearInterval(ticker);

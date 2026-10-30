@@ -43,6 +43,8 @@ export interface DraftTableHandlers {
   reveal?(): void;
   /** Final scores: same seats, new seed. */
   rematch?(): void;
+  /** The Season-end card closed (Continue or its own timer): the clock may run again. */
+  seasonClosed?(): void;
 }
 
 /** Who the device goes to next (hotseat). */
@@ -101,6 +103,7 @@ export class DraftTable {
   private readonly fxLayer: HTMLElement;
   /** The Season-end card (UX.md §10.1): the action it was closed for, and its auto-close. */
   private seasonSeen: string | null = null;
+  private seasonUp = false;
   private seasonTimerFor: string | null = null;
   private seasonTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -191,6 +194,11 @@ export class DraftTable {
 
   get covered(): boolean {
     return this.cover !== null;
+  }
+
+  /** The Season-end card is on screen (R7 #1: the turn clock waits while it is read). */
+  get seasonOpen(): boolean {
+    return this.seasonUp;
   }
 
   // ---- intents -----------------------------------------------------------
@@ -340,6 +348,8 @@ export class DraftTable {
     // Test hooks (UX.md §18): what the table shows, readable without parsing text.
     this.element.dataset.phase = this.cover ? 'cover' : m.phase;
     this.element.dataset.viewer = m.viewer === null ? '' : String(m.viewer);
+    this.seasonUp =
+      !m.result && !this.cover && m.seasonEnd !== null && m.actionKey !== this.seasonSeen;
     patchChildren(this.element, [
       this.top(m),
       this.neighbour(m.left, 'left', m),
@@ -351,7 +361,7 @@ export class DraftTable {
         ? [this.result(m.result)]
         : this.cover
           ? [this.coverScreen(this.cover)]
-          : m.seasonEnd && m.actionKey !== this.seasonSeen
+          : this.seasonUp && m.seasonEnd
             ? [this.seasonCard(m.seasonEnd)]
             : []),
       this.fxLayer,
@@ -680,6 +690,7 @@ export class DraftTable {
     this.seasonTimer = null;
     this.seasonSeen = this.model?.actionKey ?? null;
     this.render();
+    this.handlers.seasonClosed?.();
   }
 
   private coverScreen(c: CoverInfo): HTMLElement {

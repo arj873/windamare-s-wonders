@@ -192,24 +192,30 @@ describe('DraftTable', () => {
   it('shows the Season-end card once per Season end; Continue or time closes it', () => {
     vi.useFakeTimers();
     const state = newToyGame(3);
-    const { el, table } = mount(state);
+    const seasonClosed = vi.fn();
+    const { el, table } = mount(state, { seasonClosed });
     const base = model(state);
     const seasonEnd = {
       title: 'End of Spring · Wolf Pack, strength 2',
       lines: [{ seat: 0, text: 'P0 held the Raid', tone: 'gain' as const }],
       next: 'Next: Summer · hands pass ▶ right',
     };
+    expect(table.seasonOpen).toBe(false);
     table.update({ ...base, actionKey: 'end-1', seasonEnd });
+    expect(table.seasonOpen).toBe(true); // R7 #1: play.ts holds the clock meanwhile
     expect($(el, '#dt-season-title')?.textContent).toBe(seasonEnd.title);
     expect($(el, '.dt-season-next')?.textContent).toBe(seasonEnd.next);
     $(el, '[data-k="season-ok"]')!.click();
     expect($(el, '.dt-season')).toBeNull();
+    expect(table.seasonOpen).toBe(false);
+    expect(seasonClosed).toHaveBeenCalledTimes(1);
     table.update({ ...base, actionKey: 'end-1', seasonEnd }); // same action: stays closed
     expect($(el, '.dt-season')).toBeNull();
     table.update({ ...base, actionKey: 'end-2', seasonEnd });
     expect($(el, '.dt-season')).not.toBeNull();
     vi.advanceTimersByTime(SEASON_CARD_MS);
     expect($(el, '.dt-season')).toBeNull();
+    expect(seasonClosed).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });
 

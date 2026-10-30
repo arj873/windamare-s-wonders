@@ -267,6 +267,35 @@ describe('boot', () => {
     expect(again.querySelector('.tut-hint')).toBeNull();
   });
 
+  it('holds the turn clock while the Season card is up (R7 #1)', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    toSetup(root);
+    click(root, '[data-k="clock-normal"]');
+    click(root, '[data-k="start"]');
+    vi.advanceTimersByTime(10);
+    click(root, '[data-k="answer-0"]');
+    for (let turn = 0; turn < 5 && !root.querySelector('.dt-season'); turn++) {
+      vi.advanceTimersByTime(10);
+      click(root, '.dt-card');
+      click(root, '[data-use="spend"]');
+      vi.advanceTimersByTime(50);
+    }
+    expect(root.querySelector('.dt-season')).not.toBeNull();
+    const game = app.play!.game;
+    expect(game.paused).toBe(true);
+    const left = game.clock()!.remainingMs;
+    vi.advanceTimersByTime(3000);
+    expect(game.clock()!.remainingMs).toBe(left);
+    click(root, '[data-k="season-ok"]');
+    expect(game.paused).toBe(false);
+    vi.advanceTimersByTime(1000);
+    expect(game.clock()!.remainingMs).toBe(left - 1000);
+    app.play?.dispose();
+  });
+
   it('maps setup bot levels onto the bots lane (Normal = level 2, Hard = level 3)', () => {
     expect(BOT_LEVEL).toEqual({ easy: 'easy', normal: 'medium', hard: 'hard' });
   });
