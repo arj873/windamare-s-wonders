@@ -42,22 +42,43 @@ export interface Intent {
   glean?: WwCardDef | null;
 }
 
+/** Chance, per rank, that the town still gets it: from the Lore cards left in the Seasons to come. */
+function loreChances(rules: WwRules, state: WwState, scale: number): Map<number, number> {
+  const seatIdx = Math.min(7, Math.max(3, state.seats.length === 2 ? 4 : state.seats.length)) - 3;
+  const seasons = ['spring', 'summer', 'autumn', 'winter'];
+  const miss = new Map<number, number>(); // rank -> chance of never getting it
+  for (const c of rules.content.cards) {
+    if (c.kind !== 'lore') continue;
+    const si = seasons.indexOf(c.season);
+    if (si < state.round) continue;
+    // The current Season counts for the turns left in it only (it may already be dealt out).
+    const w =
+      si === state.round ? Math.max(0, (state.roundPicks - state.turn - 1) / state.roundPicks) : 1;
+    const copies = c.counts[seatIdx] ?? 0;
+    const rank = c.effects.find((e) => e.type === 'lore')?.rank as number | undefined;
+    if (rank === undefined) continue;
+    miss.set(rank, (miss.get(rank) ?? 1) * Math.pow(1 - Math.min(0.9, 0.3 * w * scale), copies));
+  }
+  return new Map([...miss].map(([r, m]) => [r, 1 - m]));
+}
+
 /**
- * Lore Renown as it will probably end: each rank the town lacks is added with chance `q` (the
- * ranks come in the hands still to be drawn), and the run scores of every outcome are averaged.
+ * Lore Renown as it will probably end: each rank the town lacks is added with the chance that a
+ * card of that rank still comes (`loreChances`), and the run scores of every outcome are averaged.
  */
-function expectedLore(rules: WwRules, state: WwState, seat: SeatId, q: number): number {
+function expectedLore(rules: WwRules, state: WwState, seat: SeatId, scale: number): number {
   const table = rules.tunables.loreRunScores;
   const have = loreRanks(rules, state, seat);
   const score = (ranks: number[]) => loreRuns(ranks).reduce((a, n) => a + (table[n - 1] ?? 0), 0);
-  if (q <= 0) return score(have);
-  const missing: number[] = [];
-  for (let r = 1; r <= table.length; r++) if (!have.includes(r)) missing.push(r);
+  if (scale <= 0) return score(have);
+  const chances = loreChances(rules, state, scale);
+  const missing = [...chances.keys()].filter((r) => !have.includes(r) && (chances.get(r) ?? 0) > 0);
   let total = 0;
   for (let mask = 0; mask < 1 << missing.length; mask++) {
     let p = 1;
     const ranks = [...have];
     missing.forEach((r, i) => {
+      const q = chances.get(r) ?? 0;
       if (mask & (1 << i)) {
         p *= q;
         ranks.push(r);
@@ -72,8 +93,9 @@ function expectedLore(rules: WwRules, state: WwState, seat: SeatId, q: number): 
 /** Renown without the purse (coins are priced separately, smoothly). */
 function endRenown(rules: WwRules, state: WwState, seat: SeatId, tune: EvalTune): number {
   const s = scoreTown(rules, state, seat);
-  const q = Math.min(0.5, (turnsLeft(state) / 40) * tune.loreProject);
-  return s.town + s.greatWork + s.raids + expectedLore(rules, state, seat, q) + s.honours;
+  return (
+    s.town + s.greatWork + s.raids + expectedLore(rules, state, seat, tune.loreProject) + s.honours
+  );
 }
 
 /** Turns on which a Yield still happens: this one counts (R17.3), Winter has none (R3.7). */
@@ -206,7 +228,7 @@ export interface EvalTune {
   /** Scale of the chance that a missing Lore rank turns up later (0 = Lore counts as it stands). */
   loreProject: number;
 }
-export const DEFAULT_TUNE: EvalTune = { guardSmooth: 0, loreProject: 0 };
+export const DEFAULT_TUNE: EvalTune = { guardSmooth: 0, loreProject: 1 };
 
 /** Chance a Guard of `g` holds against strength `x` in a later Season (Guard grows by then). */
 const soft = (g: number, x: number) => 1 / (1 + Math.exp(-(g - x + 0.5) / 1.5));

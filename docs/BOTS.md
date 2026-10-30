@@ -348,3 +348,36 @@ the loop of "no Lore, so Lore is worth little" keeps them out. The projected-Lor
 `loreProject`) tried to price the later runs and lost 3 points of win share at level 2 (24 vs 26%),
 so it is off; level 2 and 3 also win far more than level 1 without Lore. Whether a Lore plan (commit
 to a run early, price each rank at the run it would complete) beats that is untested.
+
+## 14. Lore plan (B9)
+
+`windamereEval.ts` prices Lore by the run it is likely to complete. For every rank the town lacks,
+`loreChances` takes the Lore cards of that rank still to come (Seasons from the current one on;
+the current Season weighted by turns left; copies from the card counts for this table size) and
+gives a chance of 1 - (1 - 0.3 x weight)^copies that the town gets one. `expectedLore` averages the
+run scores over every subset of those ranks. A Lore card is then worth the gain in that expectation,
+so rank 3 held with rank 2 and rank 4 still coming is worth a run of 3, not a run of 1. This
+replaces the §11 knob that gave every missing rank the same chance, which priced ranks that can no
+longer arrive (Spring ranks in Autumn). Knob: `EvalTune.loreProject` (scale of the 0.3; now 1).
+
+Measured, level 2, 4 seats, 2 bots with it vs 2 without (fair share 25%):
+
+| games        | seed base | with  | without |
+| ------------ | --------- | ----- | ------- |
+| 500, scale 1 | 7000      | 26.3% | 23.7%   |
+| 500, scale 2 | 7000      | 25.2% | 24.8%   |
+| 600, scale 1 | 9000      | 25.1% | 24.9%   |
+
+Pooled for scale 1: 25.8% vs 24.4%, about +1.4 points with a standard error of about 1.3, so **not
+a win-rate gain**, only no loss. It is on because the build share moves (4 identical bots, 100
+games):
+
+| bot             | Lore cards per town | towns with no Lore |
+| --------------- | ------------------- | ------------------ |
+| level 2, before | 1.11                | 36%                |
+| level 2, now    | 1.82                | 19%                |
+| level 3, before | 1.03                | 38%                |
+| level 3, now    | 1.66                | 17%                |
+
+Level 1 builds 3.1. Not measured: the effect on balance.ts targets (S1 third group, Lore run
+length), which belongs to balance; K2 not re-measured.
