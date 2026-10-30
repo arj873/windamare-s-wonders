@@ -101,7 +101,12 @@
 .dt-timer.timer-low {
   animation: dt-pulse 1s ease-in-out infinite;
 }
+/* Chips + status: one row on phones (below); here the wrapper vanishes and the chips go last. */
+.dt-top-row {
+  display: contents;
+}
 .dt-chips {
+  order: 2;
   display: flex;
   gap: 6px;
   margin: 0;
@@ -504,6 +509,9 @@
   flex-direction: column;
   gap: 6px;
   width: 300px;
+  /* Long choice rows (a 2-town Burn lists 9 cards) scroll inside rather than leave the screen. */
+  max-height: calc(100vh - var(--pop-y, 220px) - 8px);
+  overflow-y: auto;
   padding: 10px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -1093,14 +1101,16 @@
   /*
    * R7 #3: three short rows instead of ~250 px. Season · pick · arrow, clock, drawer; seat dots
    * with ✓ and the status; then the Raid and Market facts (a tap explains each).
+   * R8 #2: chips + status are one flex row of their own (.dt-top-row), so the clock ring in the
+   * first row can never push the bar past the screen; 5+ seats wrap inside the row.
    */
   .dt-top {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      'round round timer drawer'
-      'chips status status status'
-      'banners banners banners banners';
+      'round timer drawer'
+      'row row row'
+      'banners banners banners';
     gap: 5px 8px;
     min-height: 0;
     padding: 5px 8px 6px 60px;
@@ -1124,21 +1134,29 @@
     font-size: 12px;
     white-space: nowrap;
   }
+  .dt-top-row {
+    grid-area: row;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
   .dt-chips {
-    grid-area: chips;
-    flex-wrap: wrap;
-    max-width: 62vw; /* 6-7 seats wrap here rather than squeeze the status to nothing */
-    gap: 4px;
+    order: 0;
+    flex: 0 1 auto;
+    flex-wrap: wrap; /* 5+ seats wrap in the row rather than widen the page */
+    min-width: 0;
+    gap: 3px;
   }
   .dt-chip {
-    gap: 3px;
-    padding: 2px 6px;
+    gap: 2px;
+    padding: 2px 4px;
   }
   .dt-chip-name {
     display: none; /* the label says who; neighbours' names are on their panels */
   }
   .dt-status {
-    grid-area: status;
+    flex: 1 1 60px;
     min-width: 0;
     font-size: 13px;
   }
@@ -1162,18 +1180,21 @@
   /*
    * R6 #3: the hand is pinned to the bottom and the whole hand fits: compact cards in rows of
    * three (name, cost, Spend band, Build badge). The popover sheet shows the full text.
+   * `--dt-bottom-inset` (set by a host on .dt or an ancestor, e.g. online's bottom bar) lifts
+   * the hand and grows the page's bottom padding to match; default 0.
    */
   .dt {
-    padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px);
+    padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px + var(--dt-bottom-inset, 0px));
   }
   .dt.is-watching {
-    padding-bottom: 8px; /* a spectator has no pinned hand; the Watching row stays in flow */
+    /* a spectator has no pinned hand; the Watching row stays in flow */
+    padding-bottom: calc(8px + var(--dt-bottom-inset, 0px));
   }
   .dt-hand {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--dt-bottom-inset, 0px);
     z-index: 6;
     max-height: 48vh;
     overflow-y: auto;
@@ -1259,8 +1280,9 @@
   .dt-pop {
     left: 8px;
     right: 8px;
-    bottom: 8px;
+    bottom: calc(8px + var(--dt-bottom-inset, 0px));
     width: auto;
+    max-height: 80vh;
   }
   .dt-nb .dt-tag {
     display: none;

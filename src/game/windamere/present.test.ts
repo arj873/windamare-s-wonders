@@ -221,6 +221,11 @@ describe('windamerePresenter', () => {
     expect(model(s, 1).reveal?.happenings).toContain(`Ana bought Reed from you (${spring}g)`);
     expect(model(s, 2).reveal?.happenings).toContain(`Ana bought Reed from Bo (${spring}g)`);
     expect(model(s).seasonEnd).toBeNull();
+    // E8: the log too (engine's logText), "You" only for the seat whose view it is.
+    const logOf = (viewer: number) => model(s, viewer).log.map((l) => l.text);
+    expect(logOf(0).some((t) => /\b[Yy]ou\b/.test(t))).toBe(true);
+    expect(logOf(0).join('\n')).not.toMatch(/\bAna\b/);
+    expect(logOf(2).join('\n')).toMatch(/\bAna\b/);
 
     // Play out Spring: the action that ends it carries the Raid summary.
     const summer = advance(s, (x) => x.round === 1);
@@ -235,6 +240,35 @@ describe('windamerePresenter', () => {
     ).toBe(true);
     const mine = end.lines.find((l) => l.seat === 0)!.text;
     expect(mine).toMatch(/^You (held the Raid|were plundered) /);
+  });
+
+  it('lets one of 2 towns choose its Burn on every turn but the last (R14.2, R14.4)', () => {
+    let s = advance(
+      engine.createGame({ seed: 'duel', seats: [{ name: 'Ana' }, { name: 'Bo' }] }),
+      (x) => x.phase.kind === 'pick',
+    );
+    const m = model(s);
+    expect(m.left?.name).toBe('Bo');
+    expect(m.right).toBeNull(); // one neighbour, drawn once (R14.5)
+    const card = m.hand[0]!;
+    const spend = card.options.find((o) => o.use.id === 'spend')!;
+    const row = spend.choices.find((r) => r.key === 'burn')!;
+    expect(row.options).toHaveLength(m.hand.length - 1);
+    expect(row.options.filter((o) => o.selected)).toHaveLength(1); // the engine's default (R15.6)
+    const other = row.options.find((o) => !o.selected)!;
+    const refined = m.refine(other.pick)!;
+    expect(refined.pick).not.toBeNull();
+    expect(refined.detail).toMatch(new RegExp(`· burn ${other.label}$`));
+    expect(
+      refined.choices.find((r) => r.key === 'burn')!.options.find((o) => o.selected)?.key,
+    ).toBe(other.key);
+    // Build offers it too; the last turn of a Season burns nothing.
+    expect(
+      card.options.find((o) => o.use.id === 'build')!.choices.some((r) => r.key === 'burn'),
+    ).toBe(card.options.find((o) => o.use.id === 'build')!.pick !== null);
+    s = advance(s, (x) => x.turn === x.roundPicks - 1);
+    const last = model(s).hand[0]!.options.find((o) => o.use.id === 'spend')!;
+    expect(last.choices.some((r) => r.key === 'burn')).toBe(false);
   });
 
   it('keeps Recall of the hands passed this Season (R15.8)', () => {

@@ -732,6 +732,9 @@ Breakpoints follow Catan's `hud.css`: wide > 1279 px (sidebar 360 px), 721–127
   on ≡ marks unread chat.
 - The reveal on a phone: your staged card flips in place; neighbour rows flash their new card's
   icon; other seats only via status chips + log. Same ≤ 1.2 s budget.
+- A host with its own bottom bar (online's dock) sets `--dt-bottom-inset` on `.dt` or an
+  ancestor: the pinned hand sits that far above the bottom and the page's bottom padding grows
+  to match. Default 0. Hosts set the variable, never override `.dt-hand` / `.dt` rules.
 
 ### 12.2 Phone landscape and small tablets
 
@@ -977,9 +980,11 @@ new server message is needed (MULTIPLAYER.md §3 already marks a `reveal` messag
 Stable hooks for scripts that drive a browser game (qa Q2). Implemented in U4; changing one is a
 breaking change for qa: say so in the status file.
 
-**Start.** `/?debug=1[&seats=N][&seed=S]` skips the setup screen and starts a game with N human
-seats (default 4, clamped to the player range), named `P1`…`PN`, no pick timer and **no pass
-covers**: the table shows whichever seat the game waits for, so a script plays each seat in turn.
+**Start.** `/?debug=1[&seats=N][&seed=S][&first=1][&clock=off|relaxed|normal|fast]` skips the
+setup screen and starts a game with N human seats (default 4, clamped to the player range), named
+`P1`…`PN`, **no pass covers**, no pick timer unless `clock` names one (R15.3; an unknown value is
+Off), and R19 First game with `first=1`. The table shows whichever seat the game waits for, so a
+script plays each seat in turn.
 In debug mode only, `window.ww` is the app handle (`ww.play.game.state` = the full state, for
 assertions; never read it to choose moves), and `window.__pt.view(seat?)` returns the `DraftView`
 on screen (or seat `seat`'s) as a JSON copy, null with no game. `__pt` is merged into whatever an
@@ -999,6 +1004,7 @@ it. Without `debug=1` nothing of this exists.
 | choice option (button)      | `data-pt-role="choice"`, `data-option` = `cover-<cardId>`, `full`, `buy-<seat>`, `exchange-<good>`, `bank`; disabled ones carry `data-why` |
 | ready mark (Change pick)    | `data-pt-role="unpick"` (shown while your pick waits face down)                                                                            |
 | prompt answer (Great Work)  | `data-pt-role="answer"`, `data-answer` = the answer (a Great Work id)                                                                      |
+| Season-end card's Continue  | `data-pt-role="season-ok"` (the card covers the table until it closes: press it, or wait 8 s)                                              |
 | cost / Spend amount         | `.dt-part` with `role="img"` and `aria-label` ("3 coins", "1 Reed")                                                                        |
 | final scores                | `.dt-band-card` per town, best first                                                                                                       |
 

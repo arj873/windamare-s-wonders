@@ -266,6 +266,7 @@ describe('DraftTable', () => {
     table.update({ ...base, actionKey: 'end-1', seasonEnd });
     expect(table.seasonOpen).toBe(true); // R7 #1: play.ts holds the clock meanwhile
     expect($(el, '#dt-season-title')?.textContent).toBe(seasonEnd.title);
+    expect($(el, '[data-pt-role="season-ok"]')).toBe($(el, '[data-k="season-ok"]')); // qa Q2b-2
     expect($(el, '.dt-season-next')?.textContent).toBe(seasonEnd.next);
     $(el, '[data-k="season-ok"]')!.click();
     expect($(el, '.dt-season')).toBeNull();

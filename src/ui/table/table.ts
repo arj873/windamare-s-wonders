@@ -429,7 +429,14 @@ export class DraftTable {
           .filter((b) => !b.group)
           .map((b) => h('div', { class: 'dt-banner', attrs: tutMark(b) }, this.stat(b))),
       ),
-      h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
+      // Who is still choosing, and what the table waits on. Phones give the pair its own row
+      // (R8 #2); elsewhere the wrapper is display: contents and the chips sit at the far right.
+      h(
+        'div',
+        { class: 'dt-top-row' },
+        this.chips(m),
+        h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
+      ),
       this.timerEl,
       // R6 #3: on phones the Table list, reveal and log live in a drawer.
       h(
@@ -445,28 +452,32 @@ export class DraftTable {
         },
         'Table & log',
       ),
-      h(
-        'ol',
-        { class: 'dt-chips', attrs: { 'aria-label': 'Pick status' } },
-        ...m.seats.map((s) =>
-          h(
-            'li',
-            {
-              class: `dt-chip is-${s.status}${s.you ? ' is-you' : ''}`,
-              style: { '--seat': s.color },
-              attrs: {
-                'aria-label': `${s.you ? 'You' : s.name}: ${STATUS_TEXT[s.status]}`,
-                'data-seat': String(s.seat),
-                'data-status': s.status,
-              },
+    );
+  }
+
+  /** One chip per town: colour, name (hidden on phones) and ✓ / ⋯. */
+  private chips(m: TableModel): HTMLElement {
+    return h(
+      'ol',
+      { class: 'dt-chips', attrs: { 'aria-label': 'Pick status' } },
+      ...m.seats.map((s) =>
+        h(
+          'li',
+          {
+            class: `dt-chip is-${s.status}${s.you ? ' is-you' : ''}`,
+            style: { '--seat': s.color },
+            attrs: {
+              'aria-label': `${s.you ? 'You' : s.name}: ${STATUS_TEXT[s.status]}`,
+              'data-seat': String(s.seat),
+              'data-status': s.status,
             },
-            h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
-            h('span', { class: 'dt-chip-name' }, s.you ? 'You' : s.name),
-            h(
-              'span',
-              { class: 'dt-chip-st', attrs: { 'aria-hidden': 'true' } },
-              STATUS_MARK[s.status],
-            ),
+          },
+          h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
+          h('span', { class: 'dt-chip-name' }, s.you ? 'You' : s.name),
+          h(
+            'span',
+            { class: 'dt-chip-st', attrs: { 'aria-hidden': 'true' } },
+            STATUS_MARK[s.status],
           ),
         ),
       ),
@@ -754,7 +765,14 @@ export class DraftTable {
           { class: 'ww-dialog-actions' },
           h(
             'button',
-            { class: 'btn btn-primary', attrs: { 'data-act': 'season-ok', 'data-k': 'season-ok' } },
+            {
+              class: 'btn btn-primary',
+              attrs: {
+                'data-act': 'season-ok',
+                'data-k': 'season-ok',
+                'data-pt-role': 'season-ok',
+              },
+            },
             'Continue',
           ),
         ),
