@@ -48,8 +48,8 @@ If a Build needs a good you lack, you can:
 
 - **Buy it from a neighbour.** The good leaves their store and goes straight into your Build.
   Coins go to them. The price depends on the Season: 1† coin a good in Spring, Summer and
-  Autumn, 3† in Winter (which has no Yield). You can buy at most 2 goods from each neighbour a turn, and only what they
-  held at the start of the turn.
+  Autumn, 3† in Winter (which has no Yield). You can buy at most 2 goods from each neighbour a
+  turn, and only what they held at the start of the turn.
 - **Use an Exchange.** Some Markets let you pay 2† of one good instead of one missing good.
 - **Buy from the bank** for 6† coins a good. Always the dearest way.
 

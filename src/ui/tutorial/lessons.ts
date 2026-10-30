@@ -1,5 +1,5 @@
 /** The guided first game's lessons, in the order they come up. Plain words, our terms only. */
-import { CARDS, GREAT_WORKS } from '../../content/windamere';
+import { CARDS, GREAT_WORKS, TUNABLES } from '../../content/windamere';
 import type { Course, LessonDef, TutorialCtx } from './course';
 import { gleanTurn, mustPick, mySeat, over, picking, turnsDone } from './course';
 
@@ -84,7 +84,7 @@ export const LESSONS: readonly LessonDef[] = [
     title: 'Buy from a neighbour',
     text: (_c, live) =>
       (live ? '' : 'You did not need a neighbour’s goods this game. ') +
-      'Missing a good for a Build? Buy it from a neighbour: it leaves their store and the coins go to them. At most 2 from each neighbour a turn, and goods cost more in Winter.',
+      `Missing a good for a Build? Buy it from a neighbour: it leaves their store and the coins go to them. At most 2 from each neighbour a turn. A good costs ${TUNABLES.marketPrice.spring} coin from Spring to Autumn, but ${TUNABLES.marketPrice.winter} in Winter.`,
     after: ['reveal'],
     when: (c) => turnsDone(c) >= 3 && picking(c),
     recap: true,
@@ -130,7 +130,7 @@ export const LESSONS: readonly LessonDef[] = [
     id: 'winter',
     title: 'Winter: no Yield',
     text: () =>
-      'Holdings stop paying. Spend what you stored, buy what you lack, and get your Guard up for the last Raid.',
+      `Holdings stop paying, and a neighbour’s goods now cost ${TUNABLES.marketPrice.winter} coins each. Spend what you stored, buy what you lack, and get your Guard up for the last Raid.`,
     when: (c) => picking(c) && c.view.round === 3,
     focus: 'raid',
   },

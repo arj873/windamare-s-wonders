@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { TUNABLES } from '../../content/windamere';
 import { windamere } from '../../game/windamere/content';
 import type { TutorialCtx, WwView } from './course';
 import { TutorialCoach, type CoachHost } from './coach';
@@ -29,6 +30,16 @@ describe('lessons', () => {
       for (const a of l.after ?? []) expect(ids.has(a), `${l.id} after ${a}`).toBe(true);
       expect(`${l.title} ${l.text(ctxOf(fresh()), true)}`).not.toMatch(BLOCKED);
     }
+  });
+});
+
+describe('prices in the tips', () => {
+  it('come from the content tunables, not typed in', () => {
+    const c = ctxOf(fresh());
+    const text = (id: string) => LESSONS.find((l) => l.id === id)?.text(c, true) ?? '';
+    expect(text('buy')).toContain(`${TUNABLES.marketPrice.winter} in Winter`);
+    expect(text('winter')).toContain(`${TUNABLES.marketPrice.winter} coins`);
+    expect(text('buy')).not.toMatch(/rises|dearer/);
   });
 });
 
