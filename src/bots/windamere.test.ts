@@ -4,7 +4,7 @@ import { SEARCH } from './windamereBots';
 import { valueOf } from './windamereEval';
 import { PENDING_CARDS } from '../content/windamere';
 import { windamere, windamereRules } from './windamere';
-import { rateGreatWork, windamereAdapter } from './windamereAdapter';
+import { createGreatWorkBot, rateGreatWork, windamereAdapter } from './windamereAdapter';
 import { observeWindamere, SOURCES, sourcesOf } from './windamereMetrics';
 import { compileContent, scoreTown } from '../engine';
 import { windamereContent } from '../engine';
@@ -214,5 +214,26 @@ describe('bots on the Windamere ruleset', () => {
     // The D10b Renown is part of the net, so the net is at least the Renown it adds minus the
     // coins the town paid; with 3 greedy towns some pay nothing, so some net values reach it.
     expect(d.some((x, k) => x > 0 && (net[k] ?? 0) >= x - 3)).toBe(true);
+  });
+
+  it('the Great Work focus bots reach more tiers than greedy, and labour-only nearly always tier IV', () => {
+    const tiers = (bot: ReturnType<typeof createGreatWorkBot>) => {
+      const { summary } = runSim(
+        {
+          engine: windamere,
+          bots: bot,
+          seats: 3,
+          observe: (st) => ({ t: st.seats.map((s) => s.data.tiers) }),
+        },
+        12,
+        1,
+      );
+      expect(summary.violations).toEqual([]);
+      const t = summary.metrics.t ?? [];
+      return t.reduce((a, b) => a + b, 0) / t.length;
+    };
+    const greedy = tiers(createGreedyBot(windamereAdapter(), 'greedy'));
+    expect(tiers(createGreatWorkBot())).toBeGreaterThan(greedy);
+    expect(tiers(createGreatWorkBot({ labourOnly: true }))).toBeGreaterThan(3.5);
   });
 });
