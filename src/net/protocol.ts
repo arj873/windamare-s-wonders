@@ -89,9 +89,10 @@ export interface SeatInfo {
   /** Member id of the owner (kept while a bot plays for them), or null for an open seat. */
   occupant: string | null;
   status: SeatStatus;
-  /** What a bot playing this seat would use. */
-  botLevel: BotLevel;
-  colour: number;
+  /** What a bot playing this seat would use. Absent = easy. */
+  botLevel?: BotLevel;
+  /** Palette slot. Absent = table order (the seat index). */
+  colour?: number;
 }
 export interface MemberInfo {
   id: string;

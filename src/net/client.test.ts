@@ -27,6 +27,7 @@ function world() {
   const { session, hostToken } = GameSession.create('room1', clock.now(), toy, fakeDeps(), {
     graceMs: GRACE,
     botDelayMs: 200,
+    openingBonusMs: 0,
   });
   const host = new RoomHost(session, clock);
   let offline = false;

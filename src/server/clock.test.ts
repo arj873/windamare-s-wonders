@@ -20,3 +20,11 @@ describe('server clock matches the hotseat clock', () => {
     });
   }
 });
+
+describe('server session options', () => {
+  it('give the Season card time to the first pick; env vars override the rest', async () => {
+    const { sessionOptionsFrom } = await import('./room');
+    expect(sessionOptionsFrom({})).toEqual({ openingBonusMs: 8_400 });
+    expect(sessionOptionsFrom({ BOT_DELAY_MS: '40' })).toMatchObject({ botDelayMs: 40 });
+  });
+});

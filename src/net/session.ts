@@ -48,6 +48,8 @@ export interface SessionOptions {
   graceMs: number;
   /** Bots act this long after a stage (turn, prompt) opens. */
   botDelayMs: number;
+  /** Added to the first pick clock of each Season (the Season card's time). */
+  openingBonusMs: number;
   /** An empty room (nobody connected) expires after this long. */
   idleExpiryMs: number;
   /** R15.5: once every seat that is here has acted, away seats get this long, then a timeout pick. */
@@ -56,6 +58,7 @@ export interface SessionOptions {
 export const DEFAULT_SESSION_OPTIONS: SessionOptions = {
   graceMs: 60_000,
   botDelayMs: 900,
+  openingBonusMs: 0, // the server sets it (SERVER_LIMITS)
   idleExpiryMs: 24 * 3_600_000,
   awayWaitMs: 15_000,
 };
@@ -798,11 +801,15 @@ export class GameSession<S, T> {
     this.stageStartedAt = now;
     this.awayWaitFrom = null;
     this.timedOut = this.seats.map(() => false);
-    this.stageTotalMs = clockMs(
+    const base = clockMs(
       this.config.timer,
       st.phase.kind === 'prompt' ? 'prompt' : 'pick',
       st.turn,
     );
+    // The Season card opens over the first pick of a Season and closes itself after
+    // `openingBonusMs`; that reading time is not the players' (research R7 net #1).
+    const bonus = st.turn === 0 && st.phase.kind === 'pick' ? this.opts.openingBonusMs : 0;
+    this.stageTotalMs = base === null ? null : base + bonus;
     this.deadline = this.stageTotalMs === null ? null : now + this.stageTotalMs;
     this.gameDirty = true; // the timer changed
   }

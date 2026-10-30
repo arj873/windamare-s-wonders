@@ -350,3 +350,11 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
   engine's E6; untested against the real engine until it lands (the toy ruleset ignores it).
 - `src/server/clock.test.ts` asserts the server clock equals `windamereClock.seconds` for every
   preset and turn, so hotseat and online cannot drift.
+- **Backward compatible:** `SeatInfo.botLevel` / `colour` are optional on the wire type (absent =
+  easy / seat index); the server always sends them.
+- **First game** is tested on the real engine (`windamere.test.ts`): `options.firstGame` starts in
+  the `pick` phase, no Honours, every town holds a Great Work; a misspelt option key refuses to
+  start. The full game then plays to `over`.
+- **Season card time (R7 net #1):** `SessionOptions.openingBonusMs` (default 0 in `GameSession`,
+  8 400 ms set by the server in `sessionOptionsFrom`) is added to the pick clock of turn 0 of each
+  Season; `timer.totalMs` includes it. The in-page/SharedWorker dev backends use the default 0.

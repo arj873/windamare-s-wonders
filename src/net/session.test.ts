@@ -10,7 +10,10 @@ type View = DraftView<ToySeat, ToyTable>;
 
 /** Ann (host, seat 0) and Bob (seat 1) online, seat 2 is a bot. Lobby, nothing started. */
 function lobby(opts: Partial<SessionOptions> = {}, options?: Record<string, number | boolean>) {
-  const { session, hostToken } = GameSession.create('ROOM01', 0, toy, fakeDeps(), opts);
+  const { session, hostToken } = GameSession.create('ROOM01', 0, toy, fakeDeps(), {
+    openingBonusMs: 0,
+    ...opts,
+  });
   const net: Net = new LocalNet(session);
   net.connect('c1');
   net.send('c1', { type: 'hello', token: hostToken, name: 'Ann' });
@@ -222,6 +225,15 @@ describe('simultaneous picks (real engine, toy ruleset)', () => {
 });
 
 describe('clock', () => {
+  it('adds the Season card time to the first pick clock only (R7 net #1)', () => {
+    const { net } = started({ openingBonusMs: 8_400 });
+    expect(game(net, 'c1').timer).toEqual({ remainingMs: 53_400, totalMs: 53_400 });
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
+    net.send('c2', { type: 'pick', pick: sell(net, 'c2') });
+    net.advance(1_000);
+    expect(game(net, 'c1').timer!.totalMs).toBe(40_000);
+  });
+
   it('plays the engine default for slow seats when the clock runs out', () => {
     const { net } = started();
     net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
