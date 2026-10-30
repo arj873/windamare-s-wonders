@@ -45,6 +45,11 @@ export interface DraftTableHandlers {
   rematch?(): void;
   /** The Season-end card closed (Continue or its own timer): the clock may run again. */
   seasonClosed?(): void;
+  /**
+   * The final scores' button words (UX.md §6): online says "Back to lobby" (rematch) and
+   * "Leave room" (newGame). Default "Rematch" / "New game".
+   */
+  labels?: { rematch?: string; newGame?: string };
 }
 
 /** Who the device goes to next (hotseat). */
@@ -1376,13 +1381,13 @@ export class DraftTable {
             h(
               'button',
               { class: 'btn', attrs: { 'data-act': 'rematch', 'data-k': 'rematch' } },
-              'Rematch',
+              this.handlers.labels?.rematch ?? 'Rematch',
             ),
           this.handlers.newGame &&
             h(
               'button',
               { class: 'btn btn-primary', attrs: { 'data-act': 'new', 'data-k': 'new' } },
-              'New game',
+              this.handlers.labels?.newGame ?? 'New game',
             ),
         ),
       ),

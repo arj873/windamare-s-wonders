@@ -183,10 +183,17 @@ describe('DraftTable', () => {
     const totals = cards.map((c) => Number(c.querySelector('.dt-band-total')?.textContent));
     expect([...totals].sort((a, b) => b - a)).toEqual(totals);
     expect(cards[0]!.querySelectorAll('dt').length).toBeGreaterThan(0);
+    expect($(el, '[data-k="new"]')?.textContent).toBe('New game');
+    expect($(el, '[data-k="rematch"]')?.textContent).toBe('Rematch');
     $(el, '[data-k="new"]')!.click();
     $(el, '[data-k="rematch"]')!.click();
     expect(handlers.newGame).toHaveBeenCalled();
     expect(handlers.rematch).toHaveBeenCalled();
+    // UX.md §6: online renames them.
+    document.body.replaceChildren();
+    const online = mount(state, { labels: { rematch: 'Back to lobby', newGame: 'Leave room' } });
+    expect($(online.el, '[data-k="rematch"]')?.textContent).toBe('Back to lobby');
+    expect($(online.el, '[data-k="new"]')?.textContent).toBe('Leave room');
   });
 
   it('drives the timer ring', () => {
