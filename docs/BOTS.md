@@ -53,10 +53,32 @@ Simulator: `src/bots/sim.ts` (`runGame`, `runSim`, `summarize`), CLI `scripts/si
 It reports games, finished, violations (`crash`, `illegal`, `noMove`, `stall`), actions per game,
 score spread, mean score and win rate by seat. Exit 0 = no violations, 1 = violations, 2 = bad usage.
 
-First numbers (toy ruleset, random bots, 200 games, 4 seats, seeds 1-200): 0 violations, 24-28
+`--bots greedy,random,random` assigns one bot per seat, rotated one seat per game so seat and
+bot are not confounded; the report adds `winByBot` (wins per seat held; fair = 1/seats).
+
+### B3 level-1 heuristic ("greedy", `src/bots/greedy.ts`)
+
+The cheapest legal Build that scores, otherwise the best Spend; random tie-break; prompts answered
+at random. The ruleset-specific part is a small `GreedyAdapter.assess(view, seat, pick, def)` that
+says whether a Build scores, what it costs and what a Spend is worth. Today only the **toy adapter**
+exists (`toyAdapter.ts`); the Windamere adapter waits for E2 and the rewritten rules.
+
+Numbers (toy ruleset, 1000 games each, seeds 1-1000, one greedy bot among random bots):
+
+| Table   | greedy win share | fair  | research target K1 (`balance-targets.md`) |
+| ------- | ---------------- | ----- | ----------------------------------------- |
+| 3 seats | 77.5%            | 33.3% | >= 83%: **missed**                        |
+| 5 seats | 58.1%            | 20.0% | >= 3x fair = 60%: **just missed**         |
+
+The toy game is far smaller than Windamere, so these say the pipeline works, not whether K1 holds
+for the real game. A first adapter bug is worth recording: I classified coin-producing builds as
+"scoring", which the toy's score does not reward, and greedy then won only 13% (3 seats) against
+random. Fixing the adapter (what scores is a ruleset fact) gave the numbers above.
+
+Earlier numbers (toy, random bots, 200 games, 4 seats, seeds 1-200): 0 violations, 24-28
 actions per game, score spread mean 2.25. Win rate by seat 21.3 / 31.0 / 24.0 / 23.8 %. With 200
-games one seat's standard error is about 3 points, so the 31% is **not evidence of a seat bias**
-(untested at larger N). The toy game says nothing about Windamere balance.
+games one seat's standard error is about 3 points, so the 31% is **not evidence of a seat bias**.
+The toy game says nothing about Windamere balance.
 
 ## 2. Needs for B2 (asks, none blocking)
 
