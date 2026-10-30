@@ -53,8 +53,15 @@ ratio has a standard error of about sqrt(3.5 / towns that held it): 0.03-0.04 fo
 | `tunables`   | Engine `WwTunables` keys, replaced (e.g. `marketPrice: [1, 2, 3, 4]`, `honourSole`). `src/engine/game/shipped.ts` maps design's `TUNABLES` names onto these.                                        |
 | `greatWorks` | `{ "<id>" or "*": patch }`; `*` applies to every Great Work first. Patch: `thresholds` or `thresholdDelta` (4 numbers), `tierRenown` (4, `null` keeps a tier) or `tierRenownDelta`, `perk`, `tiers` |
 | `cards`      | `{ "<card id>": { cost, spend, effects, counts, upgrade } }`, each field replaced                                                                                                                   |
-| `cardSpend`  | `{ labourDelta, refund, kinds, seasons }`: shift labour on matching Spend bands, `refund` coins per labour removed (default 1)                                                                      |
+| `cardSpend`  | `{ labourDelta, refund, coinsDelta, kinds, seasons }`: shift labour on matching Spend bands, `refund` coins per labour removed (default 1); `coinsDelta` coins on every matching band               |
+| `cardRenown` | `{ delta, kinds, seasons }`: printed `renown` of matching cards + delta, never below 1                                                                                                              |
+| `cardEffect` | `{ types, delta, min, kinds, seasons, ids }`: the `amount` of every effect of those `types` on matching cards + delta, never below `min` (default 1); e.g. Landmark scores but not `scoreBeat`      |
 | `raids`      | `{ "<raid id>": { strength } }`                                                                                                                                                                     |
+| `extends`    | `"<file>.json"` next to this one: start from that overlay. Keyed maps (`tunables`, `greatWorks`, `cards`, `raids`) merge per key and per field; any other field replaces the base's                 |
+
+A `"*"` Great Work patch runs before the per-work patches, so a per-work absolute `tierRenown`
+(e.g. from an `extends` base) overwrites a `"*"` delta on those works; use per-work
+`tierRenownDelta` to stack on them (see `experiments/l3-gw-up.json`).
 
 ## Caveat for every number here
 
