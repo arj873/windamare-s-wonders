@@ -381,3 +381,38 @@ games):
 
 Level 1 builds 3.1. Not measured: the effect on balance.ts targets (S1 third group, Lore run
 length), which belongs to balance; K2 not re-measured.
+
+## 15. Guard weight and Honours (B10)
+
+Two `EvalTune` knobs, each tried as 2 bots with it vs 2 without, level 2, 4 seats (fair share 25%,
+SE about 2 points). Seeds are shared by the pair; a run with identical bots on both sides gave
+27.1% / 22.9% (60 games: 26.7 / 23.3), so differences under about 4 points are noise.
+
+| knob                                                                         | games, seeds | with  | without |
+| ---------------------------------------------------------------------------- | ------------ | ----- | ------- |
+| `honourEarly` 0.3 (Honour standing counts 30% at the start, 100% at the end) | 500, 11000   | 25.3% | 24.7%   |
+| `guardScale` 1.6                                                             | 500, 11000   | 28.0% | 22.0%   |
+| `guardScale` 1.6                                                             | 500, 15000   | 26.8% | 23.2%   |
+| `guardScale` 2.5                                                             | 500, 11000   | 29.6% | 20.4%   |
+| `guardScale` 2.5                                                             | 500, 15000   | 30.9% | 19.1%   |
+| `guardScale` 4                                                               | 500, 11000   | 30.6% | 19.4%   |
+| `guardScale` 3, level 3                                                      | 500, 11000   | 31.5% | 18.5%   |
+
+Honour weighting: no effect, off (`honourEarly` 1). Guard: a clear gain that flattens from 2.5 up, so
+`guardScale` is **3** by default. It multiplies only the Guard term of the one-ply score. Why it
+works is a guess: the Valour of a held Raid (2-5 Renown plus a Bounty) is larger than the one-ply
+price, because a Watch also counts in every later Season, and the earlier Guard 0 fix (§11) priced
+the shape of Guard, not its size.
+
+With the Lore plan (§14) and `guardScale` 3 (4 identical bots, 100 games):
+
+| bot     | towns with no Valour | towns holding all 4 Raids | Guard at end | Lore cards per town | towns with no Lore |
+| ------- | -------------------- | ------------------------- | ------------ | ------------------- | ------------------ |
+| level 2 | 11%                  | 46%                       | 8.2          | 1.65                | 24%                |
+| level 3 | 14%                  | 32%                       | 7.3          | 1.61                | 19%                |
+
+Before (§11): level 2 18% / 34% / 6.8. **K2**: 2 level 2 vs 2 level 3, 4 seats, 600 games, seeds from
+21000: level 2 20.1%, level 3 29.9%, ratio **1.49** (target 1.5; balance's other seat counts were
+1.12-1.51). Only 4 seats measured here. The goods plan across turns is **not done**; the Guard
+weight made it unnecessary for the Watch problem in these runs, but the "hands pass, so plan the
+goods" idea is untested.
