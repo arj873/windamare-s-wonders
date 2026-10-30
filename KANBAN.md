@@ -1,9 +1,9 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-29 23:13 · Progress: **16 / 33 cards done**
+Updated: 2026-10-29 23:15 · Progress: **17 / 34 cards done**
 
-## In progress (13)
+## In progress (12)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
@@ -15,27 +15,27 @@ Updated: 2026-10-29 23:13 · Progress: **16 / 33 cards done**
 | E2 | engine | P0 | Full rules engine, one test per numbered rule |
 | E1b | engine | P1 | Contract changes E2 needs from RULES.md (pair picks, 2p burn, labour track, Raids, Honours) |
 | N1b | net | P0 | Real-engine adapter + real-engine leak test |
+| N2 | net | P0 | Fix qa Q0-N1..N4 (hello rate limit, double hello, host succession, engine throws) |
 | N1 | net | P1 | Online rooms via Cloudflare Durable Objects (port from Catan) |
-| P7 | platform | P1 | Import chrome.css next to tokens.css |
-| Q0 | qa | P0 | Red-team audit: hidden info (viewFor), net session cheats, determinism |
 | R4 | research | P0 | Red-team originality + design-risk review of RULES/CARDS |
 | U1 | ui | P1 | Draft table UI: hand, city tableau, neighbours, simultaneous reveal |
 
-## Ready (3)
+## In review (1)
+
+| Card | Lane | Pri | Title |
+|---|---|---|---|
+| Q0 | qa | P0 | Red-team audit: hidden info (viewFor), net session cheats, determinism |
+
+## Ready (4)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | B2 | bots | P1 | 3 difficulty levels plan -> docs/BOTS.md |
 | D5 | design | P0 | Card data into src/content + content tests (after H1) |
+| Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
 | R5 | research | P2 | Public balance/pace numbers to set sim targets |
 
-## Backlog (1)
-
-| Card | Lane | Pri | Title |
-|---|---|---|---|
-| Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
-
-## Done (16)
+## Done (17)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
@@ -52,6 +52,7 @@ Updated: 2026-10-29 23:13 · Progress: **16 / 33 cards done**
 | P3 | platform | P1 | docs/REUSE.md: Catan module reuse map with effort estimates |
 | P4 | platform | P1 | Port Windamere theme/fonts + seeded RNG + docs/ARCHITECTURE.md skeleton |
 | P6 | platform | P1 | Verify ci.yml on GitHub and fix |
+| P7 | platform | P1 | Import chrome.css next to tokens.css |
 | R1 | research | P0 | Genre + rules research: drafting/tableau games, mechanics, balance lessons -> docs/design/RESEARCH.md |
 | R2 | research | P1 | Online drafting UX survey (BGA, colonist.io feel, timers, reconnect) -> docs/design/research/online-ux.md |
 | U0 | ui | P0 | UX spec + wireframes for every screen -> docs/design/UX.md |
