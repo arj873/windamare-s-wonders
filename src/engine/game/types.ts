@@ -158,6 +158,11 @@ export interface WwSeat {
   valour: number[];
   /** R7.9: `card` lies under `by`, in the public `covered` zone. */
   covers: { card: CardId; by: CardId }[];
+  /**
+   * Goods sold to neighbours this game, filled ones only (R6.7), for `scoreSales`. A state saved
+   * before E7 lacks it: read it as 0.
+   */
+  sold: number;
 }
 
 export interface WwTable {

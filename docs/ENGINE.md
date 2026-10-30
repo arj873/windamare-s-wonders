@@ -618,6 +618,7 @@ interface WwSeat {
   tiers: number; // completed, 0-4
   valour: number[]; // Valour tokens, each its Season's value
   covers: { card: CardId; by: CardId }[]; // R7.9: `card` (zone 'covered') lies under `by`
+  sold: number; // E7: goods sold to neighbours this game, filled ones only (R6.7), scoreSales
 }
 interface WwTable {
   honours: string[]; // the 3 revealed at setup
@@ -628,16 +629,39 @@ interface WwTable {
 
 **Done (unchanged systems), each with tests named by rule id:**
 
-| System                  | Code                                                                                                                                                               | Rules                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
-| Setup                   | `setupTable` (Honours, Raids), `setupSeat`; Raid reveal in `onRoundStart`                                                                                          | R2.2, R2.3, R2.6, R3.2, R1.11        |
-| Halls, upgrades         | `checkBuildRules`, `buildCost`, `placeBuild` (covered cards move to the public `covered` zone)                                                                     | R7.1, R7.3, R7.8-R7.10, R13.1, R17.7 |
-| Great Work track, Perks | `greatWorkCheck`, `nextThreshold`; Perk and tiers via `activeEffects`                                                                                              | R8.1-R8.6                            |
-| Raids                   | `resolveRaid` (Season end, every Guard read first; bounty paid by the plundered neighbour), `currentRaid`                                                          | R9.1-R9.7, R17.6, R14.5              |
-| Lore                    | `loreRanks`, `loreRuns`, `loreScore`                                                                                                                               | R10.1-R10.5                          |
-| Honours                 | `honourStandings` (leaders all game, works on views), `honourScore`, `measure` (R11.5)                                                                             | R11.1-R11.5                          |
-| End scoring             | `scoreTown` (groups `CATEGORIES`: town, greatWork, raids, lore, honours, purse), `tiebreakOf` [tiers, coins]                                                       | R12.2-R12.5, R7.7                    |
-| Effects                 | `renown guard lore onBuild onBuildPerKind heldBonus seasonEnd scorePerKind scorePerTier scorePerValour scoreSets scoreGoods scoreBeat scoreThreshold scoreSeasons` | R13, R17.8                           |
+| System                  | Code                                                                                                                                                                                                                              | Rules                                |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Setup                   | `setupTable` (Honours, Raids), `setupSeat`; Raid reveal in `onRoundStart`                                                                                                                                                         | R2.2, R2.3, R2.6, R3.2, R1.11        |
+| Halls, upgrades         | `checkBuildRules`, `buildCost`, `placeBuild` (covered cards move to the public `covered` zone)                                                                                                                                    | R7.1, R7.3, R7.8-R7.10, R13.1, R17.7 |
+| Great Work track, Perks | `greatWorkCheck`, `nextThreshold`; Perk and tiers via `activeEffects`                                                                                                                                                             | R8.1-R8.6                            |
+| Raids                   | `resolveRaid` (Season end, every Guard read first; bounty paid by the plundered neighbour), `currentRaid`                                                                                                                         | R9.1-R9.7, R17.6, R14.5              |
+| Lore                    | `loreRanks`, `loreRuns`, `loreScore`                                                                                                                                                                                              | R10.1-R10.5                          |
+| Honours                 | `honourStandings` (leaders all game, works on views), `honourScore`, `measure` (R11.5)                                                                                                                                            | R11.1-R11.5                          |
+| End scoring             | `scoreTown` (groups `CATEGORIES`: town, greatWork, raids, lore, honours, purse), `tiebreakOf` [tiers, coins]                                                                                                                      | R12.2-R12.5, R7.7                    |
+| Effects                 | `renown guard lore onBuild onBuildPerKind heldBonus seasonEnd scorePerKind scorePerTier scorePerValour scoreSets scoreGoods scoreBeat scoreThreshold scoreSeasons`; D10b (E7): `onBuildNeighbourMin scoreNeighbourMin scoreSales` | R13, R17.8                           |
+
+**D10b effect types (E7; R13 "Pending", `effects.ts`).** The weaker neighbour for a kind or
+measure is the one with less of it. A tie counts that number, and with 2 towns it is the one
+neighbour (R14.5).
+
+- `onBuildNeighbourMin { kind, gains }`: when built (step 2c, once), gain `gains` per uncovered
+  card of `kind` in the weaker neighbour, **as it stood when the Build step began** (R4.8). Builds
+  are placed town by town, so a neighbour that already placed this turn's Build is counted
+  without it, and with the card that Build covered. The result is the same whichever town
+  resolves first (tested). As a Great Work tier reward (none uses it) it would read neighbours
+  the same way, as of this turn's Build step.
+- `scoreNeighbourMin { measure, amount }`: at the end, `amount` Renown per point of `measure`
+  (R11.5) of the weaker neighbour for that measure.
+- `scoreSales { per, amount }`: at the end, `amount` Renown per `per` goods in `WwSeat.sold`. The
+  Sell step (2b) counts only sales the seller filled; a good the bank sold for a short seller
+  (R6.7) does not count. `sold` is new seat data (public), 0 at setup. A state saved before E7
+  lacks it, so the code reads it as 0.
+
+Tests (`effects-d10b.test.ts`): ties, 2 towns, the step-start rule (a neighbour's Build this turn
+does not count; a Holding it covered this turn still does; same result in either resolve order),
+filled vs bank-filled sales, and design's staged `PENDING_CARDS` with `PENDING_SWAPS` applied:
+`checkContent` finds no problem, and whole games at 3 and 7 towns reach a scored end. Mutation
+checks (reverted): skipping the step-start rule and not counting sales each fail a test.
 
 Score by source (R12.2): on an uncovered card, printed `renown` and `score…` effects are Town
 (a); on the Perk or a completed tier they are Great Work (b). A covered card counts for nothing.

@@ -179,6 +179,7 @@ export function resolveSteps(rules: WwRules): Step[] {
         if (filled) {
           seller.data.store[good] = (seller.data.store[good] ?? 0) - 1;
           seller.data.coins += price + bonus;
+          seller.data.sold = (seller.data.sold ?? 0) + 1; // scoreSales; none before E7
         }
         const name = townOf(ctx.state, buyer).name;
         emit(

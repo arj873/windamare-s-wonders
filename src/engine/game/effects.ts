@@ -7,9 +7,10 @@
  * `score` returns `{ renown: n }`; `scoreTown` files it under a group by the effect's source
  * (R12.2).
  */
-import type { EffectHandler, EffectSpec, Json } from '../core';
+import { neighboursOf, type EffectHandler, type EffectSpec, type Json, type SeatId } from '../core';
 import type { WwRules } from './content';
 import { addGains, anyCount, checkGains, resolveAny, type GainsAllow } from './gains';
+import { BUILD } from './pick';
 import { countKind, goodsHeld, measure, neighboursBeaten, seasonsWithKind, townOf } from './town';
 import {
   KINDS,
@@ -18,6 +19,7 @@ import {
   type Kind,
   type Measure,
   type WwSeat,
+  type WwState,
   type WwTable,
 } from './types';
 
@@ -167,5 +169,59 @@ export function makeEffects(rules: WwRules): Record<string, Handler> {
       score: (state, seat, spec) =>
         renown(num(spec, 'amount') * seasonsWithKind(rules, state, seat, spec.kind as string)),
     },
+    // --- D10b (R13 "Pending"): the weaker neighbour, the one with less (a tie counts that). ---
+    // Step 2, once: `gains` per uncovered card of `kind` the weaker neighbour had when the Build
+    // step began (R4.8), so a neighbour's own Build this turn never counts.
+    onBuildNeighbourMin: {
+      validate: (spec) => (kindOk(spec.kind) ? gainsCheck()(spec) : 'kind must be a kind'),
+      onPlay: (ctx, seat, spec) => {
+        const kind = spec.kind as string;
+        const times = weakest(ctx.state, seat, (n) => kindBeforeBuild(rules, ctx.state, n, kind));
+        addGains(townOf(ctx.state, seat).data, spec.gains as Gains, times);
+      },
+    },
+    scoreNeighbourMin: {
+      validate: (spec) =>
+        measureOk(spec.measure)
+          ? amountCheck(spec)
+          : `measure must be one of ${MEASURES.join(', ')}`,
+      score: (state, seat, spec) =>
+        renown(
+          num(spec, 'amount') *
+            weakest(state, seat, (n) => measure(rules, state, n, spec.measure as Measure)),
+        ),
+    },
+    // `amount` per `per` goods sold to neighbours over the game (filled ones, R6.7).
+    scoreSales: {
+      validate: (spec) => (isCount(spec.per, 1) ? amountCheck(spec) : 'per must be >= 1'),
+      score: (state, seat, spec) =>
+        renown(
+          num(spec, 'amount') * Math.floor((townOf(state, seat).data.sold ?? 0) / num(spec, 'per')),
+        ),
+    },
   };
+}
+
+/** The least of `value` over the town's neighbours (each once, R14.5). */
+function weakest(state: WwState, seat: SeatId, value: (n: SeatId) => number): number {
+  return Math.min(...neighboursOf(state, seat).map(value));
+}
+
+/**
+ * The town's uncovered cards of `kind` as they stood when this turn's Build step began (R4.8).
+ * Builds are placed town by town: if this town's Build is already in, count without it and
+ * with the card it covered.
+ */
+function kindBeforeBuild(rules: WwRules, state: WwState, seat: SeatId, kind: string): number {
+  const town = townOf(state, seat);
+  let n = countKind(rules, state, seat, kind);
+  const pick = state.lastReveal?.picks.find((p) => p.seat === seat && p.use === BUILD);
+  if (!pick || !town.tableau.some((c) => c.id === pick.card.id)) return n;
+  if (rules.card(pick.card.def).kind === kind) n -= 1;
+  const cover = town.data.covers.find((c) => c.by === pick.card.id)?.card;
+  const under = Object.values(town.zones)
+    .flat()
+    .find((c) => c.id === cover);
+  if (under && rules.card(under.def).kind === kind) n += 1;
+  return n;
 }
