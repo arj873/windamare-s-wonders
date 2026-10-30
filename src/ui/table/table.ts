@@ -193,8 +193,18 @@ export class DraftTable {
     );
     el.classList.toggle('timer-low', !t.locked && left <= TIMER_WARN_SEC);
     el.classList.toggle('is-locked', t.locked);
-    el.textContent = t.locked ? '✓' : clockText(t.remainingMs);
-    el.setAttribute('aria-label', t.locked ? 'Pick locked' : `${clockText(t.remainingMs)} left`);
+    // R8 #5: after you pick the table may still wait, so the seconds stay (dimmed) beside a ✓.
+    const time = clockText(t.remainingMs);
+    el.replaceChildren(
+      h('span', { class: 'dt-timer-text' }, time),
+      ...(t.locked
+        ? [h('span', { class: 'dt-timer-ok', attrs: { 'aria-hidden': 'true' } }, '✓')]
+        : []),
+    );
+    el.setAttribute(
+      'aria-label',
+      t.locked ? `Pick locked; ${time} left for the table` : `${time} left`,
+    );
   }
 
   select(card: CardId | null): void {

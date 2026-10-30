@@ -95,8 +95,27 @@
 .dt-timer[hidden] {
   display: none; /* .round-badge sets display: grid */
 }
-.dt-timer.is-locked {
+/* R8 #5: locked = your pick is in; the seconds stay (dimmed) and a ✓ badge sits on the ring. */
+.dt-timer {
+  position: relative;
+}
+.dt-timer.is-locked .dt-timer-text {
   opacity: 0.55;
+}
+.dt-timer-ok {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ink-strong);
+  background: var(--good);
+  border: 1.5px solid var(--card-edge);
 }
 .dt-timer.timer-low {
   animation: dt-pulse 1s ease-in-out infinite;
