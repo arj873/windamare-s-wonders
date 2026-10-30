@@ -1,0 +1,312 @@
+/* New-game setup screen (UX.md §5). Port of catan's setup.css layout; colours are theme tokens. */
+.setup {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--setup-bg, var(--page-bg));
+}
+/* Toasts sit above the sticky footer while the setup screen is up. */
+:root:has(.setup) {
+  --toast-bottom: 96px;
+}
+.su-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.su-inner {
+  width: min(880px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 22px 0 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.su-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.su-head h1 {
+  font-size: 32px;
+  line-height: 1.05;
+}
+/* Keep the header clear of the ☰ menu (44 px at 12 px from the left) once the column reaches it. */
+@media (max-width: 1000px) {
+  .su-head {
+    padding-left: 56px;
+  }
+}
+.su-learn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px 7px 8px;
+  text-align: left;
+}
+.su-learn-q {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 99px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 18px;
+}
+.su-learn b,
+.su-learn small {
+  display: block;
+}
+.su-learn small {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* ---- sections ----------------------------------------------------------- */
+.su-sec,
+.su-more {
+  padding: 14px 16px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+}
+.su-sec > h2 {
+  font-size: 13px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 10px;
+}
+.su-hint {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.su-note {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: var(--btn-radius, 10px);
+  background: var(--surface-sunken);
+  font-size: 13px;
+}
+
+/* Mode tiles. */
+.su-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.su-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 56px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--surface-sunken);
+  border: 2px solid transparent;
+  border-radius: var(--btn-radius, 10px);
+}
+.su-tile small {
+  color: var(--ink-dim);
+}
+.su-tile.is-on {
+  color: var(--raised-ink);
+  background: var(--surface-raised);
+  border-color: var(--accent);
+}
+.su-tile.is-on small {
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* ---- seats --------------------------------------------------------------- */
+.su-seats-head,
+.su-seats-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.su-seats-foot {
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+.su-seats {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.su-seat {
+  display: grid;
+  grid-template-columns: 28px minmax(120px, 1fr) auto auto 96px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--btn-radius, 10px);
+  background: var(--surface-sunken);
+  border-left: 5px solid var(--pc);
+}
+.su-seat-no {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 99px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  background: var(--pc);
+  border: 2px solid var(--edge);
+}
+.su-name {
+  min-width: 0;
+  width: 100%;
+}
+.su-swatches {
+  display: flex;
+  gap: 4px;
+}
+.su-swatches .swatch {
+  width: 22px;
+  height: 22px;
+}
+.su-level.is-hidden {
+  visibility: hidden;
+}
+.su-seat-tools {
+  display: flex;
+  gap: 2px;
+}
+.su-tool {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+}
+.su-tool:hover:not(:disabled) {
+  background: var(--hover, rgba(255, 226, 184, 0.12));
+}
+.su-tool:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ---- more options --------------------------------------------------------- */
+.su-more > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.su-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 260px);
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 12px;
+}
+.su-field small {
+  grid-column: 2;
+}
+
+/* ---- footer ---------------------------------------------------------------- */
+.su-footer {
+  flex: none;
+  border-top: 2px solid var(--edge);
+  background: var(--surface);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.3);
+}
+.su-footer-in {
+  width: min(880px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.su-summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.su-error {
+  color: var(--bad);
+  font-size: 13px;
+}
+
+/* ---- phones (UX.md §12) ------------------------------------------------------ */
+@media (max-width: 720px) {
+  .su-head {
+    flex-wrap: wrap;
+  }
+  .su-learn {
+    margin-left: 0;
+    width: 100%;
+  }
+  .su-seat {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'no name tools'
+      'sw sw sw'
+      'ctl ctl lvl';
+  }
+  .su-seat-no {
+    grid-area: no;
+  }
+  .su-name {
+    grid-area: name;
+  }
+  .su-seat-tools {
+    grid-area: tools;
+  }
+  .su-swatches {
+    grid-area: sw;
+    flex-wrap: wrap;
+  }
+  .su-seat .seg {
+    grid-area: ctl;
+    justify-self: start;
+  }
+  .su-level {
+    grid-area: lvl;
+  }
+  /* UX.md §13: 44 px for actions; dense pickers (8 swatches in one row) get 32 px, above
+     WCAG 2.5.8's 24 px minimum. */
+  .su-tool {
+    width: 44px;
+    height: 44px;
+  }
+  .su-swatches {
+    gap: 6px;
+  }
+  .su-swatches .swatch {
+    width: 32px;
+    height: 32px;
+  }
+  .su-footer-in {
+    flex-wrap: wrap;
+  }
+  .su-start {
+    flex: 1;
+  }
+}
