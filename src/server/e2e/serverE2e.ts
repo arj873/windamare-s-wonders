@@ -10,76 +10,12 @@
  * workerd and spawns a server). Local state goes to .scratch, never /tmp.
  */
 /// <reference types="node" />
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
-import { createServer } from 'node:net';
-import { join } from 'node:path';
+import { rmSync } from 'node:fs';
 import type { DraftView } from '../../engine';
 import type { CreateRoomResponse } from '../../net/api';
 import { roomSocketUrl } from '../../net/ws';
 import { parseServerMessage, PROTOCOL_VERSION, type ServerMessage } from '../../net/protocol';
-
-const TIMEOUT_MS = 300_000;
-const STATE_ROOT = process.env['E2E_STATE_DIR'] ?? join(process.cwd(), '.wrangler-e2e');
-
-function freePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const srv = createServer();
-    srv.once('error', reject);
-    srv.listen(0, '127.0.0.1', () => {
-      const addr = srv.address();
-      srv.close(() =>
-        typeof addr === 'object' && addr ? resolve(addr.port) : reject(new Error('no port')),
-      );
-    });
-  });
-}
-
-function check(ok: unknown, what: string): void {
-  if (!ok) throw new Error(`check failed: ${what}`);
-  console.log(`  ok  ${what}`);
-}
-
-async function startWrangler(): Promise<{ base: string; proc: ChildProcess; stateDir: string }> {
-  const port = await freePort();
-  const inspector = await freePort();
-  mkdirSync(STATE_ROOT, { recursive: true });
-  const stateDir = mkdtempSync(join(STATE_ROOT, 'run-'));
-  const proc = spawn(
-    'nice',
-    [
-      '-n',
-      '19',
-      'node_modules/.bin/wrangler',
-      'dev',
-      '--ip',
-      '127.0.0.1',
-      '--port',
-      String(port),
-      '--inspector-port',
-      String(inspector),
-      '--persist-to',
-      stateDir,
-      '--var',
-      'BOT_DELAY_MS:40',
-      '--var',
-      'GRACE_MS:2000',
-    ],
-    { detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
-  );
-  let log = '';
-  await new Promise<void>((resolve, reject) => {
-    const onData = (b: Buffer) => {
-      log += b.toString();
-      if (log.includes('Ready on')) resolve();
-    };
-    proc.stdout?.on('data', onData);
-    proc.stderr?.on('data', onData);
-    proc.once('exit', (code) => reject(new Error(`wrangler exited (${code}):\n${log}`)));
-    setTimeout(() => reject(new Error(`wrangler not ready after 90 s:\n${log}`)), 90_000);
-  });
-  return { base: `http://127.0.0.1:${port}`, proc, stateDir };
-}
+import { assertNoLeaks, buildDist, check, startWrangler, TIMEOUT_MS } from './support';
 
 type Game = Extract<ServerMessage, { type: 'game' }>;
 
@@ -196,27 +132,8 @@ class Client {
   }
 }
 
-/** The per-seat view must hide other seats' hands, picks, recall, the deck and the seed. */
-function assertNoLeaks(g: Game, seat: number | null): void {
-  const v = g.view as DraftView<unknown, unknown>;
-  v.seats.forEach((s, i) => {
-    if (i === seat) return;
-    if (s.hand.some((c) => c.id >= 0)) throw new Error(`seat ${seat} saw seat ${i}'s hand`);
-    if (s.pick !== null) throw new Error(`seat ${seat} saw seat ${i}'s pick`);
-    if (s.recall.length > 0) throw new Error(`seat ${seat} saw seat ${i}'s recall`);
-  });
-  if (v.deck.some((c) => c.id >= 0)) throw new Error('deck face visible');
-  for (const a of g.legal) if (a.seat !== seat) throw new Error('legal action for another seat');
-}
-
 async function main(): Promise<void> {
-  if (!existsSync('dist/index.html')) {
-    console.log('building dist/ ...');
-    const r = spawnSync('nice', ['-n', '19', 'pnpm', 'exec', 'vite', 'build'], {
-      stdio: 'inherit',
-    });
-    if (r.status !== 0) throw new Error('vite build failed');
-  }
+  buildDist(false);
   const { base, proc, stateDir } = await startWrangler();
   const killer = setTimeout(() => {
     console.error('timeout');

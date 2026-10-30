@@ -298,7 +298,6 @@ export class GameSession<S, T> {
       return this.emptySince === null ? null : this.emptySince + this.opts.idleExpiryMs;
     }
     const due: number[] = [];
-    if (this.phase === 'over') return null;
     if (this.phase === 'playing' && this.deadline !== null) due.push(this.deadline);
     if (this.phase === 'playing' && this.awayWaitFrom !== null) {
       due.push(this.awayWaitFrom + this.opts.awayWaitMs);
@@ -309,7 +308,9 @@ export class GameSession<S, T> {
         due.push(this.stageStartedAt + this.opts.botDelayMs);
       }
     }
-    for (const s of this.seats) if (s.away && !s.bot) due.push(s.awayAt + this.opts.graceMs);
+    if (this.phase !== 'over') {
+      for (const s of this.seats) if (s.away && !s.bot) due.push(s.awayAt + this.opts.graceMs);
+    }
     const host = this.members.find((x) => x.id === this.host);
     if (host && host.conn === null) due.push(host.lastSeen + this.opts.graceMs);
     return due.length ? Math.min(...due) : null;

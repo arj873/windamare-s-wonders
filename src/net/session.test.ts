@@ -380,6 +380,16 @@ describe('snapshot', () => {
 });
 
 describe('game over and rematch', () => {
+  it('wakes to hand the host role on when the host drops at final scores (N5)', () => {
+    const { net, session } = started({ graceMs: 5_000 });
+    playOut(net);
+    expect(phase(net)).toBe('over');
+    net.disconnect('c1');
+    expect(session.nextWakeAt()).not.toBeNull();
+    net.advance(5_000); // no message from anyone: only the wake can pass the host on
+    expect(net.last('c2', 'room')!.room.host).toBe(net.last('c2', 'welcome')!.you.member);
+  });
+
   it('ends with a result, returns to the lobby on rematch and can start again', () => {
     const { net } = started();
     playOut(net);
