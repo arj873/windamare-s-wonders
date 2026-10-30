@@ -1,7 +1,8 @@
 # Research: card drafting and tableau building (card R1)
 
 Owner: research lane. Status: **R1 complete, pass 2** (2026-10-29). Per-game long notes live in
-`docs/design/research/games.md`. Numbers marked _(unverified)_ come from memory or a single weak
+`docs/design/research/games.md`; the online UX survey (card R2) is
+`docs/design/research/online-ux.md`. Numbers marked _(unverified)_ come from memory or a single weak
 source; treat them as approximate. Method: web search summaries of rulebooks, rules sites, reviews
 and forum threads; no rulebook PDF was opened page by page, so exact numbers carry that caveat.
 
