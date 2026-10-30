@@ -11,6 +11,9 @@ import {
   HONOURS,
   KINDS,
   MEASURES,
+  PENDING_CARDS,
+  PENDING_EFFECT_PARAMS,
+  PENDING_SWAPS,
   RAIDS,
   SEASONS,
   SPRING,
@@ -44,9 +47,17 @@ function gainsProblems(gains: unknown, allowAny: boolean, where: string): string
   return out;
 }
 
-/** R13 shape check for one effect; `anyOk` = the effect is a card's own onBuild (R13.4). */
-function effectProblems(e: EffectSpec, where: string, anyOk: boolean): string[] {
-  const spec = (EFFECT_PARAMS as Record<string, readonly string[]>)[e.type];
+/**
+ * R13 shape check for one effect; `anyOk` = the effect is a card's own onBuild (R13.4).
+ * `params` = the vocabulary allowed (shipped by default; pending cards add their types).
+ */
+function effectProblems(
+  e: EffectSpec,
+  where: string,
+  anyOk: boolean,
+  params: Record<string, readonly string[]> = EFFECT_PARAMS,
+): string[] {
+  const spec = params[e.type];
   if (!spec) return [`${where}: unknown effect type ${e.type}`];
   const out: string[] = [];
   const allowed = spec.map((p) => p.replace('?', ''));
@@ -324,6 +335,44 @@ describe('Raids and Honours (R9, R11)', () => {
   });
 });
 
+describe('pending cards (D10b, waiting for engine handlers)', () => {
+  const vocab = { ...EFFECT_PARAMS, ...PENDING_EFFECT_PARAMS };
+
+  it('stay out of CARDS, use only the pending vocabulary, and have new ids', () => {
+    const problems: string[] = [];
+    for (const c of PENDING_CARDS) {
+      if (byId.has(c.id)) problems.push(`${c.id}: already in CARDS`);
+      problems.push(...costProblems(c.cost, `${c.id} cost`));
+      problems.push(...gainsProblems(c.spend, true, `${c.id} spend`));
+      c.effects.forEach((e, i) => problems.push(...effectProblems(e, `${c.id} ${i}`, true, vocab)));
+      if (!c.effects.some((e) => e.type in PENDING_EFFECT_PARAMS)) {
+        problems.push(`${c.id}: uses no pending type, so it could ship now`);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('with their swaps applied, every deck still holds 6 cards per seat', () => {
+    expect(Object.keys(PENDING_SWAPS).sort()).toEqual(PENDING_CARDS.map((c) => c.id).sort());
+    const swapped = CARDS.map((c) => {
+      const s = Object.values(PENDING_SWAPS).find((x) => x.card === c.id);
+      return s ? { ...c, counts: s.counts } : c;
+    });
+    for (const [id, s] of Object.entries(PENDING_SWAPS)) {
+      const target = byId.get(s.card);
+      const card = PENDING_CARDS.find((c) => c.id === id)!;
+      expect(target?.season, id).toBe(card.season);
+    }
+    for (const season of SEASONS) {
+      const deck = [...swapped, ...PENDING_CARDS].filter((c) => c.season === season);
+      SEAT_COUNTS.forEach((seats, i) => {
+        const total = deck.reduce((n, c) => n + c.counts[i]!, 0);
+        expect(total, `${season} at ${seats} seats`).toBe(TUNABLES.handSize * seats);
+      });
+    }
+  });
+});
+
 describe('originality blocklist (ORIGINALITY.md §5)', () => {
   const TERMS = [
     'age',
@@ -438,6 +487,7 @@ describe('originality blocklist (ORIGINALITY.md §5)', () => {
   ];
   const allNames = [
     ...CARDS.map((c) => c.name),
+    ...PENDING_CARDS.map((c) => c.name),
     ...GREAT_WORKS.map((w) => w.name),
     ...RAIDS.map((r) => r.name),
     ...HONOURS.map((h) => h.name),

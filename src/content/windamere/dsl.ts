@@ -85,4 +85,16 @@ export const fx = {
     kind,
     amount,
   }),
+  // Pending engine support (PENDING_EFFECT_PARAMS); used only by pending.ts.
+  onBuildNeighbourMin: (kind: Kind, gains: string): EffectSpec => ({
+    type: 'onBuildNeighbourMin',
+    kind,
+    gains: g(gains),
+  }),
+  scoreNeighbourMin: (measure: Measure, amount: number): EffectSpec => ({
+    type: 'scoreNeighbourMin',
+    measure,
+    amount,
+  }),
+  scoreSales: (per: number, amount: number): EffectSpec => ({ type: 'scoreSales', per, amount }),
 };

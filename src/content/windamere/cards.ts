@@ -294,7 +294,18 @@ export const SUMMER: readonly WwCardDef[] = [
     cost: g('1S 1W'),
     spend: g('5c'),
     effects: [fx.onBuildPerKind('holding', '2c')],
-    counts: [1, 1, 2, 2, 2],
+    counts: [0, 0, 1, 1, 1],
+  },
+  // D10: rivalry with the neighbours (scoreBeat), for interaction (research I1).
+  {
+    id: 'rival-stalls',
+    name: 'Rival Stalls',
+    kind: 'market',
+    season: 'summer',
+    cost: g('1S 1W'),
+    spend: g('4c'),
+    effects: [fx.income(1), fx.scoreBeat('markets', 3)],
+    counts: [1, 1, 1, 1, 1],
   },
   {
     id: 'salt-weigh-house',
@@ -346,7 +357,18 @@ export const SUMMER: readonly WwCardDef[] = [
     upgrade: { of: ['hurdle-fence'], cost: g('1H') },
     spend: g('1H 1lab 1c'),
     effects: [fx.guard(3)],
-    counts: [1, 1, 2, 2, 2],
+    counts: [0, 0, 1, 1, 1],
+  },
+  // D10 rivalry.
+  {
+    id: 'tilting-green',
+    name: 'Tilting Green',
+    kind: 'watch',
+    season: 'summer',
+    cost: g('1R 1H'),
+    spend: g('1H 1c'),
+    effects: [fx.guard(2), fx.scoreBeat('guard', 3)],
+    counts: [1, 1, 1, 1, 1],
   },
   {
     id: 'watchfire-ridge',
@@ -570,7 +592,18 @@ export const AUTUMN: readonly WwCardDef[] = [
     cost: g('1W 1H'),
     spend: g('3lab'),
     effects: [fx.lore(4)],
-    counts: [1, 1, 2, 3, 3],
+    counts: [0, 0, 1, 2, 2],
+  },
+  // D10 rivalry.
+  {
+    id: 'disputation-house',
+    name: 'Disputation House',
+    kind: 'lore',
+    season: 'autumn',
+    cost: g('1W 1H'),
+    spend: g('2lab 1c'),
+    effects: [fx.lore(4), fx.scoreBeat('loreRun', 3)],
+    counts: [1, 1, 1, 1, 1],
   },
   {
     id: 'chronicle-house',
@@ -762,7 +795,18 @@ export const WINTER: readonly WwCardDef[] = [
     cost: g('2R 2S 2W'),
     spend: g('3any'),
     effects: [fx.scorePerKind('hall', 2)],
-    counts: [1, 1, 2, 2, 2],
+    counts: [0, 0, 1, 1, 1],
+  },
+  // D10 rivalry.
+  {
+    id: 'victors-oak',
+    name: "The Victors' Oak",
+    kind: 'landmark',
+    season: 'winter',
+    cost: g('1R 2P 1H'),
+    spend: g('3any'),
+    effects: [fx.scoreBeat('valour', 4)],
+    counts: [1, 1, 1, 1, 1],
   },
   {
     id: 'market-cross',
