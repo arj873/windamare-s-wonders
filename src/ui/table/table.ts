@@ -84,6 +84,18 @@ export function clockText(ms: number): string {
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 }
 
+/** Keys of the choice rows every playable use has (with 2+ such uses): drawn once. */
+function sharedRows(options: readonly UseOption[]): Set<string> {
+  const legal = options.filter((o) => o.pick);
+  const [first, ...rest] = legal;
+  if (!first || rest.length === 0) return new Set();
+  return new Set(
+    first.choices
+      .map((row) => row.key)
+      .filter((key) => rest.every((o) => o.choices.some((row) => row.key === key))),
+  );
+}
+
 /** The tutorial coach's focus mark (tutorial.css) on the Raid banner fact. */
 function tutMark(b: SeatStat): Record<string, string> {
   return b.term === 'raid' ? { 'data-tut': 'raid' } : {};
@@ -238,6 +250,19 @@ export class DraftTable {
           this.overrides.set(`${card.id}:${b}`, chosen.pick);
           this.render();
         }
+        break;
+      }
+      case 'choose-all': {
+        // choose-all:<card>:<row key>:<option key>: a shared row (the 2-town Burn) sets every use.
+        const card = m?.hand.find((x) => x.id === Number(a));
+        if (!card) break;
+        for (const base of card.options) {
+          const opt = this.optionFor(card, base.use.id)
+            ?.choices.find((row) => row.key === b)
+            ?.options.find((o) => o.key === c);
+          if (opt && !opt.why) this.overrides.set(`${card.id}:${base.use.id}`, opt.pick);
+        }
+        this.render();
         break;
       }
       case 'select':
@@ -1079,11 +1104,19 @@ export class DraftTable {
     const options = c.options.map((o) => this.optionFor(c, o.use.id) ?? o);
     const best = primaryOption(options);
     const primary = best ? options.indexOf(best) : -1;
+    const shared = sharedRows(options);
+    const first = options.find((o) => o.pick);
     return h(
       'div',
       { class: 'dt-pop', attrs: { role: 'group', 'aria-label': `${c.face.name}: choose a use` } },
       h('div', { class: 'dt-pop-title' }, c.face.name),
       h('div', { class: 'dt-pop-text' }, c.face.text),
+      // A row every use has (a 2-town Burn) comes once, before the uses.
+      ...(first
+        ? first.choices.flatMap((row, r) =>
+            shared.has(row.key) ? [this.choiceRow(c, first, row, r, true)] : [],
+          )
+        : []),
       ...options.map((o, i) =>
         o.pick
           ? h(
@@ -1118,7 +1151,9 @@ export class DraftTable {
                 ),
                 h('kbd', {}, o.use.key.toUpperCase()),
               ),
-              ...o.choices.map((row, r) => this.choiceRow(c, o, row, r)),
+              ...o.choices.flatMap((row, r) =>
+                shared.has(row.key) ? [] : [this.choiceRow(c, o, row, r)],
+              ),
             )
           : h(
               'div',
@@ -1145,8 +1180,21 @@ export class DraftTable {
     );
   }
 
-  private choiceRow(c: HandCard, o: UseOption, row: UseOption['choices'][number], r: number) {
-    const whyId = (k: number) => `why-${c.id}-${o.use.id}-${r}-${k}`;
+  /**
+   * One row of alternatives. `shared`: the row belongs to every use (a 2-town Burn) and is drawn
+   * once; a choice there applies to each use's pick.
+   */
+  private choiceRow(
+    c: HandCard,
+    o: UseOption,
+    row: UseOption['choices'][number],
+    r: number,
+    shared = false,
+  ) {
+    const scope = shared ? `all-${row.key}` : `${o.use.id}-${r}`;
+    const whyId = (k: number) => `why-${c.id}-${scope}-${k}`;
+    const act = (k: number, key: string) =>
+      shared ? `choose-all:${c.id}:${row.key}:${key}` : `choose:${c.id}:${o.use.id}:${r}:${k}`;
     return h(
       'div',
       {
@@ -1167,8 +1215,8 @@ export class DraftTable {
               attrs: {
                 role: 'radio',
                 'aria-checked': String(opt.selected),
-                'data-act': `choose:${c.id}:${o.use.id}:${r}:${k}`,
-                'data-k': `choice-${c.id}-${o.use.id}-${r}-${k}`,
+                'data-act': act(k, opt.key),
+                'data-k': `choice-${c.id}-${scope}-${k}`,
                 'data-pt-role': 'choice',
                 'data-option': opt.key,
                 ...(opt.why === null ? {} : { 'data-why': opt.why }),

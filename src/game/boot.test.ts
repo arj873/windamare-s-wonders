@@ -361,6 +361,35 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
+  it('shows a 2-town Burn once, for both uses, and sends it with the pick (R14.2)', () => {
+    const root = mount();
+    const app = boot(root, {
+      game: windamereBinding(),
+      debug: { seats: 2, seed: 'duel', firstGame: true },
+    });
+    const both = [...root.querySelectorAll<HTMLElement>('[data-pt-role="card"]')].find((card) => {
+      card.click();
+      return root.querySelectorAll('.dt-pop [data-use]:not([disabled])').length === 2;
+    });
+    expect(both).toBeDefined(); // seed 'duel': some card can be built or spent
+    expect(root.querySelectorAll('.dt-pop [data-choice="burn"]')).toHaveLength(1);
+    const alt = root.querySelector<HTMLElement>(
+      '.dt-pop [data-choice="burn"] [data-option]:not(.is-on)',
+    )!;
+    const burned = Number(alt.dataset.option!.replace('burn-', ''));
+    const name = alt.textContent!;
+    alt.click();
+    for (const use of ['build', 'spend']) {
+      expect(root.querySelector(`.dt-pop [data-use="${use}"] .dt-use-detail`)?.textContent).toMatch(
+        new RegExp(`burn ${name}$`),
+      );
+    }
+    root.querySelector<HTMLElement>('.dt-pop [data-use="spend"]')!.click();
+    const pick = app.play!.game.state.seats[0]!.pick as { args?: { burn?: number } } | null;
+    expect(pick?.args?.burn).toBe(burned);
+    app.play?.dispose();
+  });
+
   it('maps setup bot levels onto the bots lane (Normal = level 2, Hard = level 3)', () => {
     expect(BOT_LEVEL).toEqual({ easy: 'easy', normal: 'medium', hard: 'hard' });
   });
