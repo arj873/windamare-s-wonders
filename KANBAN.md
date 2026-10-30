@@ -1,30 +1,39 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-30 01:18 · Progress: **40 / 55 cards done**
+Updated: 2026-10-30 01:58 · Progress: **40 / 64 cards done**
 
-## In progress (12)
+## In progress (16)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A3 | art | P0 | Retheme to the real design: 6 kinds, goods, Lore ranks, Raid frame, Great Work track, Honours |
 | A2 | art | P1 | Table chrome: background, seat panel, neighbour strips, timer badge, title key art |
 | A7 | art | P2 | Card art-window illustrations per kind |
-| B4 | bots | P0 | First sim report on the real ruleset -> docs/BALANCE.md |
+| B4 | balance | P0 | Baseline balance re-run on main -> docs/BALANCE.md |
+| B5 | bots | P0 | Smarter bots: level 2 (plans) and level 3 (denial) |
 | D9 | design | P0 | Re-tune from BALANCE.md: Town dominance 82-90%, blowouts 32-53%, Lore runs low |
 | E4 | engine | P1 | Follow design D8: R6.7/R17.9 rewrite, price ladder via tunables |
+| F1 | fx | P0 | Reveal animation from latestEvents (reduced-motion safe) |
 | N1b | net | P0 | Real-engine adapter + real-engine leak test |
 | N3 | net | P0 | Server runs real Windamere games; RoomClient; 2-tab online e2e |
 | N1 | net | P1 | Online rooms via Cloudflare Durable Objects (port from Catan) |
+| O1 | online | P0 | Lobby flow on loopback: room, invite, seats, start, online table, waiting states, chat |
 | P10 | platform | P1 | Playtest deps: pt scripts, vitest include, system chrome |
 | R6 | research | P1 | Heuristic UX review of the playable game -> ux-review-1.md |
+| T1 | tutorial | P0 | docs/HOWTOPLAY.md one-page player summary |
 | U4 | ui | P0 | Fix 404 asset; tunables-driven price test; Great Work SVG; playtest hooks; home screen |
 
-## Ready (2)
+## Ready (7)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
+| L2 | balance | P0 | Tuning experiments as overlays; winners to design D9 |
+| F2 | fx | P1 | Port catan synth audio + game sounds |
+| O2 | online | P1 | Spectators, rematch, host leaves |
 | Q2 | qa | P1 | Playtest harness: drive a browser game from a CLI |
+| T2 | tutorial | P0 | In-game How to play overlay + term/icon tooltips |
+| T3 | tutorial | P1 | Guided first game (coach) |
 | U2 | ui | P1 | Fix R4 red-team: O4 placeholders + popover, O12 score tally |
 
 ## Backlog (1)
