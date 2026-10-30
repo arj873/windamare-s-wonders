@@ -25,6 +25,7 @@ import type {
   MonumentInfo,
   PurseInfo,
   SeasonEndInfo,
+  CatalogSection,
   Presenter,
   SeatStat,
   UseInfo,
@@ -177,6 +178,13 @@ export interface TableModel {
   reveal: { title: string; lines: RevealLine[]; happenings: string[] } | null;
   /** UX.md §10.1: the latest action ended a Season (not the game): its summary card. */
   seasonEnd: SeasonEndInfo | null;
+  /**
+   * R15.8 Recall: the hands the viewer passed on this round, newest last (owner-only in the
+   * view, cleared at round end).
+   */
+  recall: { title: string; cards: TableauCard[] }[];
+  /** R6 #8: every card by round, with copies at this table size (computed when opened). */
+  catalog(): CatalogSection[];
   log: { key: string; text: string }[];
   result: ResultModel | null;
   /** Changes with every action that logged anything: a new key = something for fx to reveal. */
@@ -332,6 +340,14 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
       happenings: present.happenings?.(view) ?? [],
     },
     seasonEnd: phase === 'gameOver' ? null : (present.seasonEnd?.(view) ?? null),
+    recall:
+      viewer === null
+        ? []
+        : (view.seats[viewer]?.recall ?? []).map((r) => ({
+            title: `Pick ${r.turn + 1}: passed to ${nameOf(r.to)}`,
+            cards: r.cards.map((c) => ({ ...tableauCard(c), fresh: false })),
+          })),
+    catalog: () => present.catalog?.(view.seats.length) ?? [],
     log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
     result: resultModel(input, seats),
     banner: present.banner?.(view) ?? [],

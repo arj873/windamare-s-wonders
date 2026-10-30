@@ -8,6 +8,7 @@
  * (patchChildren) without stale listeners. Card faces are text placeholders until art A3.
  */
 import type { CardId, Json, Pick } from '../../engine';
+import { openDialog } from '../dialog';
 import { h, patchChildren, type Child } from '../dom';
 import {
   primaryOption,
@@ -238,6 +239,12 @@ export class DraftTable {
         break;
       case 'season-ok':
         this.closeSeasonCard();
+        break;
+      case 'recall':
+        if (m) this.openRecall(m);
+        break;
+      case 'catalog':
+        if (m) this.openCatalog(m);
         break;
       case 'rematch':
         this.handlers.rematch?.();
@@ -591,6 +598,60 @@ export class DraftTable {
     );
   }
 
+  /** R15.8: the cards the viewer saw in each hand it passed this Season. */
+  private openRecall(m: TableModel): void {
+    openDialog({
+      title: 'Seen this Season',
+      className: 'is-wide dt-list-dialog',
+      body: [
+        h('p', { class: 'muted' }, 'The hands you passed on, as you last saw them.'),
+        ...m.recall.map((r) =>
+          h(
+            'section',
+            { class: 'dt-recall' },
+            h('h3', {}, r.title),
+            h('div', { class: 'dt-recall-cards' }, ...r.cards.map((c) => this.mini(c))),
+          ),
+        ),
+      ],
+      actions: [{ label: 'Close', primary: true }],
+    });
+  }
+
+  /** R6 #8: every card by round with its copies at this table size, faces as on the cards. */
+  private openCatalog(m: TableModel): void {
+    const sections = m.catalog();
+    openDialog({
+      title: 'All cards',
+      className: 'is-wide dt-list-dialog',
+      body: [
+        sections.length === 0 && h('p', { class: 'muted' }, 'No card list for this game.'),
+        ...sections.map((s) =>
+          h(
+            'section',
+            { class: 'dt-catalog' },
+            h('h3', {}, s.title),
+            h(
+              'ul',
+              {},
+              ...s.cards.map((c) =>
+                h(
+                  'li',
+                  { attrs: { 'data-def': c.def } },
+                  h('span', { class: 'dt-catalog-copies' }, `${c.copies}×`),
+                  h('b', {}, c.face.name),
+                  ` · ${c.face.cost || 'free'} · ${c.face.text}`,
+                  c.face.alt && h('span', { class: 'muted' }, ` · ${c.face.alt}`),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+      actions: [{ label: 'Close', primary: true }],
+    });
+  }
+
   private closeSeasonCard(): void {
     if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
     this.seasonTimer = null;
@@ -723,6 +784,22 @@ export class DraftTable {
       h('h2', {}, `Your hand · ${m.hand.length} card${m.hand.length === 1 ? '' : 's'}`),
       m.hand.length > 0 &&
         h('span', { class: 'muted dt-keys' }, 'Keys: 1–9 select · letter = use · Esc'),
+      h(
+        'span',
+        { class: 'dt-hand-tools' },
+        // R15.8 Recall and R6 #8 the card list: one click away, never hover-only.
+        m.recall.length > 0 &&
+          h(
+            'button',
+            { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'recall', 'data-k': 'recall' } },
+            `Seen this Season (${m.recall.length})`,
+          ),
+        h(
+          'button',
+          { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'catalog', 'data-k': 'catalog' } },
+          'All cards',
+        ),
+      ),
     );
     return h(
       'section',

@@ -36,6 +36,7 @@ import {
 } from '../../engine';
 import type {
   CardFace,
+  CatalogSection,
   ChoiceOption,
   ChoiceRow,
   HandBadge,
@@ -382,6 +383,18 @@ export function windamerePresenter(
     };
   }
 
+  /** R6 #8: the catalog by Season with copies at this seat count (2 seats use the 3-seat column). */
+  function catalog(seats: number): CatalogSection[] {
+    const col = Math.max(0, Math.min(4, seats - 3));
+    return SEASONS.map((season) => ({
+      title: capitalize(season),
+      cards: rules.content.cards
+        .filter((c) => c.season === season)
+        .map((c) => ({ def: c.id, face: card(c.id), copies: c.counts[col] ?? 0 }))
+        .filter((c) => c.copies > 0),
+    }));
+  }
+
   /** R6 #1: a hand card's Build at a glance, from its default legal Build (null = illegal). */
   function badge(view: View, seat: SeatId, pick: Pick | null): HandBadge {
     if (!pick) return { text: '✗ Spend only', tone: 'no' };
@@ -540,5 +553,6 @@ export function windamerePresenter(
     badge,
     happenings,
     seasonEnd,
+    catalog,
   };
 }

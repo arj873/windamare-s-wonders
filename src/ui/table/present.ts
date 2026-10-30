@@ -76,6 +76,12 @@ export interface ChoiceOption {
   warn?: boolean;
 }
 
+export interface CatalogSection {
+  /** "Spring". */
+  title: string;
+  cards: { def: CardDefId; face: CardFace; copies: number }[];
+}
+
 export interface SeasonEndInfo {
   /** "End of Spring · Wolf Pack, strength 3". */
   title: string;
@@ -153,6 +159,8 @@ export interface Presenter<S = unknown, T = unknown> {
   happenings?(view: DraftView<S, T>): string[];
   /** UX.md §10.1: the Season-end summary when the latest action ended a Season, else null. */
   seasonEnd?(view: DraftView<S, T>): SeasonEndInfo | null;
+  /** R6 #8: every card in the game by round (Season), with copies at this table size. */
+  catalog?(seats: number): CatalogSection[];
   /** A player-facing reason for the engine's refusal `error` of `pick`. */
   whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
 }

@@ -577,6 +577,45 @@
   color: var(--ink-dim);
 }
 
+/* ---- hand tools: Recall (R15.8) and the card list (R6 #8) --------------- */
+.dt-hand-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.dt-keys + .dt-hand-tools {
+  margin-left: 12px;
+}
+.dt-list-dialog {
+  width: min(720px, 100%) !important;
+}
+.dt-list-dialog h3 {
+  margin: 12px 0 6px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 400;
+}
+.dt-recall-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.dt-catalog ul {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.dt-catalog-copies {
+  display: inline-block;
+  min-width: 2.2em;
+  font-weight: 800;
+  color: var(--accent);
+}
+
 /* ---- R6 #4: the interaction in the Revealed panel; the Season-end card --- */
 .dt-happenings {
   margin-top: 6px !important;

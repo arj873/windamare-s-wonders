@@ -221,6 +221,23 @@ describe('windamerePresenter', () => {
     ).toBe(true);
   });
 
+  it('lists every card by Season and keeps Recall of passed hands (R6 #8, R15.8)', () => {
+    const sections = present.catalog!(4);
+    expect(sections.map((x) => x.title)).toEqual(['Spring', 'Summer', 'Autumn', 'Winter']);
+    const all = sections.flatMap((x) => x.cards);
+    expect(all.every((c) => c.copies > 0 && c.face.name.length > 0)).toBe(true);
+    // Each Season deals 6 cards to each of 4 towns (R3.2): the copies add up to the deck.
+    for (const sec of sections) {
+      expect(sec.cards.reduce((n, c) => n + c.copies, 0)).toBe(rules.tunables.handSize * 4);
+    }
+    expect(model(newGame()).recall).toEqual([]);
+    const s = advance(newGame(), (x) => x.turn === 2);
+    const recall = model(s, 0).recall;
+    expect(recall).toHaveLength(2);
+    expect(recall[0]!.title).toBe('Pick 1: passed to Bo');
+    expect(recall[0]!.cards).toHaveLength(5); // 6 dealt, 1 taken
+  });
+
   it('never highlights a Build that can only pay the bank (R6 #2)', () => {
     const m = model(pastureState(20, 0, 0)); // nobody sells Reed: the bank is the only way
     const card = m.hand[0]!;
