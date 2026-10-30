@@ -3,7 +3,9 @@
  * (`pnpm sim` once platform adds the script). Exit 0 = no violations, 1 = violations, 2 = bad usage.
  * Uses the toy ruleset until the Windamere ruleset (E2) lands.
  */
-import { createRandomBot, runSim } from '../src/bots';
+import { createGreedyBot, createRandomBot, runSim } from '../src/bots';
+import { toyAdapter } from '../src/bots/toyAdapter';
+import type { Bot } from '../src/bots';
 import type { ToySeat, ToyTable } from '../src/engine/core/testing/toy';
 import { toy } from '../src/engine/core/testing/helpers';
 
@@ -27,8 +29,27 @@ if (toy.validateConfig({ seed, seats: Array.from({ length: seats }, () => ({ nam
   process.exit(2);
 }
 
+// --bots greedy,random,random: one name per seat (rotated each game); one name = every seat.
+const makers: Record<string, () => Bot<ToySeat, ToyTable>> = {
+  random: () => createRandomBot<ToySeat, ToyTable>(),
+  greedy: () => createGreedyBot(toyAdapter),
+};
+const botIdx = process.argv.indexOf('--bots');
+const names = (botIdx === -1 ? 'random' : (process.argv[botIdx + 1] ?? '')).split(',');
+const made = names.map((n) => makers[n]?.());
+if (made.some((b) => !b) || (names.length > 1 && names.length !== seats)) {
+  console.error(`--bots needs 1 or ${seats} of: ${Object.keys(makers).join(', ')}`);
+  process.exit(2);
+}
+const bots = made as Bot<ToySeat, ToyTable>[];
+
 const { summary } = runSim(
-  { engine: toy, bots: createRandomBot<ToySeat, ToyTable>(), seats, maxActions },
+  {
+    engine: toy,
+    bots: bots.length === 1 ? (bots[0] as Bot<ToySeat, ToyTable>) : bots,
+    seats,
+    maxActions,
+  },
   games,
   seed,
 );
@@ -44,6 +65,11 @@ console.log(`mean score by seat  ${summary.meanScore.map(f).join('  ')}`);
 console.log(
   `win rate by seat    ${summary.winRate.map((w) => `${(w * 100).toFixed(1)}%`).join('  ')}`,
 );
+for (const [n, w] of Object.entries(summary.winByBot)) {
+  console.log(
+    `bot ${n}: ${(w * 100).toFixed(1)}% wins per seat (fair ${(100 / seats).toFixed(1)}%)`,
+  );
+}
 for (const v of summary.violations.slice(0, 10)) {
   console.log(`VIOLATION seed ${v.seed} ${v.violation.kind}: ${v.violation.message}`);
 }

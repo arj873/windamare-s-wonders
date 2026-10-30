@@ -27,6 +27,8 @@ export interface GameReport {
   /** Total per seat, empty if the game did not finish. */
   totals: number[];
   winners: SeatId[];
+  /** The bot's name at each seat. */
+  botNames: string[];
   violation: Violation | null;
 }
 
@@ -59,6 +61,7 @@ export function runGame<S, T>(opts: RunOptions<S, T>): GameReport {
     rounds: 0,
     totals: [],
     winners: [],
+    botNames: Array.from({ length: seats }, (_, i) => botFor(bots, i).name),
     violation: null,
   };
   const fail = (v: Violation): GameReport => ((report.violation = v), report);
@@ -131,6 +134,8 @@ export interface SimSummary {
   meanScore: number[];
   /** Fraction of finished games each seat won (ties split). */
   winRate: number[];
+  /** Per bot name: wins per seat it held (fair share = 1 / seats). Seats rotate in runSim. */
+  winByBot: Record<string, number>;
 }
 
 export function summarize(reports: GameReport[], seats: number): SimSummary {
@@ -140,7 +145,21 @@ export function summarize(reports: GameReport[], seats: number): SimSummary {
   const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
   const wins = Array.from({ length: seats }, () => 0);
   for (const r of done) for (const w of r.winners) wins[w] = (wins[w] ?? 0) + 1 / r.winners.length;
+  const botWins: Record<string, number> = {};
+  const botSeats: Record<string, number> = {};
+  for (const r of done) {
+    for (const n of r.botNames) botSeats[n] = (botSeats[n] ?? 0) + 1;
+    for (const w of r.winners) {
+      const n = r.botNames[w] ?? '?';
+      botWins[n] = (botWins[n] ?? 0) + 1 / r.winners.length;
+    }
+  }
+  const winByBot: Record<string, number> = {};
+  for (const [n, seatsHeld] of Object.entries(botSeats)) {
+    winByBot[n] = (botWins[n] ?? 0) / seatsHeld;
+  }
   return {
+    winByBot,
     games: reports.length,
     seats,
     finished: done.length,
@@ -158,13 +177,22 @@ export function summarize(reports: GameReport[], seats: number): SimSummary {
   };
 }
 
-/** Run `games` seeded games (seeds `seed .. seed + games - 1`). */
+/**
+ * Run `games` seeded games (seeds `seed .. seed + games - 1`). With a bot array, the bots rotate
+ * one seat per game so a bot's result is not confounded with its seat.
+ */
 export function runSim<S, T>(
   base: Omit<RunOptions<S, T>, 'seed'>,
   games: number,
   seed: number,
 ): { reports: GameReport[]; summary: SimSummary } {
   const reports: GameReport[] = [];
-  for (let i = 0; i < games; i++) reports.push(runGame({ ...base, seed: seed + i }));
+  const { bots } = base;
+  for (let i = 0; i < games; i++) {
+    const rotated = Array.isArray(bots)
+      ? bots.map((_, s) => botFor(bots, (s + i) % bots.length))
+      : bots;
+    reports.push(runGame({ ...base, bots: rotated, seed: seed + i }));
+  }
   return { reports, summary: summarize(reports, base.seats) };
 }

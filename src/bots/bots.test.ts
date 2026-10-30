@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { toy, toyConfig } from '../engine/core/testing/helpers';
 import { Rng } from '../engine';
-import { createRandomBot, pickFor, runGame, runSim } from './index';
+import { createGreedyBot, createRandomBot, pickFor, runGame, runSim } from './index';
+import { toyAdapter } from './toyAdapter';
 import type { ToySeat, ToyTable } from '../engine/core/testing/toy';
 import type { Bot as GenericBot } from './types';
 
@@ -123,5 +124,30 @@ describe('pickFor', () => {
       s = r.state;
     }
     expect(pickFor(toy, toy.viewFor(s, 0), 0)).toBeNull();
+  });
+});
+
+describe('greedy bot', () => {
+  const greedy = () => createGreedyBot(toyAdapter);
+  it('plays toy games with no violations', () => {
+    const { summary } = runSim({ engine: toy, bots: greedy(), seats: 3 }, 30, 1);
+    expect(summary.violations).toEqual([]);
+  });
+  it('beats random bots in a mixed table (rotated seats)', () => {
+    const { summary } = runSim(
+      {
+        engine: toy,
+        bots: [
+          greedy(),
+          createRandomBot<ToySeat, ToyTable>(),
+          createRandomBot<ToySeat, ToyTable>(),
+        ],
+        seats: 3,
+      },
+      150,
+      1,
+    );
+    expect(summary.violations).toEqual([]);
+    expect(summary.winByBot.greedy).toBeGreaterThan(1.5 / 3);
   });
 });
