@@ -53,6 +53,13 @@ engine.defaultAction(state, seat): DraftAction | null  // like defaultPick, but 
 engine.ruleset                                      // the ruleset (card defs: engine.ruleset.cards)
 ```
 
+**The Windamere engine:** `createWindamereEngine(content?)` (barrel export, `src/engine/game/`)
+returns `DraftEngine<WwSeat, WwTable>`; `content` defaults to the shipped card data once
+`src/content/` has it. **Stub until E2 lands: it throws `WINDAMERE_NOT_READY`.** The signature is
+final, so net can wire it now. A `DraftEngine<WwSeat, WwTable>` is not assignable to
+`DraftEngine<unknown, unknown>` (`resolve` steps are contravariant), so cast it as net already
+does for the toy engine.
+
 `legalPicks`, `defaultPick` and `defaultAction` work on a full state or on that seat's view
 (§6 view-safe), so a server, a client and a bot get the same answer.
 
