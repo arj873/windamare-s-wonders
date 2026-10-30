@@ -7,12 +7,14 @@
 import {
   BUILD,
   buildCostAfterDiscount,
+  countKind,
   currentRaid,
   exchangeGoods,
   guardOf,
   HIDDEN_CARD,
   honourStandings,
   marketPrice,
+  measure,
   missingGoods,
   neighboursOf,
   nextThreshold,
@@ -26,6 +28,7 @@ import {
   type DraftView,
   type Gains,
   type Json,
+  type Measure,
   type Payment,
   type Pick,
   type SeatId,
@@ -46,7 +49,7 @@ import type {
   SeasonEndInfo,
   SeatStat,
 } from '../../ui/table/present';
-import { effectsText, gainsText, goodName, KIND_LABELS } from './text';
+import { effectsText, gainsText, goodName, KIND_LABELS, kindMany, measureLabel } from './text';
 
 type View = DraftView<WwSeat, WwTable>;
 
@@ -514,6 +517,47 @@ export function windamerePresenter(
     };
   }
 
+  /**
+   * R10 #4: the race a neighbour-comparison card is in, for `seat` now. `scoreBeat`: Renown per
+   * neighbour with less; `scoreNeighbourMin`: Renown per point of the weaker neighbour;
+   * `onBuildNeighbourMin` (hand only): what Building it now would give. Neighbours by name, the
+   * seat itself as "You" when it is the viewer's (with 2 towns the one neighbour counts once).
+   */
+  function standing(view: View, seat: SeatId, def: string, built: boolean): string | null {
+    if (def === HIDDEN_CARD) return null;
+    const card = rules.card(def);
+    const nbs = [...new Set(neighboursOf(view, seat))].filter((n) => n !== seat);
+    if (nbs.length === 0) return null;
+    const list = (label: string, value: (s: SeatId) => number, self: boolean) =>
+      `${label}: ${[...(self ? [seat] : []), ...nbs]
+        .map((s) => `${subject(view, s)} ${value(s)}`)
+        .join(', ')}`;
+    const lines: string[] = [];
+    for (const e of card.effects) {
+      const amount = typeof e.amount === 'number' ? e.amount : 0;
+      if (e.type === 'scoreBeat' || e.type === 'scoreNeighbourMin') {
+        const m = e.measure as Measure;
+        const of = (s: SeatId) => measure(rules, view, s, m);
+        const renown =
+          e.type === 'scoreBeat'
+            ? amount * nbs.filter((n) => of(n) < of(seat)).length
+            : amount * Math.min(...nbs.map(of));
+        lines.push(`Now +${renown} · ${list(measureLabel(m), of, e.type === 'scoreBeat')}`);
+      } else if (e.type === 'onBuildNeighbourMin' && !built) {
+        const kind = String(e.kind);
+        const of = (s: SeatId) => countKind(rules, view, s, kind);
+        const times = Math.min(...nbs.map(of));
+        const each = (e.gains ?? {}) as Gains;
+        const got: Gains = {};
+        for (const [k, v] of Object.entries(each)) got[k] = (v ?? 0) * times;
+        lines.push(
+          `Built now: +${gainsText(rules, got) || 'nothing'} · ${list(kindMany(kind), of, false)}`,
+        );
+      }
+    }
+    return lines.length ? lines.join(' · ') : null;
+  }
+
   /** R6 #1: a hand card's Build at a glance, from its default legal Build (null = illegal). */
   function badge(view: View, seat: SeatId, pick: Pick | null): HandBadge {
     if (!pick) return { text: '✗ Spend only', tone: 'no' };
@@ -698,6 +742,7 @@ export function windamerePresenter(
     whyNot,
     purse,
     badge,
+    standing,
     happenings,
     seasonEnd,
   };

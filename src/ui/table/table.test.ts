@@ -207,8 +207,14 @@ describe('DraftTable', () => {
     table.setTimer({ remainingMs: 9_000, totalMs: 45_000, locked: false });
     expect(timer.classList.contains('timer-low')).toBe(true);
     table.setTimer({ remainingMs: 9_000, totalMs: 45_000, locked: true });
-    expect(timer.textContent).toBe('✓');
+    // R8 #5: the time left stays visible after you pick, with a ✓ beside it.
+    expect($(timer, '.dt-timer-text')?.textContent).toBe('0:09');
+    expect($(timer, '.dt-timer-ok')?.textContent).toBe('✓');
+    expect(timer.classList.contains('is-locked')).toBe(true);
+    expect(timer.getAttribute('aria-label')).toBe('Pick locked; 0:09 left for the table');
     expect(timer.classList.contains('timer-low')).toBe(false);
+    table.setTimer({ remainingMs: 8_000, totalMs: 45_000, locked: false });
+    expect($(timer, '.dt-timer-ok')).toBeNull();
     // The ring survives a re-render (it is the same node).
     table.update(model(newToyGame(3)));
     expect($(el, '.dt-timer')).toBe(timer);

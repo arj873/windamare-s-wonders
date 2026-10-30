@@ -95,8 +95,27 @@
 .dt-timer[hidden] {
   display: none; /* .round-badge sets display: grid */
 }
-.dt-timer.is-locked {
+/* R8 #5: locked = your pick is in; the seconds stay (dimmed) and a ✓ badge sits on the ring. */
+.dt-timer {
+  position: relative;
+}
+.dt-timer.is-locked .dt-timer-text {
   opacity: 0.55;
+}
+.dt-timer-ok {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ink-strong);
+  background: var(--good);
+  border: 1.5px solid var(--card-edge);
 }
 .dt-timer.timer-low {
   animation: dt-pulse 1s ease-in-out infinite;
@@ -186,6 +205,14 @@
   font-weight: 600;
   line-height: 1.25;
   color: var(--ink-dark);
+}
+.dt-mini-standing {
+  flex-basis: 100%;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--ink-strong);
 }
 .dt-mini.is-fresh {
   box-shadow: 0 0 0 2px var(--accent);
@@ -529,6 +556,15 @@
   font-size: 12.5px;
   color: var(--ink-dim);
 }
+/* R10 #4: the live race on a neighbour-comparison card ("Now +3 · Markets: You 3, Bo 2"). */
+.dt-pop-standing {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface-sunken);
+}
 .dt-use {
   display: flex;
   justify-content: space-between;
@@ -745,6 +781,21 @@
 .dt-season-lines li.is-loss::before {
   content: '✗ ';
   color: var(--bad);
+}
+/* R10 #1: the last Raid heads the final card, compact, read before the scores count up. */
+.dt-result-raid {
+  margin-bottom: 12px;
+}
+.dt-result-raid h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 400;
+}
+.dt-result-raid .dt-season-lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  font-size: 13px;
 }
 .dt-season-next {
   margin: 10px 0 0;
@@ -1049,6 +1100,21 @@
   font-family: var(--font-display);
   font-size: 22px;
 }
+/*
+ * R10 #1: while the totals count up (src/game/windamere/fx.ts sets .is-counting), the towns sit in
+ * seat order with no ranks, no winner's mark and no headline; when the count lands they settle.
+ */
+.dt-result.is-counting .dt-band-card {
+  order: var(--seat-i, 0);
+}
+.dt-result.is-counting .dt-band-card.is-winner {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.dt-result.is-counting .dt-band-rank,
+.dt-result.is-counting .dt-headline {
+  visibility: hidden;
+}
 
 /* ---- tablet / small laptop -------------------------------------------- */
 /* R6 #10: big screens give the hand the room the town panel was not using (6 cards still fit). */
@@ -1293,10 +1359,16 @@
     background: var(--page-bg);
     box-shadow: -8px 0 24px rgba(0, 0, 0, 0.5);
     transform: translateX(105%);
-    transition: transform 0.2s ease;
+    /* qa Q5-1: closed = hidden from Tab and screen readers too, once the slide-out ends. */
+    visibility: hidden;
+    transition:
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
   }
   .dt-side.is-open {
     transform: none;
+    visibility: visible;
+    transition: transform 0.2s ease;
   }
   /* The popover becomes a sheet at the bottom of the screen. */
   .dt-pop {
