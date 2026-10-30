@@ -1,0 +1,5 @@
+{
+  "name": "market-cheaper",
+  "hypothesis": "Summer-Autumn Spends are 21-36% (P3 <= 25%) because towns cannot afford any scoring Build, and goods bought from neighbours cost 3-5 coins from Summer on. Neighbour prices 1/3/4/5 -> 1/2/3/4 make more Builds legal, so Summer-Autumn Spend shares drop under 25%. Greedy does not price purchases into its choice, but legality includes them, so this changes bot decisions.",
+  "tunables": { "marketPrice": [1, 2, 3, 4] }
+}

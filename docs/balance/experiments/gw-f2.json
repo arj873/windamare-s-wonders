@@ -1,0 +1,10 @@
+{
+  "name": "gw-f2",
+  "hypothesis": "F2: after D9, 4 of the 13 Great Works greedy chooses sit outside fair x 0.75-1.25 (Spire 1.55x; Fourfold Gate 0.58x, Mere Bridge 0.60x, Hall of Echoes 0.60x, n=291). Spire tier Renown 2/4/5/8 -> 2/3/4/5, and +1 Renown on tiers I-III of the three weak ones (Mere Bridge 1/2/4/8 -> 2/3/5/8, Fourfold Gate 1/2/6/5 -> 2/3/7/5, Hall of Echoes 1/2/4/4 -> 2/3/5/4), put every chosen Great Work inside the band. Choice-rule confounder as in spire-renown-down.",
+  "greatWorks": {
+    "the-stonewrights-spire": { "tierRenown": [2, 3, 4, 5] },
+    "the-mere-bridge": { "tierRenown": [2, 3, 5, null] },
+    "the-fourfold-gate": { "tierRenown": [2, 3, 7, null] },
+    "the-hall-of-echoes": { "tierRenown": [2, 3, 5, null] }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "spire-renown-down",
+  "hypothesis": "The Stonewright's Spire wins 1.55x fair and reaches tier IV in 81% of towns (others 30-51%): its Perk yields 1 labour every turn. Tier Renown 2/4/5/8 -> 2/3/4/5 brings its win ratio under 1.25x and the Great Work's share of winners' largest source under 55% at 7 seats. Greedy's choice rule reads printed Renown, so fewer towns pick the Spire: part of the effect is who holds it.",
+  "greatWorks": { "the-stonewrights-spire": { "tierRenown": [2, 3, 4, 5] } }
+}
