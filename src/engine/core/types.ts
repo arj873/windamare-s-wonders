@@ -81,7 +81,8 @@ export interface SeatScore {
   seat: SeatId;
   categories: Record<string, number>;
   total: number;
-  tiebreak: number;
+  /** `ruleset.tiebreak` ([] without one): compared element by element, higher wins. */
+  tiebreak: number[];
 }
 
 export interface GameResult {
@@ -266,6 +267,8 @@ export interface Ruleset<S = unknown, T = unknown> {
   setupTable(ctx: Ctx<S, T>): T;
   setupSeat(ctx: Ctx<S, T>, seat: SeatId): S;
   onGameStart?(ctx: Ctx<S, T>): void;
+  /** Runs just before each round is dealt (round 0 included), before `roundSpec`. */
+  onRoundStart?(ctx: Ctx<S, T>, round: number): void;
   validateOptions?(options: Record<string, Json>): string | null;
   /** The card is in the seat's hand (the core checked). */
   validatePick(state: DraftState<S, T>, seat: SeatId, pick: Pick): string | null;
@@ -279,8 +282,8 @@ export interface Ruleset<S = unknown, T = unknown> {
   onRoundEnd?(ctx: Ctx<S, T>): void;
   /** Score categories; total = their sum. */
   score(state: DraftState<S, T>, seat: SeatId): Record<string, number>;
-  /** Higher wins a tie. */
-  tiebreak?(state: DraftState<S, T>, seat: SeatId): number;
+  /** Tie-breaks in order: the first one that differs decides, higher wins. Same length per seat. */
+  tiebreak?(state: DraftState<S, T>, seat: SeatId): number[];
   /** Effect sources beyond tableau cards (e.g. monument stages). */
   activeEffects?(state: DraftState<S, T>, seat: SeatId): EffectSpec[];
   zones?: Record<string, Visibility>;

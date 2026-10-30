@@ -38,6 +38,7 @@ export function resolveOrder<S, T>(rules: Ruleset<S, T>, state: DraftState<S, T>
 export function deal<S, T>(ctx: Ctx<S, T>, round: number): void {
   const { state: draft, rules } = ctx;
   const n = draft.seats.length;
+  rules.onRoundStart?.(ctx, round);
   const spec = rules.roundSpec(draft, round);
   const { handSize, picks, pass, deck } = spec;
   if (!Number.isInteger(handSize) || handSize < 1)
@@ -208,7 +209,16 @@ function gameEnd<S, T>(ctx: Ctx<S, T>): void {
   });
 }
 
-/** Final scores and ranking: total desc, then tiebreak desc; equal seats share a group. */
+/** b before a: > 0; element by element, higher first. Lengths are equal (checked). */
+function compareTiebreaks(a: number[], b: number[]): number {
+  for (let i = 0; i < a.length; i++) {
+    const d = (b[i] ?? 0) - (a[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/** Final scores and ranking: total desc, then tiebreaks desc in order; equal seats share a group. */
 export function scoreGame<S, T>(rules: Ruleset<S, T>, state: DraftState<S, T>): GameResult {
   const scores: SeatScore[] = state.seats.map((s) => {
     const categories = rules.score(state, s.id);
@@ -217,18 +227,23 @@ export function scoreGame<S, T>(rules: Ruleset<S, T>, state: DraftState<S, T>): 
       if (!Number.isFinite(v)) throw new Error(`seat ${s.id} score ${k} is ${v}`);
       total += v;
     }
-    const tiebreak = rules.tiebreak?.(state, s.id) ?? 0;
-    if (!Number.isFinite(tiebreak)) throw new Error(`seat ${s.id} tiebreak is ${tiebreak}`);
+    const tiebreak = [...(rules.tiebreak?.(state, s.id) ?? [])];
+    if (!tiebreak.every(Number.isFinite)) {
+      throw new Error(`seat ${s.id} tiebreak is ${JSON.stringify(tiebreak)}`);
+    }
     return { seat: s.id, categories: { ...categories }, total, tiebreak };
   });
-  const sorted = [...scores].sort(
-    (a, b) => b.total - a.total || b.tiebreak - a.tiebreak || a.seat - b.seat,
-  );
+  const len = scores[0]?.tiebreak.length ?? 0;
+  if (scores.some((sc) => sc.tiebreak.length !== len)) {
+    throw new Error('tiebreak lists differ in length between seats');
+  }
+  const order = (a: SeatScore, b: SeatScore) =>
+    b.total - a.total || compareTiebreaks(a.tiebreak, b.tiebreak);
+  const sorted = [...scores].sort((a, b) => order(a, b) || a.seat - b.seat);
   const ranking: SeatId[][] = [];
   let prev: SeatScore | null = null;
   for (const sc of sorted) {
-    if (prev && prev.total === sc.total && prev.tiebreak === sc.tiebreak)
-      ranking[ranking.length - 1]?.push(sc.seat);
+    if (prev && order(prev, sc) === 0) ranking[ranking.length - 1]?.push(sc.seat);
     else ranking.push([sc.seat]);
     prev = sc;
   }

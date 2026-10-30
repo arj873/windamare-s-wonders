@@ -219,7 +219,7 @@ export const toyRuleset: Ruleset<ToySeat, ToyTable> = {
       ...sumInto({}, effectScore(toyRuleset, state, seat)),
     };
   },
-  tiebreak: (state, seat) => seatOf(state, seat).data.coins,
+  tiebreak: (state, seat) => [seatOf(state, seat).data.coins],
 };
 
 function offered(data: Json): Card[] {

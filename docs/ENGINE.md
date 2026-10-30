@@ -181,7 +181,7 @@ interface LogEntry {
 }
 
 interface GameResult {
-  scores: { seat: SeatId; categories: Record<string, number>; total: number; tiebreak: number }[];
+  scores: { seat: SeatId; categories: Record<string, number>; total: number; tiebreak: number[] }[];
   ranking: SeatId[][]; // best first; tied seats share a group
   winners: SeatId[]; // = ranking[0]
 }
@@ -197,7 +197,8 @@ throws on a violation: that is a ruleset bug, not a bad action.
 
 ```
 createGame
-  ruleset.setupTable / setupSeat  →  deal round 0  →  ruleset.onGameStart (may prompt)  →  pick
+  ruleset.setupTable / setupSeat  →  onRoundStart(0), deal round 0  →  ruleset.onGameStart
+  (may prompt)  →  pick
 
 pick phase (simultaneous)
   each seat with a non-empty hand submits  pick { card, use, args }   (hidden from others)
@@ -217,10 +218,11 @@ pick phase (simultaneous)
 round end
   ruleset.onRoundEnd(ctx)  then every seat's active effects' onRoundEnd (seat order)
   prompts? → prompt phase until empty
-  more rounds → deal round + 1 → pick        last round → GAME END
+  more rounds → onRoundStart(round + 1), deal round + 1 → pick        last round → GAME END
 
 game end
-  ruleset.score(state, seat) per seat → result (ranking: total desc, then tiebreak desc) → gameOver
+  ruleset.score(state, seat) per seat → result (ranking: total desc, then the tiebreak lists
+  element by element, higher first) → gameOver
 ```
 
 Dealing a round: `ruleset.roundSpec(state, round)` returns
@@ -351,6 +353,7 @@ interface Ruleset<S, T> {
   setupTable(ctx): T;
   setupSeat(ctx, seat): S; // ctx.rng may be used (e.g. deal monuments)
   onGameStart?(ctx): void;
+  onRoundStart?(ctx, round): void; // just before each deal (round 0 too), before roundSpec
   validateOptions?(options): string | null;
   validatePick(state, seat, pick): string | null; // the card is in the hand (core checked)
   legalPicks(state, seat): Pick[]; // sound; see §6 for completeness
@@ -359,7 +362,7 @@ interface Ruleset<S, T> {
   resolve: ResolveStep<S, T>[]; // run step-major (§5)
   onRoundEnd?(ctx): void;
   score(state, seat): Record<string, number>; // categories; total = sum
-  tiebreak?(state, seat): number; // higher wins a tie
+  tiebreak?(state, seat): number[]; // in order, the first that differs decides; higher wins
   activeEffects?(state, seat): EffectSpec[]; // extra sources beyond tableau cards (monument stages)
   zones?: Record<string, 'public' | 'owner' | 'hidden'>; // seat zones and their visibility
   discardVisibility?: 'public' | 'hidden'; // default 'hidden'
@@ -504,21 +507,22 @@ legalActions soundness and view-safety on random playouts (2-5 seats).
 
 ## 14. Contract changes for E2 (E1b: planned, not implemented)
 
-Source: `docs/RULES.md` (R-numbers) and `docs/design/CARDS.md`, both drafts of 2026-10-29 that
-the human has not approved yet (H1). None of this is in the code. Each change lands with its
-tests, §1-§13 are updated in the same commit, and the row leaves this list.
+Source: `docs/RULES.md` (R-numbers) and `docs/design/CARDS.md` of 2026-10-29, approved by the
+human (H1) with three changes still coming from design (D2c: new goods, a single-card pick,
+neighbour trade). D2c may make C1, C2 and C5 moot. Nothing in this list is in the code yet.
+Each change lands with its tests, §1-§13 are updated in the same commit, and the row leaves
+this list. Done so far: C9 (tie-break list) and the `onRoundStart` half of C4.
 
 | #   | Change                                                                   | Rules         | Breaking for                    |
 | --- | ------------------------------------------------------------------------ | ------------- | ------------------------------- |
 | C1  | A pick holds several cards, each with a role                             | R4.1, R14.2   | net, ui, bots: `Pick`, `Reveal` |
 | C2  | Secret roles: a burned card's face stays hidden in the reveal            | R14.3         | none (additive)                 |
 | C3  | Prompt groups: several seats answer at once, hidden                      | R2.5          | net, ui, bots: `Prompt`         |
-| C4  | Start prompts come before the first deal; new `onRoundStart` hook        | R2.5, R3.2    | ui (no hand during the start)   |
+| C4  | Start prompts come before the first deal                                 | R2.5          | ui (no hand during the start)   |
 | C5  | `normalizePick`: the ruleset fills default choices when a pick arrives   | R4.3, R15.7   | none (additive)                 |
 | C6  | `ctx.play(seat, card, args)` passes the pick's choices to `onPlay`       | R13 `onBuild` | ruleset code only               |
 | C7  | Effects carry their source (card, Perk, tier)                            | R12.2a-b      | ruleset code only               |
 | C8  | `checkRuleset` also validates effects that are not on cards              | R13.3         | none (additive)                 |
-| C9  | Tie-break is a list of numbers, compared in order                        | R12.4         | ui: `SeatScore.tiebreak`        |
 | C10 | Recall: each seat's owner-only record of the hands it passed this round  | R15.8         | none (additive field)           |
 | C11 | `Ruleset` takes the card type, so `ctx.def()` returns the Windamere card | none          | ruleset code only (types)       |
 
@@ -600,16 +604,16 @@ ctx.promptGroup([{ seat, kind, data }, ...]); // one group, at most one prompt p
 - Net: the session must relay `answer` actions too, with their own 60 s clock (R15.3). The seam in
   `src/net/engineApi.ts` has picks only.
 
-### C4. Start prompts before the first deal; `onRoundStart`
+### C4. Start prompts before the first deal
 
 - Today `createGame` deals round 0 and then calls `onGameStart`, so towns would see their Spring
   hand while they choose a Great Work. The rules put the choice first (R2.5) and the deal at the
   start of the Season (R3.2).
 - Change: `createGame` runs `onGameStart` and its prompts first, and deals round 0 once they are
   all answered. The phase is `prompt` with `then: 'start'`, as now, but hands are empty during it.
-- New optional hook `onRoundStart?(ctx, round)`, run just before each deal, round 0 included.
-  Windamere reveals the Season's Raid there (R3.2).
 - The toy tests that expect hands during the opening prompt change.
+- Done: the `onRoundStart?(ctx, round)` hook (§8), which Windamere uses to reveal the Season's
+  Raid (R3.2).
 
 ### C5. `normalizePick`
 
@@ -641,12 +645,6 @@ R12.2 scores printed Renown by source: Buildings (cards, a) apart from Great Wor
 Great Work Perks and tier rewards are `EffectSpec`s outside `cards`. New optional
 `Ruleset.effectLists?(): { where: string; effects: EffectSpec[] }[]` (e.g.
 `'the-wind-organ tier II'`). `checkRuleset` validates them like card effects and names `where`.
-
-### C9. Tie-break list
-
-R12.4: most completed tiers, then most coins, then a shared win. Change:
-`tiebreak?(state, seat): number[]`, compared element by element; `SeatScore.tiebreak: number[]`.
-A single number would need `tiers * 1e6 + coins`, which ui cannot show.
 
 ### C10. Recall
 
