@@ -84,6 +84,13 @@
         text-transform: uppercase;
         letter-spacing: 0.08em;
       }
+      .card img.se {
+        position: absolute;
+        left: 156px;
+        top: 240px;
+        width: 24px;
+        height: 24px;
+      }
       .card img.ti {
         position: absolute;
         left: 18px;
@@ -285,7 +292,7 @@
       <div class="t cost">${c.map((i) => `<img src="/art/goods/${i}.svg" alt="${i}" />`).join('')}</div>
       <div class="t name">${n}</div>
       <div class="t eff">${e}</div>
-      <img class="ti" src="/art/kinds/${k}.svg" alt="${k}" /><div class="t band">${k}</div>
+      <img class="se" src="/art/seasons/summer.svg" alt="season" /><img class="ti" src="/art/kinds/${k}.svg" alt="${k}" /><div class="t band">${k}</div>
     </div>`,
           ).join('');
         });
