@@ -5,8 +5,8 @@ Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this fil
 
 Status (2026-10-30): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
 what the code does. **§15 is the Windamere game (E2): playable for 2 to 7 towns on the D2c rules
-and the shipped content, Great Work choice and Recall included.** §16 is the lookahead for bots
-(E5). §14 keeps three optional core changes (C7, C8, C11) the game does without (it does that
+and the shipped content, Great Work choice, Recall and the First game option (§15.5) included.**
+§16 is the lookahead for bots (E5). §14 keeps three optional core changes (C7, C8, C11) the game does without (it does that
 work in `src/engine/game/`).
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
@@ -78,7 +78,8 @@ log entries), which count actions. This is net's "batch resolution" (MULTIPLAYER
 interface GameConfig {
   seed: number | string; // online: from a CSPRNG (net), 128 bits
   seats: { name: string }[]; // seat i sits clockwise after seat i-1; the order is final
-  options?: Record<string, Json>; // ruleset options (e.g. a variant switch), checked by the ruleset
+  options?: Record<string, Json>; // ruleset options, checked by the ruleset
+  // Windamere: { firstGame: true } (R19, §15.5); no other keys
 }
 ```
 
@@ -787,6 +788,36 @@ whole random games for 3-7 towns check soundness and view-safety of `legalAction
 `defaultAction` at every step. Mutation checks by hand (each reverted): tie-break order, bounty
 count, unmasked Raids, fill order of purchases, Yield in Winter, the default plan's order; each
 made rule tests fail.
+
+### 15.5 First game (R19; E6, `options.ts`)
+
+A room option, off by default. **The config field:** `options: { firstGame: true }` in the
+`GameConfig` given to `createGame` (net: the room config's `options`, which `validateConfig`
+judges at start; ui: the hotseat setup screen's new-game config). The constant is
+`FIRST_GAME_OPTION`; `isFirstGame(stateOrView)` reads it. `config` is in every view, so every seat
+and spectator sees it (R19.1). `validateConfig` refuses unknown option keys (a misspelt option
+must not play the full game silently) and a value that is not `true`/`false`.
+
+What it changes, with the numbers from design's `FIRST_GAME` (`WwContent.firstGame`, default
+`DEFAULT_FIRST_GAME`; `SHIPPED_FIRST_GAME` maps design's data):
+
+- **R19.2:** `honoursPerGame` 0, so `table.honours` and `table.leaders` are `[]`. No Honour ever
+  leads, scores or emits an `honour` event. The Honours UI should hide when there are none.
+- **R19.4:** `greatWorksOffered` 1. Each town keeps the one dealt to it at setup, with **no prompt**.
+  `createGame` returns a state already in the `pick` phase, with every `greatWork` set, the
+  `greatWork` events in the log (the same as the choice's reveal) and every Perk active. There is
+  no decision outside a pick (R15.10). This holds for any content that offers 1 Great Work.
+- **R19.3:** `upgrades` false. A Build's `cover` must be null: `validatePick` refuses a cover with
+  "a First game has no upgrades: build at full cost". The default cover is null, and `legalPicks`
+  has no cover variants, so an upgrade card is built at its full cost and nothing is ever
+  covered.
+- **R19.5** (the Relaxed clock, design's `defaultClock`) is for net and ui; the rules ignore it.
+- **R19.6:** everything else is unchanged, the tie-break included ([tiers, coins]).
+
+Tests (`firstgame.test.ts`): one per rule, R19.1-R19.4 and R19.6, including whole random First
+games at 2, 3, 5 and 7 towns, one on the shipped content, and a lookahead sample that keeps the
+option. Mutation checks (each reverted): dropping the no-upgrades check fails R19.3; always
+prompting fails R19.4.
 
 ## 16. Lookahead for bots (E5; `core/lookahead.ts`)
 

@@ -1,7 +1,14 @@
 export * from './types';
 export { createWindamereEngine } from './engine';
-export { SHIPPED_TUNABLES, windamereContent } from './shipped';
-export { checkContent, compileContent, DEFAULT_TUNABLES, type WwRules } from './content';
+export { SHIPPED_FIRST_GAME, SHIPPED_TUNABLES, windamereContent } from './shipped';
+export {
+  checkContent,
+  compileContent,
+  DEFAULT_FIRST_GAME,
+  DEFAULT_TUNABLES,
+  type WwRules,
+} from './content';
+export { FIRST_GAME_OPTION, isFirstGame } from './options';
 export { ANY, COINS, LABOUR, checkGains, storeTotal } from './gains';
 export {
   activeEffects,

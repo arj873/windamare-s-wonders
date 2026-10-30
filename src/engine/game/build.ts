@@ -4,6 +4,7 @@
  */
 import type { Card, CardDefId, CardId, Ctx, Json, SeatId } from '../core';
 import type { WwRules } from './content';
+import { upgradesAllowed } from './options';
 import { townOf, uncovered } from './town';
 import type { Gains, WwSeat, WwState, WwTable } from './types';
 
@@ -28,6 +29,8 @@ export function checkBuildRules(
     return `${def.name} is already in your town`;
   }
   if (cover === null) return null;
+  // R19.3: a First game has no upgrades; an upgrade card is built at its full cost.
+  if (!upgradesAllowed(rules, state)) return 'a First game has no upgrades: build at full cost';
   // R7.9: an upgrade names one uncovered card it upgrades.
   if (!def.upgrade) return `${def.name} upgrades nothing`;
   const target = cards.find((c) => c.id === cover);

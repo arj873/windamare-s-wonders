@@ -3,6 +3,7 @@ import type { Ctx, EffectSpec, Json, PromptHandler, SeatId } from '../core';
 import type { WwRules } from './content';
 import { emit, gained, holdings } from './events';
 import { updateHonourLeaders } from './honours';
+import { greatWorksOffered } from './options';
 import { greatWorkEffects, townOf } from './town';
 import type { WwSeat, WwState, WwTable } from './types';
 
@@ -12,10 +13,15 @@ export const GREAT_WORK_CHOICE = 'greatWork';
  * R2.4, R2.5, R15.10: deal each town its offers from the shuffled pool, face down, and ask every
  * town at once (one prompt group: hidden, changeable until the last choice, revealed together).
  * The offers live only in the prompts' owner-only data, so the ones not chosen leave unseen.
+ * R19.4: one offer each (the First game) is kept at once, with no prompt.
  */
 export function offerGreatWorks(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): void {
   const pool = ctx.rng.shuffle(rules.content.greatWorks.map((g) => g.id));
-  const n = rules.tunables.greatWorksOffered;
+  const n = greatWorksOffered(rules, ctx.state);
+  if (n === 1) {
+    ctx.state.seats.forEach((s, i) => keepGreatWork(rules, ctx, s.id, pool[i] as string));
+    return;
+  }
   ctx.promptGroup(
     ctx.state.seats.map((s, i) => ({
       seat: s.id,
@@ -23,6 +29,16 @@ export function offerGreatWorks(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): void
       data: { offers: pool.slice(i * n, (i + 1) * n) },
     })),
   );
+}
+
+/** The town's Great Work is revealed and its Perk is active from now on (R2.5, R8.1). */
+function keepGreatWork(rules: WwRules, ctx: Ctx<WwSeat, WwTable>, seat: SeatId, id: string): void {
+  const town = townOf(ctx.state, seat);
+  const gw = rules.greatWork(id);
+  town.data.greatWork = gw.id;
+  emit(ctx, { type: 'greatWork', seat, greatWork: gw.id }, `${town.name} will raise ${gw.name}.`);
+  // Towns keep theirs in seat order; after the last town, the Perks may move an Honour.
+  if (seat === ctx.state.seats.length - 1) updateHonourLeaders(rules, ctx);
 }
 
 /** The Great Work ids a choice prompt offers. */
@@ -39,18 +55,7 @@ export function greatWorkChoice(rules: WwRules): PromptHandler<WwSeat, WwTable> 
         ? null
         : 'choose one of your offered Great Works',
     // Runs for every town once all have chosen (R2.5): the Perk is active from now on.
-    apply: (ctx, prompt, answer) => {
-      const town = townOf(ctx.state, prompt.seat);
-      const gw = rules.greatWork(answer as string);
-      town.data.greatWork = gw.id;
-      emit(
-        ctx,
-        { type: 'greatWork', seat: prompt.seat, greatWork: gw.id },
-        `${town.name} will raise ${gw.name}.`,
-      );
-      // The group applies in seat order; after the last town, the Perks may move an Honour.
-      if (prompt.seat === ctx.state.seats.length - 1) updateHonourLeaders(rules, ctx);
-    },
+    apply: (ctx, prompt, answer) => keepGreatWork(rules, ctx, prompt.seat, answer as string),
     // R15.6, R15.10: the timeout choice is the first offered.
     defaultAnswer: (_state, prompt) => offersOf(prompt.data)[0] ?? null,
   };

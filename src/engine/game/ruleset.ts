@@ -5,6 +5,7 @@ import type { WwRules } from './content';
 import { GREAT_WORK_CHOICE, greatWorkChoice, greatWorkSpecs, offerGreatWorks } from './greatWork';
 import { defaultPick, legalPicks, normalizePick, validatePick } from './pick';
 import { updateHonourLeaders } from './honours';
+import { validateOptions } from './options';
 import { resolveRaid, revealRaid, sampleHiddenRaids, seasonEndEffects } from './raid';
 import { scoreTown, tiebreakOf } from './score';
 import { maskTable, setupSeat, setupTable } from './setup';
@@ -33,6 +34,8 @@ export function windamereRuleset(rules: WwRules): Ruleset<WwSeat, WwTable> {
     // R15.8: a town may look at the hands it passed on, until the Season ends.
     recall: true,
     onRoundStart: (ctx, round) => revealRaid(rules, ctx, round),
+    validateOptions, // R19: { firstGame: true }
+
     normalizePick: (state, seat, pick) => normalizePick(rules, state, seat, pick),
     validatePick: (state, seat, pick) => validatePick(rules, state, seat, pick),
     legalPicks: (state, seat) => legalPicks(rules, state, seat),

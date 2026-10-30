@@ -3,8 +3,16 @@
  * `WwContent`. Design keeps R16 in its own shape (per-Season objects, its own key names); this
  * maps it, so neither lane has to follow the other's field names.
  */
-import { CARDS, GOODS, GREAT_WORKS, HONOURS, RAIDS, TUNABLES } from '../../content/windamere';
-import { SEASONS, type WwContent, type WwTunables } from './types';
+import {
+  CARDS,
+  FIRST_GAME,
+  GOODS,
+  GREAT_WORKS,
+  HONOURS,
+  RAIDS,
+  TUNABLES,
+} from '../../content/windamere';
+import { SEASONS, type WwContent, type WwFirstGame, type WwTunables } from './types';
 
 const bySeason = (x: Record<(typeof SEASONS)[number], number>): number[] =>
   SEASONS.map((s) => x[s]);
@@ -31,7 +39,14 @@ export const SHIPPED_TUNABLES: WwTunables = {
   coinsPerRenown: TUNABLES.coinsPerRenown,
 };
 
-/** The game's content: goods, cards, Great Works, Raids, Honours and R16. */
+/** R19 from design's FIRST_GAME (its `defaultClock`, R19.5, is for net and ui, not the rules). */
+export const SHIPPED_FIRST_GAME: WwFirstGame = {
+  honoursPerGame: FIRST_GAME.honoursPerGame,
+  greatWorksOffered: FIRST_GAME.greatWorksOffered,
+  upgrades: FIRST_GAME.upgrades,
+};
+
+/** The game's content: goods, cards, Great Works, Raids, Honours, R16 and R19. */
 export function windamereContent(): WwContent {
   return {
     goods: GOODS.map((id) => ({ id, name: title(id) })),
@@ -40,5 +55,6 @@ export function windamereContent(): WwContent {
     raids: RAIDS,
     honours: HONOURS,
     tunables: SHIPPED_TUNABLES,
+    firstGame: SHIPPED_FIRST_GAME,
   };
 }
