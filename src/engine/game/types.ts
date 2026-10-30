@@ -95,6 +95,8 @@ export interface WwTunables {
   handSize: number;
   /** R3.4 */
   turnsPerSeason: number;
+  /** R14.1: hand size with 2 seats (two cards a turn on turns 1 to 4, pick + glean on the last). */
+  twoSeatHandSize: number;
   /** R6.3: coins per missing good bought from the bank. */
   bankPrice: number;
   /** R6.3: goods an Exchange gives for one missing good. */

@@ -17,6 +17,7 @@ export const SHIPPED_TUNABLES: WwTunables = {
   greatWorksOffered: TUNABLES.greatWorksOffered,
   handSize: TUNABLES.handSize,
   turnsPerSeason: TUNABLES.turnsPerSeason,
+  twoSeatHandSize: TUNABLES.twoSeat.handSize,
   bankPrice: TUNABLES.bankPrice,
   exchangeRate: TUNABLES.exchangeRate,
   buyLimit: TUNABLES.buyLimitPerNeighbour,

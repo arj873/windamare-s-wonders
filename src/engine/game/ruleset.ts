@@ -1,7 +1,4 @@
-/**
- * The Windamere ruleset object for the core (docs/ENGINE.md §8), for 3 to 7 seats. Not yet: the
- * 2-player variant (R14).
- */
+/** The Windamere ruleset object for the core (docs/ENGINE.md §8), for 2 to 7 seats. */
 import type { Ruleset } from '../core';
 import { COVERED } from './build';
 import type { WwRules } from './content';
@@ -20,7 +17,7 @@ export function windamereRuleset(rules: WwRules): Ruleset<WwSeat, WwTable> {
   return {
     id: RULESET_ID,
     version: RULESET_VERSION,
-    minSeats: 3, // 2 seats need the R14 variant (Burn), not written yet
+    minSeats: 2, // 2 seats: the R14 variant (a Burn each turn but the last)
     maxSeats: 7,
     cards: rules.content.cards,
     effects: rules.effects,
@@ -49,5 +46,10 @@ export function windamereRuleset(rules: WwRules): Ruleset<WwSeat, WwTable> {
     zones: { [COVERED]: 'public', [GLEAN]: 'owner' },
     discardVisibility: 'hidden',
     maskTable,
+    // R14.3: the other town sees that a card was burned, not which.
+    maskRevealArgs: (args) =>
+      args !== null && typeof args === 'object' && !Array.isArray(args) && 'burn' in args
+        ? { ...args, burn: -1 }
+        : args,
   };
 }

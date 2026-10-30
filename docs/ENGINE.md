@@ -5,8 +5,8 @@ Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this fil
 
 Status (2026-10-30): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
 what the code does. **§14 lists the contract changes the Windamere rules still need: planned,
-not implemented. §15 is the Windamere game (E2): playable for 3 to 7 towns on the D2c rules;
-with the Great Work choice; not yet 2 players or Recall.**
+not implemented. §15 is the Windamere game (E2): playable for 2 to 7 towns on the D2c rules and
+the shipped content, Great Work choice included; not yet Recall.**
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
 resolution order, hand passing, rounds, prompts, scoring hooks and per-seat views. It does not
@@ -55,7 +55,7 @@ engine.ruleset                                      // the ruleset (card defs: e
 ```
 
 **The Windamere engine:** `createWindamereEngine(content?)` (barrel export, `src/engine/game/`)
-returns `DraftEngine<WwSeat, WwTable>` for 3 to 7 towns (§15); `content` defaults to the shipped
+returns `DraftEngine<WwSeat, WwTable>` for 2 to 7 towns (§15); `content` defaults to the shipped
 card data (`windamereContent()`, design's `src/content/windamere`). A
 `DraftEngine<WwSeat, WwTable>` is not assignable to `DraftEngine<unknown, unknown>` (`resolve`
 steps are contravariant), so cast it as net already does for the toy engine.
@@ -97,8 +97,8 @@ interface Card {
 - Seats sit clockwise. **Left neighbour = `(s + 1) % n`**, **right neighbour = `(s - 1 + n) % n`**
   (sitting at a table, the next player clockwise is on your left).
 - Hands pass **`'left'`** (to `s + 1`) or **`'right'`** (to `s - 1`), per round (§5).
-- With 2 seats both neighbours are the same seat. The rules use no neutral seat (R14); their
-  2-player variant needs §14 C1 and C2.
+- With 2 seats both neighbours are the same seat. The rules use no neutral seat; their 2-player
+  variant (R14) is in §15.3.
 
 Helpers: `leftOf(state, s)`, `rightOf(state, s)`, `neighboursOf(state, s)` → `[left, right]`
 (deduplicated with 2 seats), `passTarget(state, s)`.
@@ -335,6 +335,7 @@ A view has the `DraftState` shape, so UI renders it unchanged. Masked for everyo
 | log entries with `to`                  | dropped unless the viewer is listed                                         |
 | `rng`, `config.seed`                   | `[0, 0, 0, 0]`, `HIDDEN_SEED`                                               |
 | ruleset secrets                        | `ruleset.maskSeat(data, viewer, owner)`, `ruleset.maskTable(table, viewer)` |
+| others' `lastReveal` pick `args`       | `ruleset.maskRevealArgs(args, viewer, owner)` (e.g. which card was burned)  |
 
 At `gameOver`, owner-only zones are revealed; `'hidden'` zones, deck, box, rng and seed stay
 hidden. A view shares unchanged parts with the state: treat it as read-only.
@@ -385,6 +386,7 @@ interface Ruleset<S, T> {
   zones?: Record<string, 'public' | 'owner' | 'hidden'>; // seat zones and their visibility
   discardVisibility?: 'public' | 'hidden'; // default 'hidden'
   maskSeat?(data: S, viewer: Viewer, owner: SeatId): S;
+  maskRevealArgs?(args: Json, viewer: Viewer, owner: SeatId): Json; // others' revealed args
   maskTable?(table: T, viewer: Viewer): T;
 }
 
@@ -522,7 +524,7 @@ legalActions soundness and view-safety on random playouts (2-5 seats).
   rely on hands during the toy's opening prompts).
 - Memory of passed hands is not in views (§7). The rules want the engine to hand it out
   (R15.8): §14 C10.
-- 2-player: the rules use no neutral seat (R14): §14 C1, C2.
+- 2-player: the rules use no neutral seat (R14): §15.3.
 - Pick changes before the reveal stay (R15.2): `unpick` and re-picking are kept.
 - The log is not trimmed (a game is ~20 turns); revisit if states get large.
 
@@ -533,34 +535,15 @@ human (H1), and design's D2c changes (new goods, a single-card pick, neighbour t
 in this list is in the code yet. Each change lands with its tests, §1-§13 are updated in the
 same commit, and the row leaves this list. Done so far: C3 (prompt groups, §6), C4
 (`startBeforeDeal`, §5, plus `onRoundStart`), C5 (`normalizePick`), C6 (pick choices reach
-`onPlay`), C9 (tie-break list), and an `onLeftovers` hook (for the D2c glean).
+`onPlay`), C9 (tie-break list), an `onLeftovers` hook (for the D2c glean), and C1/C2 for 2 seats
+(the Burn is a pick arg; `maskRevealArgs` hides it, §7).
 
-| #   | Change                                                                   | Rules    | Breaking for                |
-| --- | ------------------------------------------------------------------------ | -------- | --------------------------- |
-| C1  | 2 seats only: a turn also burns a second card                            | R14.2    | none (planned as pick args) |
-| C2  | Secret roles: a burned card's face stays hidden in the reveal            | R14.3    | none (additive)             |
-| C7  | Effects carry their source (card, Perk, tier)                            | R12.2a-b | ruleset code only           |
-| C8  | `checkRuleset` also validates effects that are not on cards              | R13.3    | none (additive)             |
-| C10 | Recall: each seat's owner-only record of the hands it passed this round  | R15.8    | none (additive field)       |
-| C11 | `Ruleset` takes the card type, so `ctx.def()` returns the Windamere card | none     | ruleset code only (types)   |
-
-### C1. 2 seats: the Burn
-
-D2c made the pick a single card (R4.1), which the core already supports, so multi-card picks are
-not needed for 3-7 seats. With 2 seats a town also Burns a second card on turns 1 to 4 (R14.2).
-Plan: the pick names it in `args` (`{ burn: CardId }`), a resolve step moves it from the hand to
-the discard, and C2 keeps it out of the public reveal. `legalPicks` grows to at most 10 × 9 × 2 =
-180 picks on a fresh 10-card hand (one card to Build or Spend, another to Burn).
-
-### C2. Secret roles (2-player Burn)
-
-- `Ruleset.secretUses?: string[]` (Windamere: `['burn']`). In `lastReveal` and in the public
-  `'reveal'` log entry, a card with a secret use shows as `{ id: -1 - k, def: HIDDEN_CARD }` to
-  everyone but its owner. The role stays public ("a card was burned", R14.3). The full state
-  keeps the face.
-- Today the reveal log entry carries `card.def` for every pick (`reveal` in flow.ts), so without
-  C2 a burn leaks through the log as well as through `lastReveal`.
-- The leak test (§7) adds: scramble the face of every secret-use card.
+| #   | Change                                                                   | Rules    | Breaking for              |
+| --- | ------------------------------------------------------------------------ | -------- | ------------------------- |
+| C7  | Effects carry their source (card, Perk, tier)                            | R12.2a-b | ruleset code only         |
+| C8  | `checkRuleset` also validates effects that are not on cards              | R13.3    | none (additive)           |
+| C10 | Recall: each seat's owner-only record of the hands it passed this round  | R15.8    | none (additive field)     |
+| C11 | `Ruleset` takes the card type, so `ctx.def()` returns the Windamere card | none     | ruleset code only (types) |
 
 ### C7. Effect sources
 
@@ -594,8 +577,8 @@ Everything else the rules need fits the current contract; how the game uses it i
 ### Rules questions found (for design)
 
 1. _(answered)_ R14.3 against R15.8 (a burned card can often be worked out): D2c's R14.3 now
-   says so (research R4 D7). C2 still hides the face, so the engine never tells more than the
-   rules do.
+   says so (research R4 D7). The engine still hides which card was burned (`maskRevealArgs`),
+   so it never tells more than the rules do.
 2. **R8.3** runs the Great Work check only after steps 2 and 4. Labour gained at Season end would
    wait for the next turn, and at Winter's end it would never count. No card in CARDS.md gives
    labour at Season end today, so this is moot unless one is added.
@@ -605,8 +588,8 @@ Everything else the rules need fits the current contract; how the game uses it i
 `src/engine/game/`, exported from the barrel. Rules: `docs/RULES.md`, approved by the human
 (H1), with design's D2c changes (on `agent/design` d3eda57, not on main yet): five new goods, a
 single-card pick with a glean on the fifth turn, buying goods from neighbours. Everything below
-follows D2c. **Playable for 3 to 7 towns** with `createWindamereEngine(content)`, Great Work
-choice included; not yet: the 2-player variant, Recall (list at the end).
+follows D2c. **Playable for 2 to 7 towns** with `createWindamereEngine()`, Great Work choice
+included; not yet: Recall (§15.3).
 
 **Content in, rules out.** `compileContent(content: WwContent): WwRules` (throws on bad content)
 turns design's data (`src/content/`, CARDS.md §1 shapes) into lookups, the effect registry and
@@ -713,15 +696,24 @@ the prompts and are named nowhere in the state. Timeout: the first offered (R15.
 is dealt and the Spring Raid revealed. Net: this is the one decision outside a pick (R15.10),
 with its own 60 s clock; `waitingOn` and `defaultAction` cover it.
 
-**Not yet:**
+### 15.3 Two players (R14)
 
-- the 2-player variant (R14: Burn on turns 1-4, §14 C1, C2). `minSeats` is 3 until then.
-- Recall (R15.8, §14 C10). Timeouts use the fallback pick (R15.6); the Easy bot is bots' lane.
+`minSeats` is 2. With 2 seats: 10 cards a hand from the 4-seat deck (`twoSeatHandSize`), the rest
+undealt. On turns 1 to 4 the pick also names the card to Burn, `args.burn: CardId` (another card
+of the hand; `normalizePick` fills the first other card, R15.6). Step 1 moves it face down to
+the discard, before the pass. The fifth turn is a pick and a glean, no Burn (R14.4). In views the
+other town's revealed `burn` is `-1` (`maskRevealArgs`, R14.3): it sees that a card was burned,
+not which. The only neighbour counts once everywhere (buying limit 2 a turn in all, bounty,
+Tolls, `scoreBeat`). `legalPicks` lists each choice with every other card as the Burn: up to
+10 × 9 Spends plus the payable Builds × 9 on a fresh hand.
+
+**Not yet:** Recall (R15.8, §14 C10). Timeouts use the fallback pick (R15.6); the Easy bot is
+bots' lane.
 
 **Shipped content** (`shipped.ts`): `windamereContent()` maps design's `src/content/windamere`
 (goods, cards, Great Works, Raids, Honours, its R16 `TUNABLES`) to `WwContent`; design keeps its
 own field names (`buyLimitPerNeighbour`, per-Season objects) and this file maps them. It passes
-`checkContent`, and random games on it run to a scored end at 3, 5 and 7 towns (tested).
+`checkContent`, and random games on it run to a scored end at 2, 3, 5 and 7 towns (tested).
 
 Tests use `src/engine/game/testing/fixture.ts`: made-up test content whose goods (flint, slate,
 honey) are not the game's, and `testing/helpers.ts`. The unchanged systems are tested on hand-built

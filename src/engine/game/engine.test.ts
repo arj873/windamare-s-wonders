@@ -41,7 +41,7 @@ describe('createWindamereEngine() on the shipped content', () => {
     expect(Object.keys(s.seats[0]!.data.store)).toEqual(['reed', 'peat', 'salt', 'wax', 'horn']);
   });
 
-  for (const seats of [3, 5, 7]) {
+  for (const seats of [2, 3, 5, 7]) {
     it(`${seats} towns play a random game to a scored end`, () => {
       const end = playout(seats, seats * 31);
       expect(end.result?.scores).toHaveLength(seats);

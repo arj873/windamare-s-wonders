@@ -328,5 +328,7 @@ export interface Ruleset<S = unknown, T = unknown> {
   /** Default 'hidden'. */
   discardVisibility?: 'public' | 'hidden';
   maskSeat?(data: S, viewer: Viewer, owner: SeatId): S;
+  /** The `args` of `owner`'s revealed pick as `viewer` sees it in `lastReveal` (e.g. a secret burn). */
+  maskRevealArgs?(args: Json, viewer: Viewer, owner: SeatId): Json;
   maskTable?(table: T, viewer: Viewer): T;
 }

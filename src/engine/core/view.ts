@@ -42,9 +42,22 @@ export function viewFor<S, T>(
       data: rules.maskSeat ? rules.maskSeat(s.data, viewer, s.id) : s.data,
     };
   });
+  const mask = rules.maskRevealArgs;
+  const lastReveal =
+    state.lastReveal && mask
+      ? {
+          ...state.lastReveal,
+          picks: state.lastReveal.picks.map((p) =>
+            p.seat === seat || p.args === undefined
+              ? p
+              : { ...p, args: mask(p.args, viewer, p.seat) },
+          ),
+        }
+      : state.lastReveal;
 
   return {
     ...state,
+    lastReveal,
     config: { ...state.config, seed: HIDDEN_SEED },
     seats,
     deck: hide(state.deck),
