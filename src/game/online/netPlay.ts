@@ -160,7 +160,8 @@ export class NetPlay<S, T> {
     const leave = h(
       'button',
       {
-        class: 'btn btn-ghost',
+        // Solid, not ghost: the dock floats over the log text.
+        class: 'btn',
         attrs: { 'data-k': 'leave-room' },
         on: {
           click: () =>
@@ -173,17 +174,18 @@ export class NetPlay<S, T> {
       },
       'Leave',
     );
+    // Bottom right, over the log column: never over the hand or the towns.
     this.dock = h(
       'div',
-      { class: 'ol-dock' },
+      { class: 'ww-shell ol-dock' },
       this.dockPanel,
+      this.presenceEl,
       h('div', { class: 'ol-row' }, leave, this.dockToggle),
     );
     this.element = h(
       'div',
       { class: 'ol-play', attrs: { 'data-k': 'online-table' } },
       this.table.element,
-      this.presenceEl,
       this.dock,
     );
   }
