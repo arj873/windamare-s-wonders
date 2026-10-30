@@ -41,7 +41,7 @@ describe('Halls, upgrades and Landmarks (R7)', () => {
     const s = newWwGame(3);
     const shrine = build(s, 0, 'tf-shrine');
     expect(buildCost(fx, 'tf-hall', shrine.id)).toEqual({ slate: 1 });
-    expect(buildCost(fx, 'tf-hall', null)).toEqual({ reed: 2, slate: 1 });
+    expect(buildCost(fx, 'tf-hall', null)).toEqual({ flint: 2, slate: 1 });
     const hall = build(s, 0, 'tf-hall', shrine.id);
     const town = s.seats[0]!;
     expect(town.tableau).toEqual([hall]);

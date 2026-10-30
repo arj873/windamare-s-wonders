@@ -38,13 +38,13 @@ describe('Raids (R9)', () => {
     const s = summer();
     build(s, 1, 'tf-fence'); // short 2
     townData(s, 2).coins = 1; // short 3, has 1
-    townData(s, 2).store.reed = 4;
+    townData(s, 2).store.flint = 4;
     townData(s, 2).labour = 2;
     const out = resolveRaid(fx, ctxOf(s));
     expect(out).toEqual(['plundered', 'plundered', 'plundered']);
     expect(townData(s, 1).coins).toBe(3);
     expect(townData(s, 2).coins).toBe(0);
-    expect(townData(s, 2).store.reed).toBe(4);
+    expect(townData(s, 2).store.flint).toBe(4);
     expect(townData(s, 2).labour).toBe(2);
     expect(s.seats[1]!.tableau).toHaveLength(1);
     expect(townData(s, 1).valour).toEqual([]);
@@ -116,12 +116,12 @@ describe('Raids (R9)', () => {
     const s = newWwGame(2);
     toSeason(s, 3); // Winter, strength 7
     s.turn = s.roundPicks - 1; // the Season's last turn has resolved
-    build(s, 0, 'tf-cellar'); // season end: 1 reed, 2 coins
+    build(s, 0, 'tf-cellar'); // season end: 1 flint, 2 coins
     townData(s, 0).coins = 0;
     continueAfter(ctxOf(s), 'turn');
     // Plundered with 0 coins first (nothing lost), then the Cellar pays: the coins survive.
     expect(townData(s, 0).coins).toBe(2);
-    expect(townData(s, 0).store.reed).toBe(1);
+    expect(townData(s, 0).store.flint).toBe(1);
     expect(s.phase).toEqual({ kind: 'gameOver' });
     expect(s.result?.scores.map((x) => x.seat)).toEqual([0, 1]);
     const kinds = s.log.map((e) => e.kind);

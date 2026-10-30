@@ -1,6 +1,6 @@
 /**
  * TEST FIXTURE, NOT GAME CONTENT. A small made-up Windamere content set for the engine's own
- * tests. Its goods (reed, slate, honey) are deliberately not the game's, to show that no code
+ * tests. Its goods (flint, slate, honey) are deliberately not the game's, to show that no code
  * names a good. The real content is design's `src/content/`. Never import this from shipped code.
  */
 import type { EffectSpec } from '../../core';
@@ -31,10 +31,10 @@ const lore = (rank: number, season: Season) =>
 
 export const FX_CARDS: WwCardDef[] = [
   card('tf-hut', 'holding', 'spring', []),
-  card('tf-cellar', 'holding', 'autumn', [{ type: 'seasonEnd', gains: { reed: 1, coins: 2 } }]),
-  card('tf-shrine', 'hall', 'spring', [{ type: 'renown', amount: 2 }], { cost: { reed: 1 } }),
+  card('tf-cellar', 'holding', 'autumn', [{ type: 'seasonEnd', gains: { flint: 1, coins: 2 } }]),
+  card('tf-shrine', 'hall', 'spring', [{ type: 'renown', amount: 2 }], { cost: { flint: 1 } }),
   card('tf-hall', 'hall', 'summer', [{ type: 'renown', amount: 4 }], {
-    cost: { reed: 2, slate: 1 },
+    cost: { flint: 2, slate: 1 },
     upgrade: { of: ['tf-shrine'], cost: { slate: 1 } },
   }),
   card('tf-great-hall', 'hall', 'autumn', [{ type: 'renown', amount: 7 }], {
@@ -115,7 +115,7 @@ export const FX_GREAT_WORKS: GreatWorkDef[] = [
     tiers: tiers(
       [2, 5, 9, 14],
       [
-        [{ type: 'onBuild', gains: { reed: 2, labour: 3 } }],
+        [{ type: 'onBuild', gains: { flint: 2, labour: 3 } }],
         [{ type: 'renown', amount: 3 }],
         [{ type: 'scoreGoods', per: 3, amount: 1 }],
         [{ type: 'renown', amount: 6 }],
@@ -126,7 +126,7 @@ export const FX_GREAT_WORKS: GreatWorkDef[] = [
 
 export const FIXTURE: WwContent = {
   goods: [
-    { id: 'reed', name: 'Reed' },
+    { id: 'flint', name: 'Flint' },
     { id: 'slate', name: 'Slate' },
     { id: 'honey', name: 'Honey' },
   ],

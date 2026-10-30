@@ -12,7 +12,7 @@ describe('setup (R2) and what is public (R1.11)', () => {
     for (const seat of s.seats) {
       expect(seat.data).toEqual({
         coins: 5,
-        store: { reed: 0, slate: 0, honey: 0 },
+        store: { flint: 0, slate: 0, honey: 0 },
         labour: 0,
         greatWork: null,
         tiers: 0,

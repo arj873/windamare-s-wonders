@@ -33,11 +33,11 @@ describe('content check', () => {
   });
 
   it('R1.3 goods are data: a town stores exactly the content goods, in goods order', () => {
-    expect(Object.keys(townData(newWwGame(3), 0).store)).toEqual(['reed', 'slate', 'honey']);
+    expect(Object.keys(townData(newWwGame(3), 0).store)).toEqual(['flint', 'slate', 'honey']);
     const more = fixtureWith({ goods: [{ id: 'amber', name: 'Amber' }, ...FIXTURE.goods] });
     expect(townData(newWwGame(3, 1, more), 0).store).toEqual({
       amber: 0,
-      reed: 0,
+      flint: 0,
       slate: 0,
       honey: 0,
     });
@@ -51,7 +51,7 @@ describe('content check', () => {
     const bad = { ...FIXTURE, goods: [...FIXTURE.goods, { id: 'coins', name: 'Coins' }] };
     expect(checkContent(bad)).toContain('good id coins is reserved');
     expect(checkContent({ ...FIXTURE, goods: [...FIXTURE.goods, FIXTURE.goods[0]!] })).toContain(
-      'duplicate good reed',
+      'duplicate good flint',
     );
   });
 
@@ -83,7 +83,7 @@ describe('content check', () => {
   });
 
   it('R8.2 gains are positive, so labour only ever goes up', () => {
-    const goods = ['reed'];
+    const goods = ['flint'];
     expect(checkGains(goods, { labour: 2 }, { labour: true })).toBeNull();
     expect(checkGains(goods, { labour: -1 }, { labour: true })).toBe(
       'labour must be a positive integer',

@@ -769,7 +769,7 @@ Season-end effects, game over with scores (R3.6, R12.1).
 - `createWindamereEngine` still throws `WINDAMERE_NOT_READY` (and `createDraftEngine` refuses
   the ruleset: it has no resolve steps).
 
-Tests use `src/engine/game/testing/fixture.ts`: made-up test content whose goods (reed, slate,
+Tests use `src/engine/game/testing/fixture.ts`: made-up test content whose goods (flint, slate,
 honey) are not the game's, and `testing/helpers.ts` (`newWwGame` builds the starting state by
 hand until `createGame` can run). The content check passes on it; three deliberate bugs (tie-break
 order, bounty count, unmasked Raids) each made rule tests fail (checked by hand, reverted).

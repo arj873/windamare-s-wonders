@@ -57,7 +57,7 @@ describe('end scoring (R12)', () => {
     townData(s, 0).valour = [1, 2, 3]; // per token, not per value
     expect(score()).toBe(6 + 3);
     build(s, 0, 'tf-mark-goods');
-    Object.assign(townData(s, 0).store, { reed: 3, honey: 2 }); // 5 goods: 2 x 1
+    Object.assign(townData(s, 0).store, { flint: 3, honey: 2 }); // 5 goods: 2 x 1
     expect(score()).toBe(6 + 3 + 2);
   });
 
@@ -90,7 +90,7 @@ describe('end scoring (R12)', () => {
   it('R12.2g 1 Renown per 4 coins, rounded down; goods score nothing', () => {
     const s = bare();
     townData(s, 0).coins = 11;
-    Object.assign(townData(s, 0).store, { reed: 9, slate: 9 });
+    Object.assign(townData(s, 0).store, { flint: 9, slate: 9 });
     expect(scoreTown(fx, s, 0)).toMatchObject({ treasury: 2, landmarks: 0 });
   });
 

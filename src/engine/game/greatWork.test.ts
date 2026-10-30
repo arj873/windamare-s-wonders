@@ -38,11 +38,11 @@ describe('Great Works (R8)', () => {
   });
 
   it('R8.3 labour from a tier reward counts in the same check', () => {
-    // tg-larder tier I (2 labour) gives 3 labour and 2 reed: 5 labour reaches tier II.
+    // tg-larder tier I (2 labour) gives 3 labour and 2 flint: 5 labour reaches tier II.
     const s = withLabour('tg-larder', 2);
     expect(greatWorkCheck(fx, ctxOf(s), 0)).toBe(2);
     expect(townData(s, 0).labour).toBe(5);
-    expect(townData(s, 0).store.reed).toBe(2);
+    expect(townData(s, 0).store.flint).toBe(2);
   });
 
   it('R8.4 a one-off reward pays once, when its tier completes', () => {
