@@ -39,9 +39,9 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     'The Mere Bridge',
     [fx.toll(1, 'holding')],
     [
-      [fx.renown(1), fx.onBuild('4c')],
+      [fx.renown(2), fx.onBuild('4c')],
       [fx.renown(2), fx.income(1)],
-      [fx.renown(4)],
+      [fx.renown(5)],
       [fx.renown(8)],
     ],
   ),
@@ -51,7 +51,7 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     [fx.spendBonus('lore', '1lab')],
     [
       [fx.renown(2)],
-      [fx.renown(2), fx.onBuild('2W')],
+      [fx.renown(4), fx.onBuild('2W')],
       [fx.renown(6)],
       [fx.renown(4), fx.scorePerKind('lore', 2)],
     ],
@@ -75,14 +75,14 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
       [fx.renown(1), fx.onBuild('2W')],
       [fx.renown(2), fx.yield('1W')],
       [fx.renown(4)],
-      [fx.renown(6)],
+      [fx.renown(5)],
     ],
   ),
   work(
     'the-stonewrights-spire',
     "The Stonewright's Spire",
     [fx.yield('1lab')],
-    [[fx.renown(2)], [fx.renown(4)], [fx.renown(5)], [fx.renown(8)]],
+    [[fx.renown(2)], [fx.renown(4)], [fx.renown(5)], [fx.renown(6)]],
     [6, 12, 19, 27],
   ),
   work(
@@ -90,8 +90,8 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     'The Hall of Echoes',
     [fx.buildBonus('hall', '2c')],
     [
-      [fx.renown(1), fx.onBuild('3c')],
-      [fx.renown(2), fx.discount('hall', 1)],
+      [fx.renown(2), fx.onBuild('3c')],
+      [fx.renown(4), fx.discount('hall', 1)],
       [fx.renown(4)],
       [fx.renown(4), fx.scorePerKind('hall', 2)],
     ],
@@ -132,7 +132,7 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
       [fx.renown(1), fx.yield('1S')],
       [fx.renown(2), fx.exchange('horn')],
       [fx.renown(4)],
-      [fx.renown(8)],
+      [fx.renown(6)],
     ],
   ),
   work(
@@ -150,7 +150,7 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     'the-ring-of-oaths',
     'The Ring of Oaths',
     [fx.scoreBeat('guard', 2)],
-    [[fx.renown(1), fx.guard(1)], [fx.renown(2)], [fx.renown(4), fx.guard(1)], [fx.renown(8)]],
+    [[fx.renown(1), fx.guard(1)], [fx.renown(4)], [fx.renown(4), fx.guard(1)], [fx.renown(8)]],
   ),
   work(
     'the-coinwell',
@@ -163,10 +163,10 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     'The Fourfold Gate',
     [fx.scoreSets(2)],
     [
-      [fx.renown(1), fx.onBuild('3c')],
-      [fx.renown(2)],
+      [fx.renown(2), fx.onBuild('3c')],
+      [fx.renown(4)],
       [fx.renown(6)],
-      [fx.renown(5), fx.scoreSets(2)],
+      [fx.renown(6), fx.scoreSets(2)],
     ],
   ),
 ];

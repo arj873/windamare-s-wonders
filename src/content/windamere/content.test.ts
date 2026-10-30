@@ -155,9 +155,10 @@ describe('Season decks (R3.2, R14.1)', () => {
 });
 
 describe('prices (R6.3, R6.6c)', () => {
-  it('market price rises every Season, never costs 2, and stays below the bank', () => {
+  it('market price: never falls, Winter above Spring, never 2, below the bank', () => {
     const p = SEASONS.map((s) => TUNABLES.marketPrice[s]);
-    for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThan(p[i - 1]!);
+    for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThanOrEqual(p[i - 1]!);
+    expect(p[p.length - 1]!).toBeGreaterThan(p[0]!);
     expect(p).not.toContain(2);
     expect(Math.max(...p)).toBeLessThan(TUNABLES.bankPrice);
   });
@@ -253,6 +254,13 @@ describe('cards (R1.6, R7, R13)', () => {
       const [lo, hi] = range[c.season];
       expect(rank, c.id).toBeGreaterThanOrEqual(lo);
       expect(rank, c.id).toBeLessThanOrEqual(hi);
+    }
+  });
+
+  it('no card prints Renown 7 (research R4 O15)', () => {
+    for (const c of [...CARDS, ...PENDING_CARDS]) {
+      const renown = c.effects.filter((e) => e.type === 'renown').map((e) => e.amount);
+      expect(renown, c.id).not.toContain(7);
     }
   });
 });

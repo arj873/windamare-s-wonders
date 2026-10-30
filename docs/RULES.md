@@ -160,9 +160,9 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
     turn, up to as many as that neighbour held then. Stores are public, so the buyer sees what
     it can buy when it picks.
   - b. **Limit**: at most 2† goods from each neighbour per turn, of any types.
-  - c. **Market price**, per good, by Season: Spring 1†, Summer 3†, Autumn 4†, Winter 5† coins.
-    Goods get dearer as the year runs towards a Winter with no Yield. (No Season costs 2:
-    research R4 §5.3 noted that a flat 2 is 7 Wonders' trade price.)
+  - c. **Market price**, per good, by Season: Spring 1†, Summer 1†, Autumn 1†, Winter 3† coins.
+    Goods get dearer in Winter, which has no Yield. (No Season costs 2: research R4 §5.3 noted
+    that a flat 2 is 7 Wonders' trade price. D9c set these values; CARDS.md §14.)
   - d. The good **moves**: it leaves the seller's store and is used at once in the buyer's Build
     (it never enters the buyer's store). The coins go to the seller. The seller cannot refuse.
   - e. Effects never lower the market price. A `sellBonus` (R13) pays the seller extra coins from
@@ -416,7 +416,7 @@ These answer the open questions from net (MULTIPLAYER.md §2.1, §6) and researc
 | Bank price per missing good | 6 coins                                      | R6.3   |
 | Exchange rate               | 2 of one good → 1 other                      | R6.3   |
 | Buying limit per neighbour  | 2 goods a turn                               | R6.6b  |
-| Market price by Season      | 1, 3, 4, 5 coins a good                      | R6.6c  |
+| Market price by Season      | 1, 1, 1, 3 coins a good                      | R6.6c  |
 | Tier thresholds (standard)  | 4, 9, 15, 22 labour                          | R8.1   |
 | Valour by Season            | 2, 3, 4, 5                                   | R9.4   |
 | Plunder                     | 1 coin per point short                       | R9.5   |
