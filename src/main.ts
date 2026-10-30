@@ -1,10 +1,8 @@
 import '@fontsource-variable/fraunces';
 import '@fontsource-variable/nunito';
 import '@fontsource/marcellus';
+import './ui/theme/tokens.css';
 import { APP_TITLE } from './shared/title';
-
-// Design tokens come from the art lane; the file may not exist yet on this branch.
-import.meta.glob('./ui/theme/tokens.css', { eager: true });
 
 const root = document.getElementById('app');
 if (root) {
