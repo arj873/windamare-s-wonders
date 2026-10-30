@@ -177,21 +177,10 @@ effect line or amount, a double space, or a raw kebab content id. It also builds
 effect type in the R13 table of `docs/RULES.md`, so a type ruled but without text fails even before a
 card uses it.
 
-**Open findings (4 cards, 3 effect types, owner ui; all medium: players read the raw id):**
-
-| Card                  | Effect type           | Shown on the face as          |
-| --------------------- | --------------------- | ----------------------------- |
-| `wend-fair`           | `onBuildNeighbourMin` | `onBuildNeighbourMin`         |
-| `commons-of-the-wend` | `scoreNeighbourMin`   | `scoreNeighbourMin`           |
-| `kinsfolk-hall`       | `scoreNeighbourMin`   | `1 Renown; scoreNeighbourMin` |
-| `brokers-arcade`      | `scoreSales`          | `scoreSales`                  |
-
-`brokers-arcade` is one more than research reported. Cause: `effectText` in `text.ts` has no case for
-`onBuildNeighbourMin`, `scoreNeighbourMin`, `scoreSales` (all ruled in R13) and falls back to
-`spec.type`. The same raw id reaches the tooltip, the aria-label and the Card list sheet. Four tests
-are `it.fails` now; ui removes the markers and `KNOWN_BAD_CARDS` in the commit that adds the three
-texts. A plain test fails at once if any other card gets bad text. I checked that adding the three
-cases to `text.ts` (then reverted) makes all four `it.fails` pass, so these are the only problems.
+**Open findings: none.** The first run found 4 cards printing a raw effect id (`wend-fair`
+`onBuildNeighbourMin`, `commons-of-the-wend` and `kinsfolk-hall` `scoreNeighbourMin`, `brokers-arcade`
+`scoreSales`; `effectText` had no case for those three R13 types). Fixed by ui (0b34008, PR #110);
+the tests are now plain and pass for every card, Perk and tier reward on every surface.
 
 Not checked: wording quality (clarity, grammar of the new sentences), pluralisation ("1 coins"),
 translations, the text on card art, the rules overlay (How to play) text, log lines.

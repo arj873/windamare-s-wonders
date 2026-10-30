@@ -6,9 +6,6 @@
  * strings the table builds from a face, the Card list sheet (real DOM), the monument,
  * the Great Work choice and the help tooltips. No raw effect type id (camelCase), no "undefined",
  * "NaN", "[object", "Infinity", no empty effect line or empty amount, no raw content id.
- *
- * Known failures are `it.fails` (docs/AUDIT.md): the owning lane (ui) removes the marker in the
- * commit that fixes them. The failure list in each assertion names the card ids.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -103,23 +100,6 @@ function sampleSpec(type: string, params: string[]): EffectSpec {
   return spec;
 }
 
-/**
- * Known findings (docs/AUDIT.md Q6): effect types with no text in text.ts, so the card shows the
- * raw id. ui removes `.fails` below, and this list, in the commit that adds the text.
- */
-const KNOWN_BAD_CARDS = ['wend-fair', 'commons-of-the-wend', 'brokers-arcade', 'kinsfolk-hall'];
-
-describe('no NEW card with bad text (plain test; the known four are the it.fails below)', () => {
-  it('every card outside the known findings reads clean on its face', () => {
-    const bad = CARDS.filter(
-      (c) =>
-        badText(effectsText(rules, c.effects)).length > 0 ||
-        badText(presenter.card(c.id).text).length > 0,
-    ).map((c) => c.id);
-    expect(bad.filter((id) => !KNOWN_BAD_CARDS.includes(id))).toEqual([]);
-  });
-});
-
 // ---------------------------------------------------------------------------------------------
 // Effects
 // ---------------------------------------------------------------------------------------------
@@ -140,7 +120,7 @@ describe('effect text (R13 vocabulary)', () => {
     }
   });
 
-  it.fails('every effect type ruled in R13 reads as a sentence, never as its raw id', () => {
+  it('every effect type ruled in R13 reads as a sentence, never as its raw id', () => {
     const f = new Findings();
     for (const [type, params] of ruled) {
       const text = effectText(rules, sampleSpec(type, params));
@@ -150,7 +130,7 @@ describe('effect text (R13 vocabulary)', () => {
     expect(f.lines).toEqual([]);
   });
 
-  it.fails('every effect on every shipped card, Perk and tier reward reads as a sentence', () => {
+  it('every effect on every shipped card, Perk and tier reward reads as a sentence', () => {
     const f = new Findings();
     const one = (where: string, spec: EffectSpec): void => {
       const text = effectText(rules, spec);
@@ -173,36 +153,33 @@ describe('effect text (R13 vocabulary)', () => {
 // ---------------------------------------------------------------------------------------------
 
 describe('card faces and the strings the table builds from them', () => {
-  it.fails(
-    'every card face (name, kind, cost, effect line, Spend line, amount labels) is clean',
-    () => {
-      const f = new Findings();
-      for (const c of CARDS) {
-        const face = presenter.card(c.id);
-        const where = `card ${c.id}`;
-        f.check(`${where} name`, face.name);
-        f.check(`${where} kind`, face.kind);
-        f.check(`${where} cost`, face.cost || 'free');
-        f.check(`${where} text`, face.text);
-        f.check(`${where} Spend`, face.alt);
-        for (const p of [...(face.costParts ?? []), ...(face.altParts ?? [])]) {
-          f.check(`${where} amount label`, p.label);
-          f.check(`${where} amount`, p.text);
-        }
-        // The tooltip and the screen-reader label are built from the face (table.ts).
-        f.check(`${where} tooltip`, `${face.name}: ${face.text}`);
-        f.check(
-          `${where} aria-label`,
-          `${face.name}, ${face.kind}${face.cost ? `, costs ${face.cost}` : ''}: ${face.text}${face.alt ? `. ${face.alt}` : ''}`,
-        );
-        if (c.effects.length > 0 && face.text === 'No effect')
-          f.lines.push(`${where}: "No effect" but it has effects`);
+  it('every card face (name, kind, cost, effect line, Spend line, amount labels) is clean', () => {
+    const f = new Findings();
+    for (const c of CARDS) {
+      const face = presenter.card(c.id);
+      const where = `card ${c.id}`;
+      f.check(`${where} name`, face.name);
+      f.check(`${where} kind`, face.kind);
+      f.check(`${where} cost`, face.cost || 'free');
+      f.check(`${where} text`, face.text);
+      f.check(`${where} Spend`, face.alt);
+      for (const p of [...(face.costParts ?? []), ...(face.altParts ?? [])]) {
+        f.check(`${where} amount label`, p.label);
+        f.check(`${where} amount`, p.text);
       }
-      expect(f.lines).toEqual([]);
-    },
-  );
+      // The tooltip and the screen-reader label are built from the face (table.ts).
+      f.check(`${where} tooltip`, `${face.name}: ${face.text}`);
+      f.check(
+        `${where} aria-label`,
+        `${face.name}, ${face.kind}${face.cost ? `, costs ${face.cost}` : ''}: ${face.text}${face.alt ? `. ${face.alt}` : ''}`,
+      );
+      if (c.effects.length > 0 && face.text === 'No effect')
+        f.lines.push(`${where}: "No effect" but it has effects`);
+    }
+    expect(f.lines).toEqual([]);
+  });
 
-  it.fails('the Card list sheet (help), rendered in the DOM for every Season, is clean', () => {
+  it('the Card list sheet (help), rendered in the DOM for every Season, is clean', () => {
     const f = new Findings();
     let rows = 0;
     for (const s of SEASONS) {
