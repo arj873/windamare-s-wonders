@@ -21,7 +21,7 @@ any real token/seed generator.
 
 Open findings: none. The tests stay as regression guards; any lane that changes an API they use must keep them compiling.
 
-## Q1 — Windamere engine against docs/RULES.md (main 5dbac5e, fixture content)
+## Q1 — Windamere engine against docs/RULES.md (re-run on main b50fccd, fixture content)
 
 Tested: `src/engine/game/*` through `createWindamereEngine(FIXTURE)` in
 `src/engine/game/rules.audit.test.ts`. The real card data (`src/content/`) is not on main, so card
@@ -30,7 +30,7 @@ those two are covered only by the generic buy/short-supply tests and need a re-c
 
 **Open findings: none.** Method:
 
-- **Property tests (3 to 7 seats, 5 to 8 seeds each).** Whole 20-turn games of random but legal
+- **Property tests (2 to 7 seats, 5 to 8 seeds each).** Whole 20-turn games of random but legal
   _rich_ picks: purchases from either neighbour, Exchanges, bank, upgrades, random "any" goods,
   random Great Works, random starting coins and stores. A counter test proves they exercise
   buying, Exchanges, the bank, covers, gleans, tier completions and bounty. Per turn: arrival
@@ -52,9 +52,14 @@ those two are covered only by the generic buy/short-supply tests and need a re-c
   plunder size, covered cards counting, seller order, buy limit, missing glean, market price,
   bank price, final tier check): all but one equivalent mutant were caught by these tests.
 
-**Not implemented yet** (the engine says so in `ruleset.ts`): R14 (2-player variant: 10 cards,
-Burn) and R2.4/R2.5 (the Great Work choice at setup; towns start without one). Both are
-`it.todo` in the audit file; Q1 tests for them follow when engine lands them.
+**R14 and R2.4/R2.5 (landed in engine PR #27 / E2)** are now tested: 2 seats deal 10 cards
+from the 4-seat deck, a Burn is required on turns 1-4 and forbidden on the fifth (hands 10, 8, 6,
+4, 2, then the glean), a burned card has no effect and the other town sees only that a card was
+burned, the only neighbour counts once (buy limit, Toll, bounty); each town is offered 2 different
+Great Works, can choose only its own offers, may change until the last choice, and the choices are
+revealed together with the unchosen offers never visible in any view. The property games now run
+at 2 to 7 seats. Extra mutants checked (Burn unmasked, Burn on the last turn, wrong timeout
+choice): all caught.
 
 ## Checked and fine (tests pass, keep them green)
 

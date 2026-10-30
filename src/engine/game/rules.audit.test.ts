@@ -6,12 +6,13 @@
  *    upgrades, "any" goods) at 3 to 7 seats, with an independent oracle for Guard, Lore, Honours,
  *    scoring and ranking, and the invariants each turn must keep (R4.7, R4.8, R15.9, R7.8, ...);
  *  - targeted tests for rules the engine's own tests do not pin down.
- * `it.fails` = known finding (docs/AUDIT.md); `it.todo` = rule not implemented yet.
+ * `it.fails` = known finding (docs/AUDIT.md).
  */
 import { describe, expect, it } from 'vitest';
 import { Rng, type Card, type Json, type Pick, type SeatId } from '../core';
 import { FIXTURE } from './testing/fixture';
 import {
+  atChoice,
   build,
   fxEngine as e,
   newGame,
@@ -199,6 +200,9 @@ function richPick(s: WwState, seat: SeatId, rng: Rng): Pick {
     if (Array.isArray(args.any)) args.any = args.any.map(() => rng.pick(GOODS));
     if (Array.isArray(args.glean)) args.glean = args.glean.map(() => rng.pick(GOODS));
     if (use === 'build' && 'cover' in args && rng.int(3) === 0) args.cover = null;
+    if (typeof args.burn === 'number') {
+      args.burn = rng.pick(hand.filter((c) => c.id !== card.id)).id; // R14.2: any other card
+    }
     if (use === 'build' && Array.isArray(args.pay)) {
       const nbrs = neighboursOracle(s, seat);
       args.pay = (args.pay as { good: string }[]).map((p): Json => {
@@ -273,7 +277,7 @@ function playGame(
   return { end: s, turns };
 }
 
-const SEAT_COUNTS = [3, 4, 5, 6, 7];
+const SEAT_COUNTS = [2, 3, 4, 5, 6, 7];
 
 /** What the random games actually exercised (so a green run is not vacuous). */
 const seen = {
@@ -312,7 +316,7 @@ describe('whole games of random rich picks (R3-R13, R15.9)', () => {
   });
 
   it('R3.2-R3.5, R4.6: hands, passing and the glean follow the Season', () => {
-    for (const seats of [3, 5, 7]) {
+    for (const seats of [2, 3, 5, 7]) {
       playGame(seats, 4, ({ before, after, picks }) => {
         const turn = before.turn;
         const n = seats;
@@ -323,7 +327,8 @@ describe('whole games of random rich picks (R3-R13, R15.9)', () => {
           expect(after.turn).toBe(turn + 1);
           for (const t of before.seats) {
             const picked = picks.get(t.id)!.card;
-            const rest = t.hand.filter((c) => c.id !== picked).map((c) => c.id);
+            const burned = (picks.get(t.id)!.args as { burn?: number } | undefined)?.burn;
+            const rest = t.hand.filter((c) => c.id !== picked && c.id !== burned).map((c) => c.id);
             const to = after.seats[(t.id + dir + n) % n]!;
             expect(to.hand.map((c) => c.id)).toEqual(rest);
           }
@@ -336,7 +341,7 @@ describe('whole games of random rich picks (R3-R13, R15.9)', () => {
           if (after.phase.kind !== 'gameOver') {
             expect(after.round).toBe(before.round + 1);
             expect(after.turn).toBe(0);
-            expect(after.seats.every((t) => t.hand.length === 6)).toBe(true);
+            expect(after.seats.every((t) => t.hand.length === (seats === 2 ? 10 : 6))).toBe(true);
           }
         }
         // R3.3: Spring left, Summer right, Autumn left, Winter right.
@@ -543,7 +548,7 @@ describe('hidden information in the Windamere views (R1.11)', () => {
 
 describe('determinism (R15.9)', () => {
   it('the same seed and the same picks replay to byte-identical games', () => {
-    for (const seats of [3, 6]) {
+    for (const seats of [2, 3, 6]) {
       const run = () => {
         const log: string[] = [];
         playGame(seats, 31, ({ after }) => log.push(json(after)));
@@ -616,19 +621,220 @@ describe('setup (R2)', () => {
       const dealt = s.seats.flatMap((t) => t.hand).concat(s.deck);
       const want = FIXTURE.cards
         .filter((c) => c.season === 'spring')
-        .reduce((n, c) => n + c.counts[seats - 3]!, 0);
+        .reduce((n, c) => n + c.counts[seats === 2 ? 1 : seats - 3]!, 0); // R14.1: 2 seats use the 4-seat counts
       expect(dealt).toHaveLength(want);
       expect(new Set(dealt.map((c) => c.id)).size).toBe(want);
     }
   });
+});
 
-  it('R14 the 2-player variant (10 cards, Burn)', () => {
-    expect(() => newGame(2)).toThrow(); // not implemented: engine minSeats is 3
+describe('the Great Work choice (R2.4, R2.5, R15.10)', () => {
+  const offersOf = (s: WwState, seat: SeatId) =>
+    (s.prompts.find((p) => p.seat === seat)!.data as { offers: string[] }).offers;
+  const answer = (s: WwState, seat: SeatId, gw: string) =>
+    e.applyAction(s, {
+      type: 'answer',
+      seat,
+      prompt: s.prompts.find((p) => p.seat === seat)!.id,
+      answer: gw,
+    });
+
+  it('R2.4 every town is offered 2 different Great Works, none offered twice', () => {
+    for (const seats of SEAT_COUNTS) {
+      const s = atChoice(seats, 3);
+      const all = s.seats.flatMap((t) => offersOf(s, t.id));
+      expect(all).toHaveLength(seats * 2);
+      expect(new Set(all).size).toBe(seats * 2);
+      expect(all.every((g) => GW.has(g))).toBe(true);
+    }
   });
-  it.todo(
-    'R14.2 on turns 1-4 a two-player town picks two cards: one to Build or Spend, one to Burn',
-  );
-  it.todo('R2.4 R2.5 each town is dealt 2 Great Works and chooses one in secret (R15.10)');
+
+  it('R2.5 only the offered Great Works can be chosen, and only by the town offered them', () => {
+    const s = atChoice(3, 4);
+    const mine = offersOf(s, 0);
+    const theirs = offersOf(s, 1)[0]!;
+    expect(answer(s, 0, theirs).ok).toBe(false);
+    expect(answer(s, 0, 'not-a-great-work').ok).toBe(false);
+    expect(answer(s, 0, mine[0]!).ok).toBe(true);
+    // A pick cannot be made during the choice.
+    const pick = e.applyAction(s, { type: 'pick', seat: 0, pick: { card: 0, use: 'spend' } });
+    expect(pick.ok).toBe(false);
+  });
+
+  it('R2.5 R15.10 choices stay hidden, change freely, and are revealed together; the rest leave unseen', () => {
+    for (const seats of [2, 4, 7]) {
+      let s = atChoice(seats, 5);
+      const offers = s.seats.map((t) => offersOf(s, t.id));
+      for (const viewer of [...s.seats.map((t) => t.id), 'spectator' as const]) {
+        const v = json(e.viewFor(s, viewer));
+        offers.forEach((o, seat) => {
+          // A viewer sees only its own offers (the other towns' stay face down).
+          if (seat !== viewer)
+            for (const g of o) expect(v, `viewer ${viewer} sees ${g}`).not.toContain(`"${g}"`);
+        });
+      }
+      // Everyone but the last chooses (and one changes their mind): nothing is public yet.
+      const last = seats - 1;
+      for (let i = 0; i < last; i++) {
+        let r = answer(s, i, offers[i]![0]!);
+        if (!r.ok) throw new Error(r.error);
+        r = answer(r.state, i, offers[i]![1]!); // change
+        if (!r.ok) throw new Error(r.error);
+        s = r.state;
+        expect(s.seats.every((t) => t.data.greatWork === null)).toBe(true);
+        for (const viewer of [
+          ...s.seats.map((t) => t.id).filter((x) => x !== i),
+          'spectator' as const,
+        ]) {
+          expect(json(e.viewFor(s, viewer))).not.toContain(`"${offers[i]![1]!}"`);
+        }
+      }
+      const r = answer(s, last, offers[last]![0]!);
+      if (!r.ok) throw new Error(r.error);
+      const done = r.state;
+      expect(done.phase.kind).toBe('pick');
+      // Revealed together: each town has the last answer it gave.
+      done.seats.forEach((t, i) =>
+        expect(t.data.greatWork).toBe(i === last ? offers[i]![0] : offers[i]![1]),
+      );
+      // The Great Works nobody took leave the game unseen, in any view.
+      const taken = new Set(done.seats.map((t) => t.data.greatWork));
+      for (const viewer of [...done.seats.map((t) => t.id), 'spectator' as const]) {
+        const v = json(e.viewFor(done, viewer));
+        for (const g of offers.flat()) if (!taken.has(g)) expect(v).not.toContain(`"${g}"`);
+      }
+    }
+  });
+
+  it('R15.6 the timeout choice is the first offered', () => {
+    const s = atChoice(4, 6);
+    for (const t of s.seats) {
+      const a = e.defaultAction(s, t.id)!;
+      expect(a).toMatchObject({ type: 'answer', seat: t.id, answer: offersOf(s, t.id)[0] });
+    }
+  });
+
+  it('R2.5 Perks are active from the reveal, before the first pick', () => {
+    const s = newGame(3, 8); // everyone took the first offer
+    for (const t of s.seats) {
+      expect(t.data.greatWork).not.toBeNull();
+      const perk = GW.get(t.data.greatWork!)!.perk;
+      expect(e.ruleset.activeEffects!(s, t.id).map((x) => x.type)).toEqual(
+        expect.arrayContaining(perk.map((x) => x.type)),
+      );
+    }
+  });
+});
+
+describe('the two-player variant (R14)', () => {
+  const twoTable = () => table(2);
+  const burnOf = (p: { args?: unknown }) => (p.args as { burn?: number } | undefined)?.burn;
+
+  it('R1.1 R14.1 two towns get 10 cards each from the 4-seat deck; the rest stays undealt', () => {
+    const s = newGame(2, 2);
+    expect(s.seats.map((t) => t.hand.length)).toEqual([10, 10]);
+    const fourSeat = FIXTURE.cards
+      .filter((c) => c.season === 'spring')
+      .reduce((n, c) => n + c.counts[1]!, 0);
+    expect(s.deck).toHaveLength(fourSeat - 20);
+    for (const viewer of [0, 1, 'spectator'] as const) {
+      expect(e.viewFor(s, viewer).deck.every((c) => c.id < 0)).toBe(true);
+    }
+  });
+
+  it('R14.2 R17.1 turns 1-4 need a Burn from the hand; the Burn is a different card; turn 5 forbids it', () => {
+    const s = twoTable();
+    const [a, b] = s.seats[0]!.hand;
+    const sp = (args: Record<string, Json>): Pick => ({ card: a!.id, use: 'spend', args });
+    expect(submit(s, 0, sp({ burn: null })).ok).toBe(false);
+    expect(submit(s, 0, sp({ burn: a!.id })).ok).toBe(false);
+    expect(submit(s, 0, sp({ burn: 99999 })).ok).toBe(false);
+    expect(submit(s, 0, sp({ burn: b!.id })).ok).toBe(true);
+    // Another seat's card cannot be burned.
+    expect(submit(s, 0, sp({ burn: s.seats[1]!.hand[0]!.id })).ok).toBe(false);
+    let x = s;
+    for (let i = 0; i < 4; i++) x = playTurn(x);
+    expect(x.turn).toBe(4);
+    const [c, d] = x.seats[0]!.hand;
+    expect(submit(x, 0, { card: c!.id, use: 'spend', args: { burn: d!.id } }).ok).toBe(false);
+    expect(submit(x, 0, { card: c!.id, use: 'spend' }).ok).toBe(true);
+  });
+
+  it('R14.3 a burned card leaves face down with no effect, and the other town cannot tell which', () => {
+    const s = twoTable();
+    const [spend, burn] = setHand(s, 0, ['tf-stall', 'tf-quarry']); // Quarry's band: 2 slate
+    const slate = townData(s, 0).store.slate!;
+    const after = playTurn(s, { 0: { card: spend!.id, use: 'spend', args: { burn: burn!.id } } });
+    expect(townData(after, 0).store.slate).toBe(slate);
+    expect(after.discard.some((c) => c.id === burn!.id)).toBe(true);
+    expect(after.seats[0]!.tableau).toHaveLength(0);
+    const seen = e.viewFor(after, 1);
+    expect(json(seen)).not.toContain(`{"id":${burn!.id},"def"`);
+    // Only the viewer's own Burn is shown: the other town's (seat 0) is masked.
+    expect(burnOf(seen.lastReveal!.picks.find((p) => p.seat === 0)!)).toBe(-1);
+    // The burner itself still sees its own Burn.
+    expect(e.viewFor(after, 0).lastReveal!.picks.find((p) => p.seat === 0)).toBeDefined();
+    expect(burnOf(e.viewFor(after, 0).lastReveal!.picks.find((p) => p.seat === 0)!)).toBe(burn!.id);
+  });
+
+  it('R14.2 R14.4 hands fall 10, 8, 6, 4, 2 and the fifth turn gleans the last card; nothing is burned', () => {
+    let s = newGame(2, 3);
+    const sizes: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      sizes.push(s.seats[0]!.hand.length);
+      s = playTurn(s);
+    }
+    expect(sizes).toEqual([10, 8, 6, 4, 2]);
+    expect(s.round).toBe(1);
+    expect(s.log.filter((l) => l.kind === 'burn' && l.round === 0)).toHaveLength(8);
+    expect(s.log.filter((l) => l.kind === 'glean' && l.round === 0)).toHaveLength(2);
+  });
+
+  it('R14.5 R6.6b the other town counts once: two goods a turn in all, one Toll, one bounty', () => {
+    const s = twoTable();
+    for (const t of s.seats) t.data.greatWork = null;
+    // Buying: 3 slate wanted, 5 held by the only neighbour: at most 2 may be bought.
+    townData(s, 1).store.slate = 5;
+    townData(s, 0).coins = 20;
+    const keep = setHand(s, 0, ['tf-keep'])[0]!;
+    const buy = [1, 2, 3].map(() => ({ good: 'slate', via: 'buy', from: 1 }));
+    expect(submit(s, 0, pk(keep, 'build', { pay: buy })).ok).toBe(false);
+    expect(
+      submit(
+        s,
+        0,
+        pk(keep, 'build', {
+          pay: buy.slice(0, 2).concat([{ good: 'slate', via: 'bank' } as never]),
+        }),
+      ).ok,
+    ).toBe(true);
+    // Toll: one neighbour that built pays one Toll.
+    const t2 = twoTable();
+    for (const t of t2.seats) t.data.greatWork = null;
+    build(t2, 0, 'tf-toll');
+    const stall = setHand(t2, 1, ['tf-stall'])[0]!;
+    const c0 = townData(t2, 0).coins;
+    const after = playTurn(t2, { 1: pk(stall, 'build') });
+    expect(townData(after, 0).coins - c0).toBe(1 + 1); // toll 1 + its own Stall Spend 1
+  });
+
+  it('R14.5 R9.6 bounty: a held town takes 1 coin from the plundered one once, not twice', () => {
+    const s = twoTable();
+    for (const t of s.seats) {
+      t.data.greatWork = null;
+      setHand(s, t.id, Array(10).fill('tf-hut'));
+    }
+    const raid = FIXTURE.raids.find((r) => r.strength === 3)!;
+    s.table.raids[1] = { id: raid.id, revealed: true };
+    s.round = 1;
+    for (let k = 0; k < 3; k++) build(s, 0, 'tf-fence');
+    townData(s, 0).coins = 0;
+    townData(s, 1).coins = 5; // seat 1 has Guard 0: plundered 3, left with 2, pays 1 bounty
+    let x = s;
+    while (x.round === 1) x = playTurn(x);
+    expect(townData(x, 0).coins).toBe(1);
+    expect(townData(x, 1).coins).toBe(5 - 3 - 1);
+  });
 });
 
 describe('timing of gains (R4.5, R13.2, R17)', () => {
