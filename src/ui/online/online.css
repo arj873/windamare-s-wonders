@@ -572,13 +572,27 @@
   gap: 8px;
 }
 /* Final scores are a scrim (z 30): keep the chat, Leave and the rematch line above it. */
-.ol-play.is-over .ol-dock {
+.ol-play.is-over .ol-dock,
+.ol-play.is-over .ol-dock-panel {
   z-index: 31;
 }
 .ol-presence-watch {
   font-weight: 800;
 }
+/* `.muted` is ink for dark panels; on the cream pill it vanished ("1 watching"). */
+.ol-presence .muted {
+  color: inherit;
+  opacity: 0.75;
+}
+/* NetPlay sets --ol-bar-h to the dock's measured height; these are the fallbacks. */
+.ol-play {
+  --ol-bar-h: 84px;
+}
 .ol-dock-panel {
+  position: fixed;
+  right: 12px;
+  bottom: calc(12px + var(--ol-bar-h) + 8px);
+  z-index: 26;
   width: min(320px, calc(100vw - 24px));
   padding: 10px;
   border-radius: var(--radius);
@@ -600,21 +614,13 @@
  * instead of a stack over the hand, and the chat opens as a sheet above it.
  */
 @media (max-width: 720px) {
+  /*
+   * The table's own hook (table.css): its pinned hand, card sheet and bottom padding (players
+   * and spectators) all sit above the bar, however tall the bar is right now.
+   */
   .ol-play {
     --ol-bar-h: calc(54px + env(safe-area-inset-bottom, 0px));
-  }
-  /*
-   * ui pins the hand to the bottom on phones (table.css, R6 #3): lift it above the bar, and the
-   * table's bottom padding with it. Drop this once the table offers its own bottom inset.
-   */
-  .ol-play .dt-hand {
-    bottom: var(--ol-bar-h);
-  }
-  .ol-play .dt {
-    padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px + var(--ol-bar-h));
-  }
-  .ol-play .dt.is-watching {
-    padding-bottom: calc(8px + var(--ol-bar-h)); /* a spectator has no pinned hand */
+    --dt-bottom-inset: var(--ol-bar-h);
   }
   .ol-dock {
     left: 0;
@@ -629,13 +635,15 @@
     border-top: 2px solid var(--edge);
     box-shadow: var(--panel-shadow);
   }
+  /* The chat is a sheet right above the bar, over the hand while it is open. */
   .ol-dock-panel {
-    order: -1;
-    flex-basis: 100%;
+    left: 0;
+    right: 0;
+    bottom: var(--ol-bar-h);
     width: auto;
-    padding: 4px 0;
-    border: 0;
-    box-shadow: none;
+    padding: 8px;
+    border-width: 2px 0 0;
+    border-radius: 14px 14px 0 0;
   }
   .ol-dock-panel .ol-chat-list {
     height: min(200px, 32vh);
@@ -650,10 +658,8 @@
     background: transparent;
     box-shadow: none;
     color: inherit;
-    text-align: left;
-  }
-  .ol-presence {
     font-size: 11.5px;
+    text-align: left;
   }
   .ol-dock > .ol-row {
     margin-left: auto;

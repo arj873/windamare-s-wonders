@@ -58,7 +58,9 @@ export function withConfig(room: RoomInfo, config: RoomConfig): RoomInfo {
   const colours = seatColours(config, config.seatCount);
   const seats = Array.from({ length: config.seatCount }, (_, i): SeatInfo => {
     const s = room.seats[i] ?? { occupant: null, status: 'bot' };
-    return { ...s, botLevel: config.botLevels?.[i] ?? 'easy', colour: colours[i] ?? i };
+    // No level chosen: the server's own default, which it already reports on the seat.
+    const botLevel = config.botLevels?.[i] ?? s.botLevel ?? 'easy';
+    return { ...s, botLevel, colour: colours[i] ?? i };
   });
   const cut = new Set(room.seats.slice(config.seatCount).map((s) => s.occupant));
   const members = room.members.map((m) => (cut.has(m.id) ? { ...m, seat: null } : m));
