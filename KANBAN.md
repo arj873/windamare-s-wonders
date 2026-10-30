@@ -1,30 +1,32 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-30 00:46 · Progress: **33 / 49 cards done**
+Updated: 2026-10-30 01:04 · Progress: **37 / 55 cards done**
 
-## In progress (9)
+## In progress (12)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A3 | art | P0 | Retheme to the real design: 6 kinds, goods, Lore ranks, Raid frame, Great Work track, Honours |
 | A2 | art | P1 | Table chrome: background, seat panel, neighbour strips, timer badge, title key art |
-| A6 | art | P1 | Great Work vignettes on the tier track + title key art refresh |
+| A7 | art | P2 | Card art-window illustrations per kind |
 | B4 | bots | P0 | First sim report on the real ruleset -> docs/BALANCE.md |
-| E3 | engine | P0 | Per-turn event log in state + views (for reveal animation + history) |
+| D9 | design | P0 | Re-tune from BALANCE.md: Town dominance 82-90%, blowouts 32-53%, Lore runs low |
+| E4 | engine | P1 | Follow design D8: R6.7/R17.9 rewrite, price ladder via tunables |
 | N1b | net | P0 | Real-engine adapter + real-engine leak test |
 | N3 | net | P0 | Server runs real Windamere games; RoomClient; 2-tab online e2e |
 | N1 | net | P1 | Online rooms via Cloudflare Durable Objects (port from Catan) |
-| P9 | platform | P1 | Browser automation dep + pnpm e2e entry |
+| P10 | platform | P1 | Playtest deps: pt scripts, vitest include, system chrome |
+| R6 | research | P1 | Heuristic UX review of the playable game -> ux-review-1.md |
+| U4 | ui | P0 | Fix 404 asset; tunables-driven price test; Great Work SVG; playtest hooks; home screen |
 
-## In review (4)
+## In review (3)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | B3 | bots | P1 | Level-1 heuristic bot + sim report vs balance-targets.md |
 | D8 | design | P1 | Rule fixes: Summer price 2, R6.7 vs R17.9, deck size vs seats, re-tune plan |
 | Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
-| U3 | ui | P0 | Playable hotseat vs bots in the browser: setup -> table -> end scoring -> rematch |
 
 ## Ready (2)
 
@@ -39,13 +41,14 @@ Updated: 2026-10-30 00:46 · Progress: **33 / 49 cards done**
 |---|---|---|---|
 | D7 | design | P2 | First-game option (Honours and upgrades off) after sim numbers |
 
-## Done (33)
+## Done (37)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A1 | art | P0 | Art direction + card frame + icon set (SVG) -> docs/design/ART.md, public/art, art-dev.html |
 | A4 | art | P0 | Fix R4 red-team: O1 palette/type map, O2 glass+cloth, O3 stage sockets |
 | A5 | art | P0 | Goods icons (final D2c names) + coin + labour |
+| A6 | art | P1 | Great Work vignettes on the tier track + title key art refresh |
 | B1 | bots | P1 | Random + heuristic bots, headless sim, balance report |
 | B2 | bots | P1 | 3 difficulty levels plan -> docs/BOTS.md |
 | D2 | design | P0 | Original ruleset with numbered rules -> docs/RULES.md |
@@ -57,6 +60,7 @@ Updated: 2026-10-30 00:46 · Progress: **33 / 49 cards done**
 | D4 | design | P1 | Card catalog draft with counts per player count -> docs/design/CARDS.md |
 | E1 | engine | P0 | Game-agnostic draft core: seats, hidden simultaneous picks, reveal, hand passing, seeded RNG, per-seat views |
 | E2 | engine | P0 | Full rules engine: 3-7 towns, Great Work choice, 2-player variant, Recall |
+| E3 | engine | P0 | Per-turn event log in state + views (for reveal animation + history) |
 | E1b | engine | P1 | Contract changes E2 needs from RULES.md (pair picks, 2p burn, labour track, Raids, Honours) |
 | H1 | human | P0 | Approve the ruleset (D2-D4) before full rules engine (E2) starts |
 | N0 | net | P0 | Multiplayer plan: port Catan rooms, add per-seat hidden-hand redaction -> docs/MULTIPLAYER.md |
@@ -68,6 +72,7 @@ Updated: 2026-10-30 00:46 · Progress: **33 / 49 cards done**
 | P4 | platform | P1 | Port Windamere theme/fonts + seeded RNG + docs/ARCHITECTURE.md skeleton |
 | P6 | platform | P1 | Verify ci.yml on GitHub and fix |
 | P7 | platform | P1 | Import chrome.css next to tokens.css |
+| P9 | platform | P1 | Browser automation dep + pnpm e2e entry |
 | P8 | platform | P2 | pnpm sim script for bots |
 | Q0 | qa | P0 | Red-team audit: hidden info (viewFor), net session cheats, determinism |
 | R1 | research | P0 | Genre + rules research: drafting/tableau games, mechanics, balance lessons -> docs/design/RESEARCH.md |
@@ -75,4 +80,5 @@ Updated: 2026-10-30 00:46 · Progress: **33 / 49 cards done**
 | R2 | research | P1 | Online drafting UX survey (BGA, colonist.io feel, timers, reconnect) -> docs/design/research/online-ux.md |
 | R5 | research | P2 | Public balance/pace numbers to set sim targets |
 | U0 | ui | P0 | UX spec + wireframes for every screen -> docs/design/UX.md |
+| U3 | ui | P0 | Playable hotseat vs bots in the browser: setup -> table -> end scoring -> rematch |
 | U1 | ui | P1 | Draft table UI: hand, city tableau, neighbours, simultaneous reveal |
