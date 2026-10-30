@@ -6,6 +6,7 @@
 import {
   HIDDEN_CARD,
   leftOf,
+  logText,
   rightOf,
   type Card,
   type CardId,
@@ -353,7 +354,10 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
             title: `Pick ${r.turn + 1}: passed to ${nameOf(r.to)}`,
             cards: r.cards.map((c) => ({ ...tableauCard(c), fresh: false })),
           })),
-    log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
+    // E8: the viewer reads "You ..." (hotseat: the seat on screen); spectators read names.
+    log: view.log
+      .slice(-LOG_LINES)
+      .map((e, i) => ({ key: `${e.seq}-${i}`, text: logText(e, viewer) })),
     result: resultModel(input, seats),
     banner: present.banner?.(view) ?? [],
     actionKey: String(view.log.at(-1)?.seq ?? ''),

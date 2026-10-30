@@ -221,6 +221,11 @@ describe('windamerePresenter', () => {
     expect(model(s, 1).reveal?.happenings).toContain(`Ana bought Reed from you (${spring}g)`);
     expect(model(s, 2).reveal?.happenings).toContain(`Ana bought Reed from Bo (${spring}g)`);
     expect(model(s).seasonEnd).toBeNull();
+    // E8: the log too (engine's logText), "You" only for the seat whose view it is.
+    const logOf = (viewer: number) => model(s, viewer).log.map((l) => l.text);
+    expect(logOf(0).some((t) => /\b[Yy]ou\b/.test(t))).toBe(true);
+    expect(logOf(0).join('\n')).not.toMatch(/\bAna\b/);
+    expect(logOf(2).join('\n')).toMatch(/\bAna\b/);
 
     // Play out Spring: the action that ends it carries the Raid summary.
     const summer = advance(s, (x) => x.round === 1);
