@@ -1,20 +1,28 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-30 00:33 · Progress: **31 / 44 cards done**
+Updated: 2026-10-30 00:46 · Progress: **33 / 49 cards done**
 
-## In progress (10)
+## In progress (9)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A3 | art | P0 | Retheme to the real design: 6 kinds, goods, Lore ranks, Raid frame, Great Work track, Honours |
-| A5 | art | P0 | Goods icons (final D2c names) + coin + labour |
 | A2 | art | P1 | Table chrome: background, seat panel, neighbour strips, timer badge, title key art |
+| A6 | art | P1 | Great Work vignettes on the tier track + title key art refresh |
+| B4 | bots | P0 | First sim report on the real ruleset -> docs/BALANCE.md |
+| E3 | engine | P0 | Per-turn event log in state + views (for reveal animation + history) |
+| N1b | net | P0 | Real-engine adapter + real-engine leak test |
+| N3 | net | P0 | Server runs real Windamere games; RoomClient; 2-tab online e2e |
+| N1 | net | P1 | Online rooms via Cloudflare Durable Objects (port from Catan) |
+| P9 | platform | P1 | Browser automation dep + pnpm e2e entry |
+
+## In review (4)
+
+| Card | Lane | Pri | Title |
+|---|---|---|---|
 | B3 | bots | P1 | Level-1 heuristic bot + sim report vs balance-targets.md |
 | D8 | design | P1 | Rule fixes: Summer price 2, R6.7 vs R17.9, deck size vs seats, re-tune plan |
-| E2 | engine | P0 | Full rules engine: done for 3-7 towns; left: Great Work choice, 2-player, Recall |
-| N1b | net | P0 | Real-engine adapter + real-engine leak test |
-| N1 | net | P1 | Online rooms via Cloudflare Durable Objects (port from Catan) |
 | Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
 | U3 | ui | P0 | Playable hotseat vs bots in the browser: setup -> table -> end scoring -> rematch |
 
@@ -22,7 +30,7 @@ Updated: 2026-10-30 00:33 · Progress: **31 / 44 cards done**
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
-| B4 | bots | P0 | First sim report on the real ruleset -> docs/BALANCE.md |
+| Q2 | qa | P1 | Playtest harness: drive a browser game from a CLI |
 | U2 | ui | P1 | Fix R4 red-team: O4 placeholders + popover, O12 score tally |
 
 ## Backlog (1)
@@ -31,12 +39,13 @@ Updated: 2026-10-30 00:33 · Progress: **31 / 44 cards done**
 |---|---|---|---|
 | D7 | design | P2 | First-game option (Honours and upgrades off) after sim numbers |
 
-## Done (31)
+## Done (33)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A1 | art | P0 | Art direction + card frame + icon set (SVG) -> docs/design/ART.md, public/art, art-dev.html |
 | A4 | art | P0 | Fix R4 red-team: O1 palette/type map, O2 glass+cloth, O3 stage sockets |
+| A5 | art | P0 | Goods icons (final D2c names) + coin + labour |
 | B1 | bots | P1 | Random + heuristic bots, headless sim, balance report |
 | B2 | bots | P1 | 3 difficulty levels plan -> docs/BOTS.md |
 | D2 | design | P0 | Original ruleset with numbered rules -> docs/RULES.md |
@@ -47,6 +56,7 @@ Updated: 2026-10-30 00:33 · Progress: **31 / 44 cards done**
 | D6 | design | P0 | Fix R4 red-team: O5-O16 names/numbers, D1 neighbour share, D2 Watch/Raid bug |
 | D4 | design | P1 | Card catalog draft with counts per player count -> docs/design/CARDS.md |
 | E1 | engine | P0 | Game-agnostic draft core: seats, hidden simultaneous picks, reveal, hand passing, seeded RNG, per-seat views |
+| E2 | engine | P0 | Full rules engine: 3-7 towns, Great Work choice, 2-player variant, Recall |
 | E1b | engine | P1 | Contract changes E2 needs from RULES.md (pair picks, 2p burn, labour track, Raids, Honours) |
 | H1 | human | P0 | Approve the ruleset (D2-D4) before full rules engine (E2) starts |
 | N0 | net | P0 | Multiplayer plan: port Catan rooms, add per-seat hidden-hand redaction -> docs/MULTIPLAYER.md |
