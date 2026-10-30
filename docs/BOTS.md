@@ -219,3 +219,10 @@ Adds to Medium:
 | B3   | Easy and Medium on the real ruleset          | E2 (ruleset), platform `sim` script  |
 | B4   | seat-rotated multi-level sim and reports     | B3                                   |
 | B5   | Hard (determinization)                       | §2 engine answers, B3, speed numbers |
+
+## 8. Windamere adapter and balance report (B3)
+
+`src/bots/windamere.ts` (the shipped content bound to the engine), `windamereAdapter.ts` (level-1
+greedy; `focus: kind` makes a specialist), `windamereMetrics.ts` (per-game samples),
+`scripts/balance.ts` (the report). Results and findings: `docs/BALANCE.md`. Level 1 is weak
+(1.6-2.1x fair against random), so it is a probe of the rules, not a finished Easy bot.

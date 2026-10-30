@@ -5,7 +5,7 @@
  * the returned action and records any rejection. A game ends at gameOver, on a violation
  * (crash, illegal action, bot with no move) or at `maxActions`.
  */
-import type { DraftAction, DraftEngine, GameConfig, SeatId } from '../engine';
+import type { DraftAction, DraftEngine, DraftState, GameConfig, SeatId } from '../engine';
 import { Rng } from '../engine';
 import type { Bot } from './types';
 
@@ -29,6 +29,8 @@ export interface GameReport {
   winners: SeatId[];
   /** The bot's name at each seat. */
   botNames: string[];
+  /** Samples from `RunOptions.observe`, by metric name. */
+  metrics: Record<string, number[]>;
   violation: Violation | null;
 }
 
@@ -40,6 +42,8 @@ export interface RunOptions<S, T> {
   seed: number;
   options?: GameConfig['options'];
   maxActions?: number;
+  /** Called with the final state of a finished game: samples to collect (per town, per game ...). */
+  observe?: (state: DraftState<S, T>) => Record<string, number[]>;
 }
 
 const botFor = <S, T>(bots: Bot<S, T> | Bot<S, T>[], seat: SeatId): Bot<S, T> => {
@@ -62,6 +66,7 @@ export function runGame<S, T>(opts: RunOptions<S, T>): GameReport {
     totals: [],
     winners: [],
     botNames: Array.from({ length: seats }, (_, i) => botFor(bots, i).name),
+    metrics: {},
     violation: null,
   };
   const fail = (v: Violation): GameReport => ((report.violation = v), report);
@@ -116,6 +121,7 @@ export function runGame<S, T>(opts: RunOptions<S, T>): GameReport {
       );
       report.winners = [...result.winners];
     }
+    if (opts.observe) report.metrics = opts.observe(state);
   } catch (e) {
     return fail({ kind: 'crash', seat: null, message: e instanceof Error ? e.message : String(e) });
   }
@@ -136,6 +142,8 @@ export interface SimSummary {
   winRate: number[];
   /** Per bot name: wins per seat it held (fair share = 1 / seats). Seats rotate in runSim. */
   winByBot: Record<string, number>;
+  /** Every `observe` sample of finished games, concatenated per metric name. */
+  metrics: Record<string, number[]>;
 }
 
 export function summarize(reports: GameReport[], seats: number): SimSummary {
@@ -158,7 +166,11 @@ export function summarize(reports: GameReport[], seats: number): SimSummary {
   for (const [n, seatsHeld] of Object.entries(botSeats)) {
     winByBot[n] = (botWins[n] ?? 0) / seatsHeld;
   }
+  const metrics: Record<string, number[]> = {};
+  for (const r of done)
+    for (const [k, v] of Object.entries(r.metrics)) (metrics[k] ??= []).push(...v);
   return {
+    metrics,
     winByBot,
     games: reports.length,
     seats,
