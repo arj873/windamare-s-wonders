@@ -22,6 +22,9 @@
   --raised-ink: #1d3f86;
   --good: #b8f0a8;
   --bad: #ffcdb8;
+  /* Warnings (bank payment etc.): ink on light surfaces (--bad, --card-paper*), edge for rings. */
+  --warn-ink: #9b1c0c;
+  --warn-edge: #b83a0a;
 
   --surface: linear-gradient(180deg, #96452a, #853b22);
   --surface-raised: linear-gradient(180deg, #fbf3e2, #ecdcc0);
