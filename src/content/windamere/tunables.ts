@@ -28,3 +28,14 @@ export const TUNABLES = {
   clockOptions: { off: 0, relaxed: 1.5, normal: 1, fast: 0.5 }, // R15.3, rounded up
   awayWaitSec: 15, // R15.5
 } as const;
+
+/**
+ * RULES.md R19, the "First game" room option: values that replace TUNABLES when it is on, plus
+ * the two switches it adds. A separate export so `shipped.ts` and TUNABLES stay as they are.
+ */
+export const FIRST_GAME = {
+  honoursPerGame: 0, // R19.2: no Honours
+  greatWorksOffered: 1, // R19.4: one Great Work, kept, no choice prompt
+  upgrades: false, // R19.3: upgrade cards only at full cost, nothing is covered
+  defaultClock: 'relaxed', // R19.5, online
+} as const;
