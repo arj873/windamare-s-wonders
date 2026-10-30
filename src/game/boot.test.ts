@@ -66,6 +66,31 @@ describe('boot', () => {
     expect(localStorage.getItem('ww.animations')).toBe('off');
   });
 
+  it('offers Sound on/off in the ☰ menu when given a switch (as online does)', () => {
+    const plain = mount();
+    boot(plain).menu.setOpen(true);
+    expect(plain.querySelector('[data-k="choice-2-off"]')).toBeNull(); // no switch, no item
+    document.body.replaceChildren();
+    const root = mount();
+    let muted = false;
+    const setMuted = vi.fn((m: boolean) => {
+      muted = m;
+    });
+    const { menu } = boot(root, {
+      sound: {
+        get muted() {
+          return muted;
+        },
+        setMuted,
+      },
+    });
+    menu.setOpen(true);
+    expect(root.querySelector('[data-k="choice-2-on"]')?.getAttribute('aria-pressed')).toBe('true');
+    click(root, '[data-k="choice-2-off"]');
+    expect(setMuted).toHaveBeenCalledWith(true);
+    expect(muted).toBe(true);
+  });
+
   it('starts a bound game on the draft table, and New game goes back to setup', () => {
     vi.useFakeTimers();
     const root = mount();
