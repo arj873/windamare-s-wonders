@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
+<title>Title screen key art</title>
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c3d5a"/><stop offset=".6" stop-color="#e09a72"/><stop offset="1" stop-color="#f5b82e"/></linearGradient>
+<linearGradient id="st" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3e2"/><stop offset="1" stop-color="#c9b48c"/></linearGradient>
+</defs>
+<rect width="1200" height="600" fill="url(#sky)"/>
+<circle cx="600" cy="330" r="150" fill="#f5b82e" fill-opacity=".55"/><circle cx="600" cy="330" r="100" fill="#fff4e4" fill-opacity=".7"/>
+<path d="M0 420L150 340l140 60 130-90 160 100 130-70 150 80 140-60 170 80V600H0z" fill="#853b22" stroke="#5e2914" stroke-width="3"/>
+<path d="M0 480l200-60 180 50 220-70 240 70 200-50 160 40V600H0z" fill="#5e2914"/>
+<!-- Central monument on a hill -->
+<path d="M480 470h240v-18H480z" fill="#5e2914" stroke="#1e0c04" stroke-width="3"/>
+<path d="M500 452h200v-20H500z" fill="url(#st)" stroke="#1e0c04" stroke-width="3"/>
+<path d="M530 432h140V300l-70-34-70 34z" fill="url(#st)" stroke="#1e0c04" stroke-width="3" stroke-linejoin="round"/>
+<path d="M600 266V230" stroke="#1e0c04" stroke-width="4"/><path d="M600 230l36 10-36 10z" fill="#1f4fa0" stroke="#1e0c04" stroke-width="2.5"/>
+<g fill="#fff" stroke="#1e0c04" stroke-width="2.5"><rect x="548" y="318" width="26" height="90" rx="4"/><rect x="587" y="318" width="26" height="90" rx="4"/><rect x="626" y="318" width="26" height="90" rx="4"/></g>
+<!-- Fan of cards -->
+<g stroke="#3a1a0c" stroke-width="3" fill="#fbf3e2"><rect x="-40" y="-60" width="80" height="112" rx="8" transform="translate(300 520) rotate(-18)"/><rect x="-40" y="-60" width="80" height="112" rx="8" transform="translate(350 530) rotate(-6)"/><rect x="-40" y="-60" width="80" height="112" rx="8" transform="translate(850 530) rotate(6)"/><rect x="-40" y="-60" width="80" height="112" rx="8" transform="translate(900 520) rotate(18)"/></g>
+<g fill="#0072b2" stroke="#3a1a0c" stroke-width="2"><rect x="-32" y="-52" width="64" height="18" rx="4" transform="translate(300 520) rotate(-18)"/><rect x="-32" y="-52" width="64" height="18" rx="4" fill="#d55e00" transform="translate(350 530) rotate(-6)"/><rect x="-32" y="-52" width="64" height="18" rx="4" fill="#009e73" transform="translate(850 530) rotate(6)"/><rect x="-32" y="-52" width="64" height="18" rx="4" fill="#e69f00" transform="translate(900 520) rotate(18)"/></g>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+<title>Table background</title>
+<defs>
+<radialGradient id="g" cx=".42" cy=".45" r=".8"><stop offset="0" stop-color="#145a7d"/><stop offset=".55" stop-color="#0c3d5a"/><stop offset="1" stop-color="#072638"/></radialGradient>
+<pattern id="tile" width="80" height="80" patternUnits="userSpaceOnUse"><path d="M40 6l34 34-34 34L6 40z" fill="none" stroke="#f5b82e" stroke-opacity=".07" stroke-width="2"/><circle cx="40" cy="40" r="4" fill="#f5b82e" fill-opacity=".06"/></pattern>
+<radialGradient id="v" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></radialGradient>
+</defs>
+<rect width="1600" height="900" fill="url(#g)"/><rect width="1600" height="900" fill="url(#tile)"/><rect width="1600" height="900" fill="url(#v)"/>
+</svg>

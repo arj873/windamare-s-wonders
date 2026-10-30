@@ -71,6 +71,18 @@ resource set is a placeholder until design fixes the resource list.
 Stepped plinth with three stage sockets (`stage-1..3`) and a saffron capstone. Stage count is
 not final; duplicate or remove sockets to match RULES.md.
 
+## Table chrome (A2)
+
+Fixed art in `public/art/table/`: `table-bg.svg` (cobalt table with faint diamond tile),
+`seat-panel.svg` (terracotta, sockets avatar/name/tableau/plaque), `neighbour-strip.svg` (arrow
+shows pass direction; mirror for the other side), `round-badge.svg` (timer ring: animate
+`#ring-fill` `stroke-dashoffset`, circumference 251.3), `title-key-art.svg` (monument on a hill,
+card fan). Live-layout equivalents are CSS in `src/ui/theme/chrome.css`
+(`.table .seat .seat-me .neighbour .round-badge .timer-low`; `--timer` 0..1 drives the ring).
+Seat identity: colour (`--seat`) plus a marker shape and the seat name, never colour alone.
+Built from catan's patterns without UX.md/RULES.md; **adjust when they land**. Not viewed in a
+browser yet.
+
 ## Preview
 
 `art-dev.html` renders every asset plus a sample card per type. Run under vite (platform) at
