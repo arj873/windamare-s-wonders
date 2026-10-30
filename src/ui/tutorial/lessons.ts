@@ -84,7 +84,7 @@ export const LESSONS: readonly LessonDef[] = [
     title: 'Buy from a neighbour',
     text: (_c, live) =>
       (live ? '' : 'You did not need a neighbour’s goods this game. ') +
-      'Missing a good for a Build? Buy it from a neighbour: it leaves their store and the coins go to them. At most 2 from each neighbour a turn, and the price rises every Season.',
+      'Missing a good for a Build? Buy it from a neighbour: it leaves their store and the coins go to them. At most 2 from each neighbour a turn, and goods cost more in Winter.',
     after: ['reveal'],
     when: (c) => turnsDone(c) >= 3 && picking(c),
     recap: true,
@@ -112,7 +112,7 @@ export const LESSONS: readonly LessonDef[] = [
     id: 'season2',
     title: 'A new Season',
     text: (c) =>
-      `Season ${c.view.round + 1} of 4. A new hand, a new direction to pass, and dearer goods to buy. Check the Raid.`,
+      `Season ${c.view.round + 1} of 4. A new hand, and a new direction to pass. Check the Raid.`,
     when: (c) => picking(c) && c.view.round >= 1,
     stale: (c) => c.view.round >= 2,
     focus: 'raid',

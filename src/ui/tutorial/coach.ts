@@ -35,6 +35,10 @@ export interface CoachHost {
   pace(ms: number | null): void;
 }
 
+/** Set on the root while the panel is open (not minimized); `--tut-h` is its height plus a gap. */
+export const ACTIVE_ATTR = 'data-tut-active';
+export const HEIGHT_VAR = '--tut-h';
+
 /** Attribute on the table root naming the element to point at (tutorial.css). */
 export const FOCUS_ATTR = 'data-tut-focus';
 
@@ -94,6 +98,8 @@ export class TutorialCoach {
     this.panel.hidden = true;
     this.panel.replaceChildren();
     this.root.removeAttribute(FOCUS_ATTR);
+    this.root.removeAttribute(ACTIVE_ATTR);
+    this.root.style.removeProperty(HEIGHT_VAR);
   }
 
   private belongs(run: TutorialRun, view: WwView): boolean {
@@ -127,6 +133,13 @@ export class TutorialCoach {
         this.host.newGame();
       },
     });
+    if (view.collapsed) {
+      this.root.removeAttribute(ACTIVE_ATTR);
+      this.root.style.removeProperty(HEIGHT_VAR);
+    } else {
+      this.root.setAttribute(ACTIVE_ATTR, '');
+      this.root.style.setProperty(HEIGHT_VAR, `${this.panel.offsetHeight + 20}px`);
+    }
     if (view.focus && !view.collapsed) this.root.setAttribute(FOCUS_ATTR, view.focus);
     else this.root.removeAttribute(FOCUS_ATTR);
   }

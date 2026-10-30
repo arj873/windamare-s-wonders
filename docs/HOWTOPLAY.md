@@ -47,8 +47,8 @@ paid out when you Build. Left-over goods carry over, but they score nothing at t
 If a Build needs a good you lack, you can:
 
 - **Buy it from a neighbour.** The good leaves their store and goes straight into your Build.
-  Coins go to them. The price depends on the Season: Spring 1†, Summer 3†, Autumn 4†,
-  Winter 5† coins each. You can buy at most 2 goods from each neighbour a turn, and only what they
+  Coins go to them. The price depends on the Season: 1† coin a good in Spring, Summer and
+  Autumn, 3† in Winter (which has no Yield). You can buy at most 2 goods from each neighbour a turn, and only what they
   held at the start of the turn.
 - **Use an Exchange.** Some Markets let you pay 2† of one good instead of one missing good.
 - **Buy from the bank** for 6† coins a good. Always the dearest way.
@@ -77,7 +77,7 @@ stays in view but no longer counts for anything.
 ## Labour and your Great Work
 
 **Labour** comes from Spend bands and some Holdings. It only goes up and is never spent. Your
-Great Work has four **tiers** that complete by themselves at 3†, 6†, 10† and 15† labour. Each tier
+Great Work has four **tiers** that complete by themselves at 4†, 9†, 15† and 22† labour. Each tier
 gives a reward, usually Renown and often an effect.
 
 ## Raids
@@ -85,8 +85,8 @@ gives a reward, usually Renown and often an effect.
 Each Season has a **Raid** with a **strength**, shown at the start of the Season. At Season end
 every town compares its **Guard** with the strength.
 
-- **Held** (Guard is enough): you gain a **Valour** token worth Renown: Spring 1†, Summer 2†,
-  Autumn 3†, Winter 4†. Guard above the strength gives nothing extra.
+- **Held** (Guard is enough): you gain a **Valour** token worth Renown: Spring 2†, Summer 3†,
+  Autumn 4†, Winter 5†. Guard above the strength gives nothing extra.
 - **Plundered** (Guard is short): you lose 1 coin for each point short, and gain no Valour.
 - **Bounty:** each neighbour that held takes 1† coin from you if you were plundered.
 
@@ -115,6 +115,11 @@ When the Winter Raid is done, Renown is added in six groups:
 6. **Purse:** 1 Renown for every 4† coins.
 
 Most Renown wins. A tie goes to the most completed Great Work tiers, then the most coins.
+
+## First game
+
+For a table with someone new, the host can turn on **First game**: no Honours, no upgrades, and
+each town is dealt one Great Work with no choice. Everything else is the same.
 
 ## Two players
 
