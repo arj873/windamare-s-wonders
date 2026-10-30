@@ -78,6 +78,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   corner.append(menu.element);
 
   function showSetup(): void {
+    play?.hide();
     setup = new SetupScreen({
       onStart: start,
       ...(play ? { onBack: showPlay } : {}),
@@ -94,6 +95,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
       ...prefs,
     ]);
     root.replaceChildren(play.element, corner);
+    play.show();
   }
 
   function start(cfg: NewGameConfig): void {

@@ -77,6 +77,26 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
+  it('covers the hand between two humans on one device (hotseat)', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: { engine: toy, present: toyPresenter } });
+    click(root, '[data-k="ctl-1-human"]'); // seat 2 becomes a human
+    click(root, '[data-k="start"]');
+    const title = () => root.querySelector('#dt-cover-title')?.textContent ?? null;
+    expect(title()).toContain('Pass to Player 1');
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(0);
+    click(root, '[data-k="reveal"]');
+    expect(title()).toBeNull();
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(4);
+    click(root, '.dt-card');
+    click(root, '[data-k^="use-"][data-k$="-sell"]');
+    expect(title()).toContain('Pass to Player 2');
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(0);
+    app.play?.dispose();
+  });
+
   it('refuses a setup the ruleset cannot seat, with a notice', () => {
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });

@@ -30,6 +30,10 @@ export interface PlayHandle<S, T> {
   element: HTMLElement;
   game: LocalGame<S, T>;
   table: DraftTable;
+  /** The table left the screen (setup opened over it): stop the clock. */
+  hide(): void;
+  /** Back on screen: the clock runs again unless a pass cover is up. */
+  show(): void;
   dispose(): void;
 }
 
@@ -85,7 +89,30 @@ export function playLocal<S, T>(
     answer: (prompt, answer) => send((seat) => ({ type: 'answer', seat, prompt, answer })),
     newGame: () => hooks.onNewGame(),
     rematch: () => hooks.onRematch(),
+    reveal: () => {
+      shownTo = game.viewer;
+      syncCover(game);
+    },
   });
+
+  /**
+   * Hotseat (UX.md §9): with 2+ humans the hand on screen belongs to `shownTo`. When the game
+   * moves on to another human, a pass cover goes up and their clock waits until they say so.
+   */
+  let shownTo: SeatId | null = null;
+  const syncCover = (g: LocalGame<S, T>) => {
+    const next = g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
+    if (next === null) {
+      g.resume();
+      table.setCover(null);
+    } else {
+      g.pause();
+      table.setCover({
+        name: g.state.seats[next]?.name ?? 'the next player',
+        color: looks[next]?.color ?? '',
+      });
+    }
+  };
 
   const tick = () => {
     const c = game.clock();
@@ -108,6 +135,8 @@ export function playLocal<S, T>(
       const view = g.view();
       const viewer = view.view.viewer;
       locked = viewer !== null && view.view.submitted[viewer] === true;
+      // Cover first, so the next human's hand is never rendered before the cover is up.
+      syncCover(g);
       table.update(tableModel({ view, engine, present, looks }));
       tick();
     },
@@ -129,6 +158,8 @@ export function playLocal<S, T>(
     element: table.element,
     game,
     table,
+    hide: () => game.pause(),
+    show: () => syncCover(game),
     dispose: () => {
       clearInterval(ticker);
       game.dispose();

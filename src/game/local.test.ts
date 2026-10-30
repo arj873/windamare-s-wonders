@@ -76,6 +76,22 @@ describe('LocalGame', () => {
     expect(g.clock()).toEqual({ remainingMs: 30_000, totalMs: 30_000 }); // a fresh clock
   });
 
+  it('pauses the clock (pass cover, setup screen) and resumes with the time that was left', () => {
+    const onTimeout = vi.fn();
+    const { g } = game({ pickTimerSec: 30, onTimeout });
+    vi.advanceTimersByTime(10_000);
+    g.pause();
+    expect(g.paused).toBe(true);
+    vi.advanceTimersByTime(60_000);
+    expect(onTimeout).not.toHaveBeenCalled();
+    expect(g.clock()?.remainingMs).toBe(20_000);
+    g.resume();
+    vi.advanceTimersByTime(19_000);
+    expect(onTimeout).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1_000);
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+  });
+
   it('runs no clock without a timer', () => {
     const { g } = game();
     expect(g.clock()).toBeNull();

@@ -622,6 +622,22 @@
   font-weight: 600;
   color: var(--ink-dim);
 }
+.dt-cover {
+  z-index: 20; /* under the ☰ menu (25), so New game stays reachable */
+  background: var(--page-bg);
+}
+.dt-cover-card {
+  text-align: center;
+  padding: 18px 22px 20px;
+  border-color: var(--seat, var(--edge));
+}
+.dt-cover-card h2 {
+  font-size: 26px;
+  margin: 6px 0 4px;
+}
+.dt-cover-card .ww-dialog-actions {
+  justify-content: center;
+}
 .dt-stat.is-dim {
   opacity: 0.45;
 }

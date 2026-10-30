@@ -29,8 +29,16 @@ export interface DraftTableHandlers {
   answer(prompt: number, answer: Json): void;
   /** Final scores: "New game" (absent hides the button). */
   newGame?(): void;
+  /** Hotseat cover: the named player has the device and wants their hand shown. */
+  reveal?(): void;
   /** Final scores: same seats, new seed. */
   rematch?(): void;
+}
+
+/** Who the device goes to next (hotseat). */
+export interface CoverInfo {
+  name: string;
+  color: string;
 }
 
 export interface TimerState {
@@ -66,6 +74,8 @@ export class DraftTable {
   private readonly overrides = new Map<string, Pick>();
   /** The pick turn the overrides belong to (stores and sellers change at every reveal). */
   private overridesFor = '';
+  /** Hotseat pass cover (UX.md §9): while set, no hand is in the DOM at all. */
+  private cover: CoverInfo | null = null;
 
   constructor(private readonly handlers: DraftTableHandlers) {
     this.timerEl = h('div', {
@@ -135,6 +145,19 @@ export class DraftTable {
     this.render();
   }
 
+  /** Show or drop the hotseat pass cover. */
+  setCover(cover: CoverInfo | null): void {
+    const was = this.cover?.name;
+    this.cover = cover;
+    if (cover) this.selected = null;
+    this.render();
+    if (cover && cover.name !== was) this.focusKey('reveal');
+  }
+
+  get covered(): boolean {
+    return this.cover !== null;
+  }
+
   // ---- intents -----------------------------------------------------------
 
   private onClick(e: MouseEvent): void {
@@ -184,6 +207,9 @@ export class DraftTable {
       }
       case 'new':
         this.handlers.newGame?.();
+        break;
+      case 'reveal':
+        this.handlers.reveal?.();
         break;
       case 'rematch':
         this.handlers.rematch?.();
@@ -259,9 +285,9 @@ export class DraftTable {
       this.neighbour(m.left, 'left', m),
       this.town(m),
       this.neighbour(m.right, 'right', m),
-      this.hand(m),
+      this.cover ? this.hiddenHand() : this.hand(m),
       this.side(m),
-      ...(m.result ? [this.result(m.result)] : []),
+      ...(m.result ? [this.result(m.result)] : this.cover ? [this.coverScreen(this.cover)] : []),
     ]);
     if (focused && !this.element.contains(document.activeElement)) this.focusKey(focused);
     this.placePopover();
@@ -457,8 +483,48 @@ export class DraftTable {
   }
 
   /** The face-down slot where your locked pick waits for the reveal (UX.md §7.2, §8.2). */
+  /** The hand row while a pass cover is up: no cards, no names, nothing to peek at. */
+  private hiddenHand(): HTMLElement {
+    return h(
+      'section',
+      { class: 'dt-hand is-hidden', attrs: { 'aria-label': 'Hand hidden' } },
+      h('header', { class: 'dt-hand-head' }, h('h2', {}, 'Hand hidden')),
+      h('div', { class: 'dt-cards' }),
+    );
+  }
+
+  /** UX.md §9: "Pass to Ana", then Ana shows her own hand. Port of catan's coverScreen. */
+  private coverScreen(c: CoverInfo): HTMLElement {
+    return h(
+      'div',
+      { class: 'ww-scrim dt-cover' },
+      h(
+        'div',
+        {
+          class: 'ww-dialog dt-cover-card',
+          style: { '--seat': c.color },
+          attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dt-cover-title' },
+        },
+        h('p', { class: 'muted' }, 'Hotseat: hide your cards'),
+        h('h2', { id: 'dt-cover-title' }, h('span', { class: 'dt-dot' }), ` Pass to ${c.name}`),
+        h(
+          'div',
+          { class: 'ww-dialog-actions' },
+          h(
+            'button',
+            {
+              class: 'btn btn-primary btn-lg',
+              attrs: { 'data-act': 'reveal', 'data-k': 'reveal' },
+            },
+            `I'm ${c.name}, show my hand`,
+          ),
+        ),
+      ),
+    );
+  }
+
   private stage(m: TableModel): HTMLElement {
-    const st = m.staged;
+    const st = this.cover ? null : m.staged;
     return h(
       'div',
       { class: `dt-stage${st ? ' is-full' : ''}` },
