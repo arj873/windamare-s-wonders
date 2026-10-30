@@ -28,6 +28,46 @@ describe('the room server hosts the shipped Windamere engine', () => {
     expect(g.view.result?.winners.length).toBeGreaterThan(0);
   });
 
+  it('First game (R19, ENGINE §15.5): starts in the pick phase, no Honours, one Great Work each', () => {
+    const engine = roomEngine();
+    const { session, hostToken } = GameSession.create('WIND03', 0, engine, fakeDeps(), {
+      botDelayMs: 0,
+    });
+    const net = new LocalNet(session);
+    net.connect('a');
+    net.send('a', { type: 'hello', token: hostToken, name: 'Ann' });
+    net.send('a', {
+      type: 'configure',
+      config: { seatCount: 3, timer: 'relaxed', options: { firstGame: true } },
+    });
+    net.send('a', { type: 'start' });
+    expect(net.last('a', 'error')).toBeUndefined();
+    const v = net.last('a', 'game')!.view as unknown as {
+      config: { options?: { firstGame?: boolean } };
+      phase: { kind: string };
+      table: { honours: unknown[] };
+      seats: { data: { greatWork: unknown } }[];
+    };
+    expect(v.config.options?.firstGame).toBe(true);
+    expect(v.phase.kind).toBe('pick'); // no Great Work choice (R19.4)
+    expect(v.table.honours).toEqual([]);
+    expect(v.seats.every((x) => typeof x.data.greatWork === 'string')).toBe(true);
+    for (let i = 0; i < 400 && session.currentPhase === 'playing'; i++) net.advance(10_000);
+    expect(session.currentPhase).toBe('over');
+
+    // A misspelt option must not silently play the full game.
+    const again = GameSession.create('WIND04', 0, engine, fakeDeps(), {}).session;
+    const n2 = new LocalNet(again);
+    n2.connect('a');
+    n2.send('a', { type: 'hello', token: null, name: 'Ann' });
+    n2.send('a', {
+      type: 'configure',
+      config: { seatCount: 3, timer: 'off', options: { firstGam: true } },
+    });
+    n2.send('a', { type: 'start' });
+    expect(again.currentPhase).toBe('lobby');
+  });
+
   it('leaks nothing: every seat sees only its own hand, pick and prompt data, all game long', () => {
     const engine = roomEngine();
     const { session, hostToken } = GameSession.create('WIND02', 0, engine, fakeDeps(), {

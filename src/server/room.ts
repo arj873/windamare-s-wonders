@@ -320,7 +320,8 @@ export function sessionDeps(randomBytes: (n: number) => Uint8Array): SessionDeps
 
 /** Optional `vars` overrides (local dev and the end-to-end test speed bots up). */
 export function sessionOptionsFrom(vars: Record<string, unknown>): Partial<SessionOptions> {
-  const out: Partial<SessionOptions> = {};
+  // The Season card's reading time is not the players' (research R7 net #1).
+  const out: Partial<SessionOptions> = { openingBonusMs: 8_400 };
   const num = (key: string, min: number, max: number): number | undefined => {
     const raw = vars[key];
     if (raw === undefined || raw === '') return undefined;

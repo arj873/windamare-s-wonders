@@ -10,7 +10,10 @@ type View = DraftView<ToySeat, ToyTable>;
 
 /** Ann (host, seat 0) and Bob (seat 1) online, seat 2 is a bot. Lobby, nothing started. */
 function lobby(opts: Partial<SessionOptions> = {}, options?: Record<string, number | boolean>) {
-  const { session, hostToken } = GameSession.create('ROOM01', 0, toy, fakeDeps(), opts);
+  const { session, hostToken } = GameSession.create('ROOM01', 0, toy, fakeDeps(), {
+    openingBonusMs: 0,
+    ...opts,
+  });
   const net: Net = new LocalNet(session);
   net.connect('c1');
   net.send('c1', { type: 'hello', token: hostToken, name: 'Ann' });
@@ -222,6 +225,15 @@ describe('simultaneous picks (real engine, toy ruleset)', () => {
 });
 
 describe('clock', () => {
+  it('adds the Season card time to the first pick clock only (R7 net #1)', () => {
+    const { net } = started({ openingBonusMs: 8_400 });
+    expect(game(net, 'c1').timer).toEqual({ remainingMs: 53_400, totalMs: 53_400 });
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
+    net.send('c2', { type: 'pick', pick: sell(net, 'c2') });
+    net.advance(1_000);
+    expect(game(net, 'c1').timer!.totalMs).toBe(40_000);
+  });
+
   it('plays the engine default for slow seats when the clock runs out', () => {
     const { net } = started();
     net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
@@ -413,6 +425,25 @@ describe('hardening (audit Q0-N1..N4)', () => {
     expect(net.session.room().host).toBe('m2');
     net.send('c2', { type: 'start' });
     expect(net.last('c2', 'room')!.room.phase).toBe('playing');
+  });
+
+  it('carries a bot level and a distinct colour per seat (N4)', () => {
+    const { net, session } = lobby();
+    net.send('c1', {
+      type: 'configure',
+      config: { seatCount: 3, timer: 'off', botLevels: ['easy', 'easy', 'hard'], colours: [2, 0] },
+    });
+    const seats = session.room().seats;
+    expect(seats.map((x) => x.botLevel)).toEqual(['easy', 'easy', 'hard']);
+    expect(seats.map((x) => x.colour)).toEqual([2, 0, 1]); // unchosen seats take the free slots
+    net.send('c1', { type: 'configure', config: { seatCount: 3, timer: 'off', colours: [1, 1] } });
+    expect(net.last('c1', 'error')!.code).toBe('bad_message');
+    net.send('c1', {
+      type: 'configure',
+      config: { seatCount: 3, timer: 'off', botLevels: ['god' as 'easy'] },
+    });
+    expect(net.last('c1', 'error')!.code).toBe('bad_message');
+    expect(session.room().seats[2]!.botLevel).toBe('hard');
   });
 
   it('turns an engine that throws or a bad seat count into bad_config (N4)', () => {

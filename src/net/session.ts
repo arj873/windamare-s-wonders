@@ -15,6 +15,7 @@ import {
   LIMITS,
   PROTOCOL_VERSION,
   RATE_LIMITS,
+  SEAT_COLOURS,
   clockMs,
   cleanText,
   parseClientMessage,
@@ -27,6 +28,7 @@ import {
   type RoomInfo,
   type RoomPhase,
   type SeatInfo,
+  type BotLevel,
   type ServerMessage,
   type TimerInfo,
 } from './protocol';
@@ -46,6 +48,8 @@ export interface SessionOptions {
   graceMs: number;
   /** Bots act this long after a stage (turn, prompt) opens. */
   botDelayMs: number;
+  /** Added to the first pick clock of each Season (the Season card's time). */
+  openingBonusMs: number;
   /** An empty room (nobody connected) expires after this long. */
   idleExpiryMs: number;
   /** R15.5: once every seat that is here has acted, away seats get this long, then a timeout pick. */
@@ -54,6 +58,7 @@ export interface SessionOptions {
 export const DEFAULT_SESSION_OPTIONS: SessionOptions = {
   graceMs: 60_000,
   botDelayMs: 900,
+  openingBonusMs: 0, // the server sets it (SERVER_LIMITS)
   idleExpiryMs: 24 * 3_600_000,
   awayWaitMs: 15_000,
 };
@@ -366,6 +371,10 @@ export class GameSession<S, T> {
     };
     this.members.push(m);
     return m;
+  }
+
+  private botLevel(i: number): BotLevel {
+    return this.config.botLevels?.[i] ?? 'easy';
   }
 
   private resizeSeats(): void {
@@ -792,11 +801,15 @@ export class GameSession<S, T> {
     this.stageStartedAt = now;
     this.awayWaitFrom = null;
     this.timedOut = this.seats.map(() => false);
-    this.stageTotalMs = clockMs(
+    const base = clockMs(
       this.config.timer,
       st.phase.kind === 'prompt' ? 'prompt' : 'pick',
       st.turn,
     );
+    // The Season card opens over the first pick of a Season and closes itself after
+    // `openingBonusMs`; that reading time is not the players' (research R7 net #1).
+    const bonus = st.turn === 0 && st.phase.kind === 'pick' ? this.opts.openingBonusMs : 0;
+    this.stageTotalMs = base === null ? null : base + bonus;
     this.deadline = this.stageTotalMs === null ? null : now + this.stageTotalMs;
     this.gameDirty = true; // the timer changed
   }
@@ -850,9 +863,10 @@ export class GameSession<S, T> {
       for (const i of new Set(due)) {
         // Bots and timeouts answer from the seat's own view, like a client would.
         const v = this.engine.viewFor(st, i);
-        // R15.6: the timeout pick is the Easy bot's; the engine default is the fallback.
+        // Bots play at their seat's level; R15.6: a timeout pick is always the Easy bot's.
+        const level = this.isBot(this.seatAt(i)) ? this.botLevel(i) : 'easy';
         const a =
-          pickFor(this.engine, v, i, { level: 'easy', salt: saltOf(st.config.seed) }) ??
+          pickFor(this.engine, v, i, { level, salt: saltOf(st.config.seed) }) ??
           this.engine.defaultAction(v, i);
         if (a === null) continue;
         const r = this.engine.applyAction(next, a);
@@ -874,9 +888,21 @@ export class GameSession<S, T> {
 
   // ---- outbound views ------------------------------------------------------
 
+  /** Chosen colours first; seats without one get the lowest unused slots, so all differ. */
+  private seatColours(): number[] {
+    const chosen = this.config.colours ?? [];
+    const free = Array.from({ length: SEAT_COLOURS }, (_, c) => c).filter(
+      (c) => !chosen.includes(c),
+    );
+    return this.seats.map((_, i) => chosen[i] ?? (free.shift() as number));
+  }
+
   room(): RoomInfo {
-    const seats: SeatInfo[] = this.seats.map((s) => ({
+    const colours = this.seatColours();
+    const seats: SeatInfo[] = this.seats.map((s, i) => ({
       occupant: s.occupant,
+      botLevel: this.botLevel(i),
+      colour: colours[i] as number,
       status:
         this.phase === 'lobby'
           ? s.occupant

@@ -337,3 +337,24 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
   Not in `pnpm test`. A `pnpm e2e:server` script entry is platform's to add.
 - **Not done:** the 2-tab _browser_ e2e (playwright is on main, P9): the UI has no online screens
   yet (home, lobby, table over `RoomClient`), so there is nothing to drive. No deploy.
+
+## 11. N4: bot level, seat colour, First game, clock check
+
+- `RoomConfig.botLevels?: ('easy'|'medium'|'hard')[]` (by seat index, default easy) and
+  `colours?: number[]` (slots 0..7, by seat index, must differ). Both are at most `seatCount`
+  long. `SeatInfo` in the `room` message now always carries `botLevel` and `colour`; seats with no
+  chosen colour take the lowest unused slots. A bot playing a seat (empty seat, or grace over)
+  uses that seat's level via `pickFor`; a **timeout pick is always Easy** (R15.6).
+- **First game (R19.1)** needs no protocol change: the host sets `config.options.firstGame = true`
+  and `options` is passed to the engine's `createGame` / `validateConfig`. The engine field is
+  engine's E6; untested against the real engine until it lands (the toy ruleset ignores it).
+- `src/server/clock.test.ts` asserts the server clock equals `windamereClock.seconds` for every
+  preset and turn, so hotseat and online cannot drift.
+- **Backward compatible:** `SeatInfo.botLevel` / `colour` are optional on the wire type (absent =
+  easy / seat index); the server always sends them.
+- **First game** is tested on the real engine (`windamere.test.ts`): `options.firstGame` starts in
+  the `pick` phase, no Honours, every town holds a Great Work; a misspelt option key refuses to
+  start. The full game then plays to `over`.
+- **Season card time (R7 net #1):** `SessionOptions.openingBonusMs` (default 0 in `GameSession`,
+  8 400 ms set by the server in `sessionOptionsFrom`) is added to the pick clock of turn 0 of each
+  Season; `timer.totalMs` includes it. The in-page/SharedWorker dev backends use the default 0.

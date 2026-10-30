@@ -44,6 +44,12 @@ export type RateKind = keyof typeof RATE_LIMITS;
 export const REACTIONS = ['thumbsUp', 'laugh', 'wow', 'sad', 'clap', 'think', 'gg'] as const;
 export type Reaction = (typeof REACTIONS)[number];
 
+/** Bot strength per seat (src/bots `pickFor` levels). Timeouts always use Easy (R15.6). */
+export const BOT_LEVELS = ['easy', 'medium', 'hard'] as const;
+export type BotLevel = (typeof BOT_LEVELS)[number];
+/** Seat colours are palette slots; the UI owns what each looks like. */
+export const SEAT_COLOURS = 8;
+
 export const SEAT_RANGE = { min: 2, max: 8 } as const; // guess: RULES.md will decide
 
 /** Room clock presets (RULES.md R15.3). */
@@ -72,6 +78,10 @@ export interface RoomConfig {
   timer: TimerPreset;
   /** Ruleset options (variants); the engine's `validateConfig` judges them at start. */
   options?: Record<string, Json>;
+  /** Bot level by seat index (default easy); used when a bot plays that seat. */
+  botLevels?: BotLevel[];
+  /** Colour slot (0..7) by seat index; default is the seat index. Entries must differ. */
+  colours?: number[];
 }
 export const DEFAULT_ROOM_CONFIG: RoomConfig = { seatCount: 4, timer: 'normal' };
 
@@ -79,6 +89,10 @@ export interface SeatInfo {
   /** Member id of the owner (kept while a bot plays for them), or null for an open seat. */
   occupant: string | null;
   status: SeatStatus;
+  /** What a bot playing this seat would use. Absent = easy. */
+  botLevel?: BotLevel;
+  /** Palette slot. Absent = table order (the seat index). */
+  colour?: number;
 }
 export interface MemberInfo {
   id: string;
@@ -232,14 +246,30 @@ const pickCheck: Check<Pick> = (x, path) => {
 
 const configCheck: Check<RoomConfig> = (x, path) => {
   const o = record(x, path);
-  onlyKeys(o, ['seatCount', 'timer', 'options'], path);
+  onlyKeys(o, ['seatCount', 'timer', 'options', 'botLevels', 'colours'], path);
   const options = o['options'];
   if (options !== undefined && (!isRecord(options) || Object.keys(options).length > 16)) {
     throw new Invalid(`${path}.options`, 'expected an object with at most 16 keys');
   }
+  const seatCount = field(o, 'seatCount', int(SEAT_RANGE.min, SEAT_RANGE.max), path);
+  const list = <V>(key: string, item: Check<V>): V[] | undefined => {
+    const raw = o[key];
+    if (raw === undefined) return undefined;
+    if (!Array.isArray(raw) || raw.length > seatCount) {
+      throw new Invalid(`${path}.${key}`, `expected an array of at most ${seatCount}`);
+    }
+    return raw.map((v, i) => item(v, `${path}.${key}[${i}]`));
+  };
+  const botLevels = list('botLevels', oneOf(BOT_LEVELS));
+  const colours = list('colours', int(0, SEAT_COLOURS - 1));
+  if (colours && new Set(colours).size !== colours.length) {
+    throw new Invalid(`${path}.colours`, 'colours must differ');
+  }
   return {
     ...(options === undefined ? {} : { options: options as Record<string, Json> }),
-    seatCount: field(o, 'seatCount', int(SEAT_RANGE.min, SEAT_RANGE.max), path),
+    ...(botLevels ? { botLevels } : {}),
+    ...(colours ? { colours } : {}),
+    seatCount,
     timer: field(o, 'timer', oneOf(TIMER_PRESETS), path),
   };
 };
