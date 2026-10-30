@@ -102,6 +102,14 @@ fourfold-gate. Each is drawn as four layers `tier-1..4` (base first); inline the
 simple flat shapes and are not tied to what the tier rewards are. Original Windamere places;
 no real-world ancient wonder (ORIGINALITY §5). Untested in the live UI.
 
+## Card art-window illustrations (`public/art/cards/<kind>-<name>.svg`, 136×100)
+
+Eighteen small flat scenes, three per kind, sized for the frame's `art` zone (136×100). Subjects
+come from Windamere card names but are not tied to one card id: holding (reeds, peat, hives),
+hall (moot, hearth, bell), market (stall, bridge, fair), watch (beacon, fence, gatehouse), lore
+(almanac, stars, rune), landmark (barrow, highhall, orrery). Placeholder pool: design or ui can
+map cards to illustrations later. Original drawings; no 7 Wonders subjects or layouts.
+
 ## Table chrome (A2)
 
 Fixed art in `public/art/table/`: `table-bg.svg` (cobalt table with faint diamond tile),
