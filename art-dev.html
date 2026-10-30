@@ -131,6 +131,10 @@
       </div>
     </section>
     <section>
+      <h2>Great Work vignettes (4 tier layers each)</h2>
+      <div class="row" id="gw"></div>
+    </section>
+    <section>
       <h2>Sample cards (frame is inline SVG, kind colour via CSS vars)</h2>
       <div class="row" id="cards"></div>
     </section>
@@ -198,6 +202,25 @@
         .join('');
       $('honours').innerHTML = HONOURS.map((h) => cell(`/art/honours/${h}.svg`, h, 56)).join('');
 
+      const GW = [
+        'the-mere-bridge',
+        'the-wind-organ',
+        'the-beacon-crown',
+        'the-salt-stair',
+        'the-stonewrights-spire',
+        'the-hall-of-echoes',
+        'the-harvest-wheel',
+        'the-ice-lantern',
+        'the-wolf-gate',
+        'the-tide-mill',
+        'the-lantern-market',
+        'the-ring-of-oaths',
+        'the-coinwell',
+        'the-fourfold-gate',
+      ];
+      $('gw').innerHTML = GW.map((g) =>
+        cell(`/art/great-works/${g}.svg`, g.replace('the-', ''), 160),
+      ).join('');
       // Sample content is placeholder text, not final card data (CARDS.md owns that).
       const SAMPLES = [
         ['holding', 'Sample Holding', 'Yields 1 reed.', ['peat']],
