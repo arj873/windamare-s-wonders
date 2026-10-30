@@ -18,7 +18,7 @@ function lobby(opts: Partial<SessionOptions> = {}, options?: Record<string, numb
   net.send('c2', { type: 'hello', token: null, name: 'Bob' });
   net.send('c1', {
     type: 'configure',
-    config: { seatCount: 3, roundTimerSec: 60, ...(options ? { options } : {}) },
+    config: { seatCount: 3, timer: 'normal', ...(options ? { options } : {}) },
   });
   const bobToken = net.last('c2', 'welcome')!.you.token;
   return { net, session, hostToken, bobToken };
@@ -225,20 +225,20 @@ describe('clock', () => {
   it('plays the engine default for slow seats when the clock runs out', () => {
     const { net } = started();
     net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
-    expect(game(net, 'c1').timer).toEqual({ remainingMs: 60_000, totalMs: 60_000 });
-    net.advance(59_999);
+    expect(game(net, 'c1').timer).toEqual({ remainingMs: 90_000, totalMs: 90_000 });
+    net.advance(89_999);
     expect(view(net, 'c1').turn).toBe(0);
     net.advance(1);
     expect(view(net, 'c1').turn).toBe(1);
     expect(net.messages('c1', 'chat').some((c) => c.entry.text === 'Bob ran out of time')).toBe(
       true,
     );
-    expect(game(net, 'c1').timer!.remainingMs).toBe(60_000); // a fresh clock for the new turn
+    expect(game(net, 'c1').timer!.totalMs).toBe(70_000); // turn 2's clock is shorter (R15.3)
   });
 
   it('waits for humans when the timer is off', () => {
     const { net } = lobby();
-    net.send('c1', { type: 'configure', config: { seatCount: 3, roundTimerSec: null } });
+    net.send('c1', { type: 'configure', config: { seatCount: 3, timer: 'off' } });
     net.send('c1', { type: 'start' });
     net.advance(3_600_000);
     expect(view(net, 'c1').turn).toBe(0);
@@ -247,22 +247,44 @@ describe('clock', () => {
 });
 
 describe('disconnects and reconnects', () => {
-  it('does not wait for an away seat once everyone else has acted', () => {
+  it('waits the away wait (R15.5), not the whole clock, for an away seat', () => {
     const { net } = started();
     net.disconnect('c2');
     net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
-    net.advance(900);
+    net.advance(900); // the bot acts; from now only Bob is outstanding
+    net.advance(14_999);
+    expect(view(net, 'c1').turn).toBe(0);
+    net.advance(1);
     expect(view(net, 'c1').turn).toBe(1);
   });
 
-  it('can hold the table for an away seat until the clock (autoPickAway off)', () => {
-    const { net } = started({ autoPickAway: false });
+  it('the away wait never runs past the clock, and works with the clock off', () => {
+    const { net } = started({ awayWaitMs: 1_000_000, graceMs: 1_000_000 });
     net.disconnect('c2');
     net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
-    net.advance(30_000);
+    net.advance(89_999);
     expect(view(net, 'c1').turn).toBe(0);
-    net.advance(30_000);
+    net.advance(1);
     expect(view(net, 'c1').turn).toBe(1);
+
+    const off = lobby();
+    off.net.send('c1', { type: 'configure', config: { seatCount: 3, timer: 'off' } });
+    off.net.send('c1', { type: 'start' });
+    off.net.disconnect('c2');
+    off.net.send('c1', { type: 'pick', pick: sell(off.net, 'c1') });
+    off.net.advance(900 + 15_000);
+    expect(view(off.net, 'c1').turn).toBe(1);
+  });
+
+  it('a seat that comes back during the away wait is waited for', () => {
+    const { net, bobToken } = started();
+    net.disconnect('c2');
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
+    net.advance(10_000);
+    net.connect('c2b');
+    net.send('c2b', { type: 'hello', token: bobToken });
+    net.advance(20_000);
+    expect(view(net, 'c1').turn).toBe(0); // Bob is here and has not picked: wait for the clock
   });
 
   it('keeps a pick across a reconnect mid-round and shows it again', () => {
@@ -279,7 +301,7 @@ describe('disconnects and reconnects', () => {
   });
 
   it('hands a seat to a bot after the grace period and gives it back on return', () => {
-    const { net, bobToken } = started({ autoPickAway: false });
+    const { net, bobToken } = started();
     net.disconnect('c2');
     expect(net.last('c1', 'room')!.room.seats[1]!.status).toBe('away');
     net.advance(60_000);
@@ -309,7 +331,7 @@ describe('disconnects and reconnects', () => {
     net.connect('c1b');
     net.send('c1b', { type: 'hello', token: hostToken });
     expect(view(net, 'c1b').turn).toBe(0);
-    expect(game(net, 'c1b').timer!.remainingMs).toBe(40_000);
+    expect(game(net, 'c1b').timer!.remainingMs).toBe(70_000);
   });
 
   it('expires an empty room after the idle period', () => {
@@ -357,5 +379,63 @@ describe('game over and rematch', () => {
     expect(net.last('c1', 'room')!.room.phase).toBe('lobby');
     net.send('c1', { type: 'start' });
     expect(view(net, 'c1').round).toBe(0);
+  });
+});
+
+describe('hardening (audit Q0-N1..N4)', () => {
+  it('one socket cannot fill the room with throwaway members (N1)', () => {
+    const { net } = lobby();
+    net.connect('flood');
+    for (let i = 0; i < 50; i++) net.send('flood', { type: 'hello', token: null, name: `F${i}` });
+    expect(net.session.room().members.length).toBeLessThanOrEqual(4); // Ann, Bob, one flooder
+    net.connect('late');
+    net.send('late', { type: 'hello', token: null, name: 'Late' });
+    expect(net.last('late', 'welcome')).toBeDefined();
+  });
+
+  it('a second hello on a bound socket needs the same token (N2)', () => {
+    const { net, bobToken } = lobby();
+    net.send('c2', { type: 'hello', token: null, name: 'Eli' });
+    expect(net.last('c2', 'error')!.code).toBe('bad_message');
+    net.send('c2', { type: 'hello', token: bobToken });
+    expect(net.last('c2', 'welcome')).toBeDefined();
+    net.disconnect('c2');
+    const members = net.session.room().members;
+    expect(members.filter((m) => m.connected).map((m) => m.name)).toEqual(['Ann']);
+  });
+
+  it('passes the host on after the grace period (N3)', () => {
+    const { net } = lobby();
+    net.disconnect('c1');
+    net.advance(59_999);
+    expect(net.session.room().host).toBe('m1');
+    net.advance(1);
+    expect(net.session.room().host).toBe('m2');
+    net.send('c2', { type: 'start' });
+    expect(net.last('c2', 'room')!.room.phase).toBe('playing');
+  });
+
+  it('turns an engine that throws or a bad seat count into bad_config (N4)', () => {
+    const { net, session } = lobby();
+    net.send('c1', { type: 'configure', config: { seatCount: 9, timer: 'off' } });
+    expect(net.last('c1', 'error')!.code).toBe('bad_message'); // protocol bound
+    net.send('c1', { type: 'configure', config: { seatCount: 8, timer: 'off' } });
+    expect(net.last('c1', 'error')!.code).toBe('bad_config'); // toy ruleset seats 2..5
+    expect(session.room().config.seatCount).toBe(3);
+
+    const throwing = {
+      ...toy,
+      createGame: () => {
+        throw new Error('boom');
+      },
+      ruleset: toy.ruleset,
+    };
+    const t = GameSession.create('R2', 0, throwing as typeof toy, fakeDeps());
+    const n2: Net = new LocalNet(t.session);
+    n2.connect('a');
+    n2.send('a', { type: 'hello', token: t.hostToken, name: 'Ann' });
+    expect(() => n2.send('a', { type: 'start' })).not.toThrow();
+    expect(n2.last('a', 'error')!.code).toBe('bad_config');
+    expect(t.session.currentPhase).toBe('lobby');
   });
 });

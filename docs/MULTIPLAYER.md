@@ -290,3 +290,20 @@ yet changed). `RoomCore` gets the engine through `RoomPlatform.engine`.
 - Host succession, seat colours, bot levels, profiles.
 - Nothing has run under workerd or `wrangler dev`; no deploy (needs the human).
 - Per-IP HTTP limits live in isolate memory (as in Catan).
+
+## 9. Following RULES.md R15 and ENGINE.md §14 (2026-10-29)
+
+- **Away seats (R15.5)** replace "resolve at once": when every seat still owed an action is away,
+  they get `awayWaitMs` (15 s) more, never past the clock, and it applies with the clock off too.
+  `autoPickAway` is gone. After `graceMs` (60 s) a bot plays the seat, as before.
+- **Clock (R15.3)** is a room preset `timer: off | relaxed | normal | fast` (replaces
+  `roundTimerSec`), per stage: pick clock by turn 90/70/55/40 s × preset, 60 s for an `answer`
+  stage. Lengths live in `CLOCK_SECONDS` (`protocol.ts`); R15.3 marks them provisional (†).
+- **Timeout pick (R15.6)** and bot seats use `pickFor(engine, view, seat, {level:'easy', salt})`
+  from `src/bots`, from the seat's own view; the engine's `defaultAction` is the fallback.
+- **Pick shape (C1)**: the parser accepts `{card, use, args?}` (the core today) and
+  `{cards: [...]}` (E1b, up to 4); the engine decides which it takes. Drop the first when E1b lands.
+- **Prompt groups (C3)**: a group is one stage (`prompts[0].group`), one 60 s clock, `answer`
+  relayed per seat; `waiting` already lists every seat in the group. Untested until the engine
+  implements groups (only sequential prompts exist today).
+- Not changed: single-pick vs pair needed nothing (the pick is opaque to net).

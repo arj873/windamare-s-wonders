@@ -5,6 +5,7 @@
  */
 import {
   field,
+  arrayOf,
   int,
   Invalid,
   isRecord,
@@ -45,19 +46,35 @@ export const REACTIONS = ['thumbsUp', 'laugh', 'wow', 'sad', 'clap', 'think', 'g
 export type Reaction = (typeof REACTIONS)[number];
 
 export const SEAT_RANGE = { min: 2, max: 8 } as const; // guess: RULES.md will decide
-export const ROUND_TIMER_RANGE = { min: 10, max: 300 } as const; // seconds, guess
+
+/** Room clock presets (RULES.md R15.3). */
+export const TIMER_PRESETS = ['off', 'relaxed', 'normal', 'fast'] as const;
+export type TimerPreset = (typeof TIMER_PRESETS)[number];
+/** Normal pick-clock seconds by turn of a Season (the last repeats), and the prompt clock. */
+export const CLOCK_SECONDS = { pickByTurn: [90, 70, 55, 40], prompt: 60 } as const;
+const CLOCK_FACTOR = { relaxed: 1.5, normal: 1, fast: 0.5 } as const;
+
+/** Clock length in ms for a stage, or null when the clock is off. */
+export function clockMs(preset: TimerPreset, kind: 'pick' | 'prompt', turn: number): number | null {
+  if (preset === 'off') return null;
+  const base =
+    kind === 'prompt'
+      ? CLOCK_SECONDS.prompt
+      : (CLOCK_SECONDS.pickByTurn[Math.min(turn, CLOCK_SECONDS.pickByTurn.length - 1)] as number);
+  return Math.ceil(base * CLOCK_FACTOR[preset]) * 1000;
+}
 
 export type RoomPhase = 'lobby' | 'playing' | 'over';
 export type SeatStatus = 'human' | 'away' | 'bot';
 
 export interface RoomConfig {
   seatCount: number;
-  /** Seconds per round; null = no clock. */
-  roundTimerSec: number | null;
+  /** Turn clock preset (R15.3). */
+  timer: TimerPreset;
   /** Ruleset options (variants); the engine's `validateConfig` judges them at start. */
   options?: Record<string, Json>;
 }
-export const DEFAULT_ROOM_CONFIG: RoomConfig = { seatCount: 4, roundTimerSec: 60 };
+export const DEFAULT_ROOM_CONFIG: RoomConfig = { seatCount: 4, timer: 'normal' };
 
 export interface SeatInfo {
   /** Member id of the owner (kept while a bot plays for them), or null for an open seat. */
@@ -184,21 +201,34 @@ const token: Check<string> = str(LIMITS.tokenMax, {
 const memberId: Check<string> = str(12, { min: 2, pattern: /^m\d+$/ });
 const rawText = (max: number): Check<string> => str(max * 2);
 
-const pickCheck: Check<Pick> = (x, path) => {
+const pickedCard = (x: unknown, path: string) => {
   const o = record(x, path);
   onlyKeys(o, ['card', 'use', 'args'], path);
-  const pick: Pick = {
+  const c: { card: number; use: string; args?: Json } = {
     card: field(o, 'card', int(0, 1_000_000), path),
     use: field(o, 'use', str(32, { min: 1 }), path),
   };
   // `args` is ruleset vocabulary: any JSON, judged by the ruleset's validatePick.
-  if (o['args'] !== undefined) pick.args = o['args'] as Json;
-  return pick;
+  if (o['args'] !== undefined) c.args = o['args'] as Json;
+  return c;
+};
+
+/**
+ * One card (`{card, use, args?}`, the core today) or several (`{cards: [...]}`, engine change C1,
+ * docs/ENGINE.md §14). Both are rebuilt from known fields; the engine says which it accepts.
+ */
+const pickCheck: Check<Pick> = (x, path) => {
+  const o = record(x, path);
+  if ('cards' in o) {
+    onlyKeys(o, ['cards'], path);
+    return { cards: field(o, 'cards', arrayOf(pickedCard, 4), path) } as unknown as Pick;
+  }
+  return pickedCard(o, path) as Pick;
 };
 
 const configCheck: Check<RoomConfig> = (x, path) => {
   const o = record(x, path);
-  onlyKeys(o, ['seatCount', 'roundTimerSec', 'options'], path);
+  onlyKeys(o, ['seatCount', 'timer', 'options'], path);
   const options = o['options'];
   if (options !== undefined && (!isRecord(options) || Object.keys(options).length > 16)) {
     throw new Invalid(`${path}.options`, 'expected an object with at most 16 keys');
@@ -206,12 +236,7 @@ const configCheck: Check<RoomConfig> = (x, path) => {
   return {
     ...(options === undefined ? {} : { options: options as Record<string, Json> }),
     seatCount: field(o, 'seatCount', int(SEAT_RANGE.min, SEAT_RANGE.max), path),
-    roundTimerSec: field(
-      o,
-      'roundTimerSec',
-      nullable(int(ROUND_TIMER_RANGE.min, ROUND_TIMER_RANGE.max)),
-      path,
-    ),
+    timer: field(o, 'timer', oneOf(TIMER_PRESETS), path),
   };
 };
 

@@ -7,6 +7,7 @@
  * through `engine.viewFor`, the owner's own `myPick`, and the owner's own `welcome`.
  */
 import type { DraftAction, DraftEngine, DraftState } from '../engine';
+import { pickFor } from '../bots';
 import { Invalid } from './guard';
 import {
   CLOSE,
@@ -14,6 +15,7 @@ import {
   LIMITS,
   PROTOCOL_VERSION,
   RATE_LIMITS,
+  clockMs,
   cleanText,
   parseClientMessage,
   type ChatEntry,
@@ -46,14 +48,14 @@ export interface SessionOptions {
   botDelayMs: number;
   /** An empty room (nobody connected) expires after this long. */
   idleExpiryMs: number;
-  /** Resolve as soon as every connected human and bot has picked; away seats get a default pick. */
-  autoPickAway: boolean;
+  /** R15.5: once every seat that is here has acted, away seats get this long, then a timeout pick. */
+  awayWaitMs: number;
 }
 export const DEFAULT_SESSION_OPTIONS: SessionOptions = {
   graceMs: 60_000,
   botDelayMs: 900,
   idleExpiryMs: 24 * 3_600_000,
-  autoPickAway: true,
+  awayWaitMs: 15_000,
 };
 
 interface Member {
@@ -89,10 +91,19 @@ export interface SessionSnapshot<S, T> {
     stageKey: string;
     stageStartedAt: number;
     deadline: number | null;
+    stageTotalMs: number | null;
+    awayWaitFrom: number | null;
     pausedAt: number | null;
     timedOut: boolean[];
   } | null;
   emptySince: number | null;
+}
+
+/** Numeric salt for the bots' decision RNG, from the game's seed. */
+function saltOf(seed: number | string): number {
+  let h = 0x811c9dc5;
+  for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+  return h;
 }
 
 class Bucket {
@@ -126,6 +137,8 @@ export class GameSession<S, T> {
   private stageKey = '';
   private stageStartedAt = 0;
   private deadline: number | null = null;
+  private stageTotalMs: number | null = null;
+  private awayWaitFrom: number | null = null;
   private pausedAt: number | null = null;
   private timedOut: boolean[] = [];
 
@@ -144,6 +157,8 @@ export class GameSession<S, T> {
     now: number,
   ) {
     this.emptySince = now;
+    const { minSeats, maxSeats } = engine.ruleset;
+    this.config.seatCount = Math.min(maxSeats, Math.max(minSeats, this.config.seatCount));
     this.resizeSeats();
   }
 
@@ -190,6 +205,8 @@ export class GameSession<S, T> {
       s.stageKey = snap.game.stageKey;
       s.stageStartedAt = snap.game.stageStartedAt;
       s.deadline = snap.game.deadline;
+      s.stageTotalMs = snap.game.stageTotalMs;
+      s.awayWaitFrom = snap.game.awayWaitFrom;
       s.pausedAt = snap.game.pausedAt;
       s.timedOut = snap.game.timedOut;
     }
@@ -216,6 +233,8 @@ export class GameSession<S, T> {
               stageKey: this.stageKey,
               stageStartedAt: this.stageStartedAt,
               deadline: this.deadline,
+              stageTotalMs: this.stageTotalMs,
+              awayWaitFrom: this.awayWaitFrom,
               pausedAt: this.pausedAt,
               timedOut: this.timedOut,
             },
@@ -276,6 +295,9 @@ export class GameSession<S, T> {
     const due: number[] = [];
     if (this.phase === 'over') return null;
     if (this.phase === 'playing' && this.deadline !== null) due.push(this.deadline);
+    if (this.phase === 'playing' && this.awayWaitFrom !== null) {
+      due.push(this.awayWaitFrom + this.opts.awayWaitMs);
+    }
     if (this.phase === 'playing' && this.state !== null) {
       const st = this.state;
       if (this.engine.waitingOn(st).some((i) => this.isBot(this.seatAt(i)))) {
@@ -283,6 +305,8 @@ export class GameSession<S, T> {
       }
     }
     for (const s of this.seats) if (s.away && !s.bot) due.push(s.awayAt + this.opts.graceMs);
+    const host = this.members.find((x) => x.id === this.host);
+    if (host && host.conn === null) due.push(host.lastSeen + this.opts.graceMs);
     return due.length ? Math.min(...due) : null;
   }
 
@@ -319,6 +343,15 @@ export class GameSession<S, T> {
   }
   private isBot(s: Seat): boolean {
     return s.occupant === null || s.bot;
+  }
+
+  private bucket(key: string, kind: RateKind, now = 0): Bucket {
+    let b = this.buckets.get(key);
+    if (!b) {
+      b = new Bucket(RATE_LIMITS[kind].burst, now);
+      this.buckets.set(key, b);
+    }
+    return b;
   }
 
   private addMember(now: number): Member {
@@ -390,12 +423,8 @@ export class GameSession<S, T> {
           : msg.type === 'pick' || msg.type === 'unpick' || msg.type === 'answer'
             ? 'pick'
             : 'lobby';
-    let b = this.buckets.get(`${m.id}:${kind}`);
-    if (!b) {
-      b = new Bucket(RATE_LIMITS[kind].burst, now);
-      this.buckets.set(`${m.id}:${kind}`, b);
-    }
-    if (!b.take(kind, now)) return this.error(conn, 'rate_limited', 'slow down', msg.type);
+    if (!this.bucket(`${m.id}:${kind}`, kind, now).take(kind, now))
+      return this.error(conn, 'rate_limited', 'slow down', msg.type);
 
     const need = (ok: boolean, code: ErrorCode, why: string) => {
       if (!ok) this.error(conn, code, why, msg.type);
@@ -427,6 +456,16 @@ export class GameSession<S, T> {
       case 'configure':
         if (!need(m.id === this.host, 'not_host', 'host only')) return;
         if (!need(this.phase === 'lobby', 'wrong_phase', 'configure in the lobby')) return;
+        if (
+          !need(
+            msg.config.seatCount >= this.engine.ruleset.minSeats &&
+              msg.config.seatCount <= this.engine.ruleset.maxSeats,
+            'bad_config',
+            `this game seats ${this.engine.ruleset.minSeats} to ${this.engine.ruleset.maxSeats}`,
+          )
+        ) {
+          return;
+        }
         this.config = msg.config;
         this.resizeSeats();
         this.roomDirty = true;
@@ -449,7 +488,7 @@ export class GameSession<S, T> {
         ) {
           return;
         }
-        return this.start(now);
+        return this.start(conn, now);
       case 'rematch':
         if (!need(m.id === this.host, 'not_host', 'host only')) return;
         if (!need(this.phase === 'over', 'wrong_phase', 'game is not over')) return;
@@ -498,6 +537,17 @@ export class GameSession<S, T> {
       this.out.push({ kind: 'close', conn, code: CLOSE.expired, reason: 'expired' });
       return;
     }
+    // One member per connection: a second hello may only repeat the first one's token.
+    const boundId = this.conns.get(conn);
+    if (boundId) {
+      const cur = this.members.find((x) => x.id === boundId);
+      if (!cur || msg.token !== cur.token) {
+        return this.error(conn, 'bad_message', 'already joined on this connection', 'hello');
+      }
+    }
+    if (!this.bucket(`${conn}:hello`, 'lobby').take('lobby', now)) {
+      return this.error(conn, 'rate_limited', 'slow down', 'hello');
+    }
     let m = msg.token ? this.members.find((x) => x.token === msg.token) : undefined;
     let fresh = false;
     if (!m) {
@@ -530,6 +580,7 @@ export class GameSession<S, T> {
       const d = now - this.pausedAt;
       this.stageStartedAt += d;
       if (this.deadline !== null) this.deadline += d;
+      if (this.awayWaitFrom !== null) this.awayWaitFrom += d;
       this.pausedAt = null;
     }
     const name = msg.name === undefined ? null : cleanText(msg.name, LIMITS.name);
@@ -609,12 +660,13 @@ export class GameSession<S, T> {
   }
 
   private detach(conn: ConnId, now: number): void {
-    const m = this.memberOf(conn);
     this.conns.delete(conn);
-    if (!m || m.conn !== conn) return;
-    m.conn = null;
-    m.lastSeen = now;
-    this.markAway(m, now);
+    this.buckets.delete(`${conn}:hello`);
+    for (const m of this.members.filter((x) => x.conn === conn)) {
+      m.conn = null;
+      m.lastSeen = now;
+      this.markAway(m, now);
+    }
     if (this.connectedCount() === 0) {
       this.emptySince = now;
       if (this.phase === 'playing') this.pausedAt = now;
@@ -643,7 +695,7 @@ export class GameSession<S, T> {
     this.roomDirty = true;
   }
 
-  private start(now: number): void {
+  private start(conn: ConnId, now: number): void {
     const names = this.seats.map((s, i) => {
       const m = this.members.find((x) => x.id === s.occupant);
       return m?.name ?? `Bot ${i + 1}`;
@@ -654,16 +706,17 @@ export class GameSession<S, T> {
       ...(this.config.options ? { options: this.config.options } : {}),
     };
     const bad = this.engine.validateConfig(config);
-    if (bad !== null) {
-      this.error(
-        this.host ? (this.members.find((x) => x.id === this.host)?.conn ?? '') : '',
+    if (bad !== null) return this.error(conn, 'bad_config', bad, 'start');
+    try {
+      this.state = this.engine.createGame(config);
+    } catch (e) {
+      return this.error(
+        conn,
         'bad_config',
-        bad,
+        e instanceof Error ? e.message : 'cannot start',
         'start',
       );
-      return;
     }
-    this.state = this.engine.createGame(config);
     for (const s of this.seats) {
       s.away = false;
       s.bot = false;
@@ -691,6 +744,21 @@ export class GameSession<S, T> {
     this.touch();
   }
 
+  /** Host away for the grace period (or gone): the longest-present connected member takes over. */
+  private passHost(now: number): void {
+    const host = this.members.find((x) => x.id === this.host);
+    if (host && (host.conn !== null || now - host.lastSeen < this.opts.graceMs)) return;
+    const next = this.connected()
+      .filter((x) => x.id !== this.host)
+      .sort(
+        (a, b) => Number(b.seat !== null) - Number(a.seat !== null) || a.joinedAt - b.joinedAt,
+      )[0];
+    if (!next) return;
+    this.host = next.id;
+    this.sys(`${next.name ?? 'Someone'} is now the host`, now);
+    this.roomDirty = true;
+  }
+
   /** A seat's action from a client message: engine-validated, then the engine does the rest. */
   private act(
     conn: ConnId,
@@ -703,7 +771,12 @@ export class GameSession<S, T> {
       return this.error(conn, 'wrong_phase', 'no game is running', ref);
     }
     if (m.seat === null) return this.error(conn, 'not_seated', 'you have no seat', ref);
-    const r = this.engine.applyAction(this.state, build(m.seat));
+    let r;
+    try {
+      r = this.engine.applyAction(this.state, build(m.seat));
+    } catch {
+      return this.error(conn, 'illegal_action', 'the game refused that action', ref);
+    }
     if (!r.ok) return this.error(conn, 'illegal_action', r.error, ref);
     this.state = r.state;
     this.touch();
@@ -711,18 +784,26 @@ export class GameSession<S, T> {
 
   /** New engine stage (turn, prompt, round) -> fresh clock and "ran out of time" flags. */
   private syncStage(st: DraftState<S, T>, now: number): void {
-    const key = `${st.round}:${st.turn}:${st.phase.kind}:${st.prompts[0]?.id ?? ''}`;
+    // A prompt group (engine C3) is one stage: its seats answer together.
+    const head = st.prompts[0] as { id: number; group?: number } | undefined;
+    const key = `${st.round}:${st.turn}:${st.phase.kind}:${head?.group ?? head?.id ?? ''}`;
     if (key === this.stageKey) return;
     this.stageKey = key;
     this.stageStartedAt = now;
+    this.awayWaitFrom = null;
     this.timedOut = this.seats.map(() => false);
-    this.deadline =
-      this.config.roundTimerSec === null ? null : now + this.config.roundTimerSec * 1000;
+    this.stageTotalMs = clockMs(
+      this.config.timer,
+      st.phase.kind === 'prompt' ? 'prompt' : 'pick',
+      st.turn,
+    );
+    this.deadline = this.stageTotalMs === null ? null : now + this.stageTotalMs;
     this.gameDirty = true; // the timer changed
   }
 
   /** All due work, in order; loops because one step (a resolve) can make the next due. */
   private work(now: number): void {
+    this.passHost(now);
     for (let guard = 0; guard < 1000; guard++) {
       // Grace over -> bot.
       for (const s of this.seats) {
@@ -755,21 +836,24 @@ export class GameSession<S, T> {
       if (now >= this.stageStartedAt + this.opts.botDelayMs) {
         due.push(...waiting.filter((i) => this.isBot(this.seatAt(i))));
       }
+      // R15.5: everyone who is here has acted -> the away seats get a short wait, never past the clock.
+      const onlyAway = waiting.length > 0 && waiting.every((i) => this.seatAt(i).away);
+      if (!onlyAway) this.awayWaitFrom = null;
+      else this.awayWaitFrom ??= now;
       if (this.deadline !== null && now >= this.deadline) {
         due.push(...waiting);
-      } else if (
-        this.opts.autoPickAway &&
-        waiting.length > 0 &&
-        waiting.every((i) => this.seatAt(i).away)
-      ) {
-        // Everyone who is here has acted: do not hold the table for a dropped seat.
+      } else if (this.awayWaitFrom !== null && now >= this.awayWaitFrom + this.opts.awayWaitMs) {
         due.push(...waiting);
       }
       let next = st;
       let acted = false;
       for (const i of new Set(due)) {
         // Bots and timeouts answer from the seat's own view, like a client would.
-        const a = this.engine.defaultAction(this.engine.viewFor(st, i), i);
+        const v = this.engine.viewFor(st, i);
+        // R15.6: the timeout pick is the Easy bot's; the engine default is the fallback.
+        const a =
+          pickFor(this.engine, v, i, { level: 'easy', salt: saltOf(st.config.seed) }) ??
+          this.engine.defaultAction(v, i);
         if (a === null) continue;
         const r = this.engine.applyAction(next, a);
         if (!r.ok) throw new Error(`default action refused for seat ${i}: ${r.error}`);
@@ -828,12 +912,10 @@ export class GameSession<S, T> {
   }
 
   private timerFor(now: number): TimerInfo | null {
-    if (this.phase !== 'playing' || this.deadline === null || this.config.roundTimerSec === null)
+    if (this.phase !== 'playing' || this.deadline === null || this.stageTotalMs === null) {
       return null;
-    return {
-      remainingMs: Math.max(0, this.deadline - now),
-      totalMs: this.config.roundTimerSec * 1000,
-    };
+    }
+    return { remainingMs: Math.max(0, this.deadline - now), totalMs: this.stageTotalMs };
   }
 
   /** One `game` message per connected member: their own view and legal actions. */
