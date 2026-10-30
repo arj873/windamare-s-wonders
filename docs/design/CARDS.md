@@ -671,5 +671,62 @@ D10b is §12's scratch metric, 500 games; bot play):
 
 I1 now passes at every count from 3 to 7 seats at both levels, by bots' own metric at 6-7 and
 with D10b counted at 3-5. The cost is Town: rivalry Renown is card Renown (R12.2a), so at 6-7
-seats D10c gives back much of what L3 took from Town. That points at the score sheet rather than
-at the cards: see the "neighbours" group proposal in the design status (open, not built).
+seats D10c gives back much of what L3 took from Town. Research's R9 now judges S1 by the 8
+sources, not the R12.2 groups, so this matters less than it looks; see §17.
+
+## 17. D12 proposal: a fourth source for level-2 winners (open, not built)
+
+**Status: proposal.** Not built until balance's re-check of D9c, D10b, L3 and D10c on main is in
+(inbox 06:50). Every number is bot play (`balance.ts`, level 2, 1000 games, seed 1, 2-7 seats,
+on main's content after D10c), measured with overlays in scratch; nothing here is shipped.
+
+**The target** (research R9): S1 is judged by the 8 sources (Hall, Landmark, other card, Great
+Work, Valour, Lore, Honours, Purse). The winner's top source must be at most 55% of winners, and
+**at least 4 sources must each be the top source of at least 10% of winners**. Level 2 today:
+
+| Seats | Great Work | Landmark | Valour | Purse | Other card | Hall | Lore | Honours | Sources ≥ 10% |
+| ----- | ---------- | -------- | ------ | ----- | ---------- | ---- | ---- | ------- | ------------- |
+| 2     | **57%**    | 8%       | 15%    | 5%    | 0%         | 11%  | 1%   | 3%      | 3             |
+| 3     | 50%        | 11%      | 14%    | 14%   | 5%         | 3%   | 2%   | 1%      | 4             |
+| 4     | **56%**    | 19%      | 9%     | 8%    | 3%         | 4%   | 2%   | 0%      | 2             |
+| 5     | 45%        | 31%      | 7%     | 11%   | 1%         | 4%   | 1%   | 0%      | 3             |
+| 6     | 43%        | 27%      | 4%     | 8%    | 12%        | 4%   | 1%   | 0%      | 3             |
+| 7     | 49%        | 25%      | 5%     | 12%   | 6%         | 2%   | 1%   | 0%      | 3             |
+
+So D12 must move two numbers: the Great Work's top share under 55% at every count (fails at 2
+and 4 seats), and a 4th source over 10% at every count (only 3 seats has it).
+
+**Levers measured** (each alone, same games):
+
+| Probe                                     | Top source            | Sources ≥ 10% | Other effects                                     |
+| ----------------------------------------- | --------------------- | ------------- | ------------------------------------------------- |
+| Great Work thresholds +1/+1/+2/+3         | GW 35-48% (passes)    | 3/4/3/3/3/3   | tier IV 57-72% → 41-57% (S4 passes at 2, 3, 5, 6) |
+| Valour 3/4/5/6                            | Valour or GW, 33-49%  | 2/2/3/3/3/3   | Valour takes over                                 |
+| Thresholds up + Valour 3/4/5/6            | Valour 33-54%         | 2/2/3/3/3/3   | same                                              |
+| Purse 1 per 2 coins                       | Purse 49-76%          | 2/2/2/3/3/3   | overshoots; winning score +8 to +12               |
+| Purse 1 per 3 coins (**not allowed**)     | GW or Purse 32-52%    | 3/2/3/3/3/3   | 7 Wonders' rate (ORIGINALITY §2); for scale only  |
+| Score sheet: a "Neighbours" group (R12.2) | n/a under R9          |               | a 7th group brings back R4 O12's seven categories |
+| Score sheet: neighbour Renown into Raids  | Raids 57-83% by group |               | moves the concentration, does not spread it       |
+
+What this says: every single lever swaps which source leads; none spreads the top. Under the
+thresholds probe the 4th place is Valour (6-22%) or Purse (5-15%), close to 10% but not over.
+Lore never leads (1-3%) because level-2 bots barely build it whatever its numbers (BALANCE.md
+5.4), and Honours never does at 3+ seats.
+
+**Proposal, in order:**
+
+1. **Great Work thresholds +1/+1/+2/+3** (4/9/15/22 → 5/10/17/25; Spire 6/12/19/27 → 7/13/21/30).
+   Fixes the 55% cap at every count and most of S4 at level 2. Cost to check with balance: level-1
+   tier IV is already under 20% at 2-3 seats, and this lowers it further (the S4 conflict between
+   levels, open with research).
+2. **A modest raise for the 4th source on top of 1**, searched by balance as a small grid rather
+   than one guess: Valour Winter 5 → 6 alone, or Autumn and Winter +1 (2/3/5/6); and, if the
+   engine takes a new R12.2f shape, Purse at **2 Renown per 5 coins** (between 4 and 2, not 3;
+   today `coinsPerRenown` must be a whole number). Pass condition: ≥ 4 sources at ≥ 10% at 3-7
+   seats with the top under 55%.
+3. **Lore stays out of D12** until bots' level 2 values a run's future (asked of bots before). A
+   design change to Lore numbers has not moved level 2 at all.
+4. **Watch the rivalry size at level 2.** Level-2 winners take 8-15 Renown from neighbour effects
+   (`scoreBeat`, `scoreNeighbourMin`, `scoreSales`). Those payoffs were sized at level 1, where
+   the bot ignored Renown amounts (§12). Balance's re-check should say whether they are now too
+   big; cutting them would also move Landmark and "other card" shares in the table above.
