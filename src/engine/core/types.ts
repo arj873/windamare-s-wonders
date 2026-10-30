@@ -205,8 +205,8 @@ export interface Ctx<S = unknown, T = unknown> {
   readonly rules: Ruleset<S, T>;
   readonly rng: Rng;
   def(card: Card | CardDefId): CardDef;
-  /** Into the seat's tableau, then each of the card's effects' `onPlay`. */
-  play(seat: SeatId, card: Card): void;
+  /** Into the seat's tableau, then each of the card's effects' `onPlay` (given `args`). */
+  play(seat: SeatId, card: Card, args?: Json): void;
   /** Into a seat zone (no triggers). */
   place(seat: SeatId, zone: string, card: Card): void;
   toDiscard(card: Card): void;
@@ -215,7 +215,7 @@ export interface Ctx<S = unknown, T = unknown> {
   /** Remove a card from wherever it is; the caller must put it somewhere. */
   take(id: CardId): Card;
   /** Run `onPlay` of arbitrary specs (e.g. a monument stage). */
-  trigger(seat: SeatId, specs: readonly EffectSpec[], source: Card | null): void;
+  trigger(seat: SeatId, specs: readonly EffectSpec[], source: Card | null, args?: Json): void;
   prompt(seat: SeatId, kind: string, data: Json): void;
   log(seat: SeatId | null, kind: string, text: string, opts?: { data?: Json; to?: SeatId[] }): void;
   left(seat: SeatId): SeatId;
@@ -226,7 +226,14 @@ export interface Ctx<S = unknown, T = unknown> {
 export interface EffectHandler<S = unknown, T = unknown> {
   /** Checks a spec's parameters; content tests run it on every card. */
   validate?(spec: EffectSpec): string | null;
-  onPlay?(ctx: Ctx<S, T>, seat: SeatId, spec: EffectSpec, source: Card | null): void;
+  /** `args`: what `ctx.play` / `ctx.trigger` passed (e.g. the pick's choices); may be undefined. */
+  onPlay?(
+    ctx: Ctx<S, T>,
+    seat: SeatId,
+    spec: EffectSpec,
+    source: Card | null,
+    args: Json | undefined,
+  ): void;
   onRoundEnd?(ctx: Ctx<S, T>, seat: SeatId, spec: EffectSpec): void;
   score?(state: DraftState<S, T>, seat: SeatId, spec: EffectSpec): Record<string, number>;
 }
@@ -270,7 +277,13 @@ export interface Ruleset<S = unknown, T = unknown> {
   /** Runs just before each round is dealt (round 0 included), before `roundSpec`. */
   onRoundStart?(ctx: Ctx<S, T>, round: number): void;
   validateOptions?(options: Record<string, Json>): string | null;
-  /** The card is in the seat's hand (the core checked). */
+  /**
+   * Fill in what the pick left out (default choices) before it is validated and stored; the
+   * stored and revealed pick is what this returns. Must keep `card` and `use`, must not throw on
+   * junk `args` (return the pick as is and let `validatePick` reject it), and must be view-safe.
+   */
+  normalizePick?(state: DraftState<S, T>, seat: SeatId, pick: Pick): Pick;
+  /** The card is in the seat's hand (the core checked); `pick` is normalized. */
   validatePick(state: DraftState<S, T>, seat: SeatId, pick: Pick): string | null;
   /** Sound; complete up to open-ended `args` (docs/ENGINE.md §6). */
   legalPicks(state: DraftState<S, T>, seat: SeatId): Pick[];
@@ -279,6 +292,11 @@ export interface Ruleset<S = unknown, T = unknown> {
   /** Default 0..n-1. */
   resolveOrder?(state: DraftState<S, T>): SeatId[];
   resolve: ResolveStep<S, T>[];
+  /**
+   * The last turn's leftover hand cards, after the reveal and before the resolve steps. Must put
+   * every card somewhere (e.g. a zone a resolve step reads). Default: the discard pile.
+   */
+  onLeftovers?(ctx: Ctx<S, T>, seat: SeatId, cards: Card[]): void;
   onRoundEnd?(ctx: Ctx<S, T>): void;
   /** Score categories; total = their sum. */
   score(state: DraftState<S, T>, seat: SeatId): Record<string, number>;

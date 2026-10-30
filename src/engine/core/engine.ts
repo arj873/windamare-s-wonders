@@ -123,18 +123,42 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
     return draft;
   }
 
-  /** Why `pick` is not acceptable for `seat` now, or null. Works on a view for the viewer. */
-  function checkPick(state: DraftState<S, T>, seat: SeatId, pick: unknown): string | null {
-    if (state.phase.kind !== 'pick') return 'not the pick phase';
-    if (!isRecord(pick)) return 'pick must be an object';
+  /**
+   * The pick `applyAction` would store for `seat` now (only `card`, `use`, `args`, after
+   * `ruleset.normalizePick`), or why it is not acceptable. Works on a view for the viewer.
+   */
+  function acceptPick(
+    state: DraftState<S, T>,
+    seat: SeatId,
+    pick: unknown,
+  ): { pick: Pick } | { error: string } {
+    if (state.phase.kind !== 'pick') return { error: 'not the pick phase' };
+    if (!isRecord(pick)) return { error: 'pick must be an object' };
     const { card, use, args } = pick;
-    if (typeof card !== 'number' || !Number.isInteger(card)) return 'pick.card must be a card id';
-    if (typeof use !== 'string' || use === '') return 'pick.use must be a string';
-    if (args !== undefined && !isJson(args)) return 'pick.args must be JSON';
+    if (typeof card !== 'number' || !Number.isInteger(card)) {
+      return { error: 'pick.card must be a card id' };
+    }
+    if (typeof use !== 'string' || use === '') return { error: 'pick.use must be a string' };
+    if (args !== undefined && !isJson(args)) return { error: 'pick.args must be JSON' };
     const s = state.seats[seat];
-    if (!s || s.hand.length === 0) return 'you hold no cards';
-    if (!s.hand.some((c) => c.id === card)) return `card ${card} is not in your hand`;
-    return rules.validatePick(state, seat, pick as unknown as Pick);
+    if (!s || s.hand.length === 0) return { error: 'you hold no cards' };
+    if (!s.hand.some((c) => c.id === card)) return { error: `card ${card} is not in your hand` };
+    const clean: Pick = { card, use, ...(args !== undefined ? { args: cloneJson(args) } : {}) };
+    const normal = rules.normalizePick ? rules.normalizePick(state, seat, clean) : clean;
+    if (normal.card !== card || normal.use !== use) {
+      throw new Error(`ruleset ${rules.id}: normalizePick changed the card or use`);
+    }
+    if (normal.args !== undefined && !isJson(normal.args)) {
+      throw new Error(`ruleset ${rules.id}: normalizePick returned non-JSON args`);
+    }
+    const err = rules.validatePick(state, seat, normal);
+    return err ? { error: err } : { pick: normal };
+  }
+
+  /** Why `pick` is not acceptable for `seat` now, or null. */
+  function checkPick(state: DraftState<S, T>, seat: SeatId, pick: unknown): string | null {
+    const r = acceptPick(state, seat, pick);
+    return 'error' in r ? r.error : null;
   }
 
   function applyAction(state: DraftState<S, T>, action: DraftAction): ActionResult<S, T> {
@@ -155,11 +179,10 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
 
     switch (action.type) {
       case 'pick': {
-        const err = checkPick(draft, seat, action.pick);
-        if (err) return fail(err);
-        const { card, use, args } = action.pick;
+        const r = acceptPick(draft, seat, action.pick);
+        if ('error' in r) return fail(r.error);
         draft.seq += 1;
-        me.pick = { card, use, ...(args !== undefined ? { args: cloneJson(args) } : {}) };
+        me.pick = r.pick;
         if (allPicked(draft)) reveal(ctx);
         break;
       }

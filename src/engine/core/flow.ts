@@ -98,6 +98,10 @@ export function reveal<S, T>(ctx: Ctx<S, T>): void {
     for (const s of draft.seats) {
       const left = s.hand.splice(0);
       if (left.length === 0) continue;
+      if (rules.onLeftovers) {
+        rules.onLeftovers(ctx, s.id, left);
+        continue;
+      }
       draft.discard.push(...left);
       ctx.log(s.id, 'leftovers', `${s.name} discards ${left.length} leftover card(s).`);
     }
