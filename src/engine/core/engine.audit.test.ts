@@ -152,8 +152,7 @@ describe('hostile input', () => {
     }
   });
 
-  // FINDING Q0-E1 (docs/AUDIT.md): cloneJson turns a JSON "__proto__" key into a prototype.
-  it.fails('a stored pick never inherits properties from a JSON `__proto__` key', () => {
+  it('a stored pick never inherits properties from a JSON `__proto__` key', () => {
     // JSON.parse makes "__proto__" an own key; cloneJson assigns it with `out[k] = v`, which sets
     // the clone's prototype instead. The live state then differs from its own JSON round trip.
     const eng = createDraftEngine({ ...toyRuleset, validatePick: () => null });

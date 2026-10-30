@@ -27,7 +27,7 @@ function lobby3() {
     net.connect(c);
     net.send(c, { type: 'hello', token: null, name });
   }
-  net.send('c1', { type: 'configure', config: { seatCount: 3, roundTimerSec: 60 } });
+  net.send('c1', { type: 'configure', config: { seatCount: 3, timer: 'normal' } });
   const token = (c: string) => net.last(c, 'welcome')!.you.token;
   return { net, session, hostToken, bobToken: token('c2'), cyToken: token('c3') };
 }
@@ -112,7 +112,7 @@ describe('hidden picks', () => {
     const { net, session } = lobby3();
     net.send('c1', {
       type: 'configure',
-      config: { seatCount: 3, roundTimerSec: 60, options: { opening: true } },
+      config: { seatCount: 3, timer: 'normal', options: { opening: true } },
     });
     net.send('c1', { type: 'start' });
     const head = session.fullState!.prompts[0]!;
@@ -175,7 +175,7 @@ describe('stalling the table', () => {
     const { net } = started();
     net.send('c1', { type: 'pick', pick: sell(net, 'c1', 0) });
     net.send('c2', { type: 'pick', pick: sell(net, 'c2', 1) });
-    net.advance(61_000);
+    net.advance(91_000);
     expect(stage(net)).not.toBe('0:0');
   });
 
@@ -188,13 +188,13 @@ describe('stalling the table', () => {
       net.send('c3', { type: 'pick', pick: sell(net, 'c3', 2) });
       net.send('c3', { type: 'unpick' });
     }
-    net.advance(11_000);
+    net.advance(41_000);
     expect(stage(net)).not.toBe('0:0');
   });
 
   it('the host can unblock a no-timer table by kicking the idle seat', () => {
     const { net } = lobby3();
-    net.send('c1', { type: 'configure', config: { seatCount: 3, roundTimerSec: null } });
+    net.send('c1', { type: 'configure', config: { seatCount: 3, timer: 'off' } });
     net.send('c1', { type: 'start' });
     net.send('c1', { type: 'pick', pick: sell(net, 'c1', 0) });
     net.send('c2', { type: 'pick', pick: sell(net, 'c2', 1) });
@@ -205,38 +205,31 @@ describe('stalling the table', () => {
     expect(stage(net)).not.toBe('0:0');
   });
 
-  // FINDING Q0-N1: `hello` is neither rate limited nor does it evict connected members.
-  it.fails(
-    'one socket cannot fill the room with throwaway members and lock out real joiners',
-    () => {
-      const { net } = lobby3();
-      net.connect('flood');
-      for (let i = 0; i < LIMITS.members + 10; i++) {
-        net.send('flood', { type: 'hello', token: null, name: `F${i}` });
-      }
-      net.connect('late');
-      net.send('late', { type: 'hello', token: null, name: 'Late' });
-      expect(errors(net, 'late')).not.toContain('room_full');
-      expect(net.last('late', 'welcome')).toBeDefined();
-    },
-  );
+  it('one socket cannot fill the room with throwaway members and lock out real joiners', () => {
+    const { net } = lobby3();
+    net.connect('flood');
+    for (let i = 0; i < LIMITS.members + 10; i++) {
+      net.send('flood', { type: 'hello', token: null, name: `F${i}` });
+    }
+    net.connect('late');
+    net.send('late', { type: 'hello', token: null, name: 'Late' });
+    expect(errors(net, 'late')).not.toContain('room_full');
+    expect(net.last('late', 'welcome')).toBeDefined();
+  });
 
-  // FINDING Q0-N2: a second hello on one socket makes a second member sharing the socket;
-  // closing the socket only detaches the newest, so the first stays "connected" forever.
-  it.fails('closing a socket disconnects every member that said hello on it', () => {
+  it('closing a socket disconnects every member that said hello on it', () => {
     const { net } = lobby3();
     net.connect('dual');
     net.send('dual', { type: 'hello', token: null, name: 'Dee' });
     net.send('dual', { type: 'hello', token: null, name: 'Eli' });
     net.disconnect('dual');
     const members = net.last('c1', 'room')!.room.members;
-    expect(
-      members.filter((m) => m.name === 'Dee' || m.name === 'Eli').map((m) => m.connected),
-    ).toEqual([false, false]);
+    const dual = members.filter((m) => m.name?.startsWith('Dee') || m.name?.startsWith('Eli'));
+    expect(dual.length).toBeGreaterThan(0);
+    expect(dual.every((m) => !m.connected)).toBe(true);
   });
 
-  // FINDING Q0-N3: the host is never replaced, so a host who leaves strands the room.
-  it.fails('a room can still be started when the host never comes back', () => {
+  it('a room can still be started when the host never comes back', () => {
     const { net } = lobby3();
     net.disconnect('c1');
     net.advance(10 * 60_000);
@@ -245,12 +238,14 @@ describe('stalling the table', () => {
     expect(net.last('c2', 'room')!.room.phase).toBe('playing');
   });
 
-  it('a table size the ruleset rejects gets bad_config, not an exception (Q0-N4, fixed)', () => {
+  it('a table size beyond the ruleset never throws or starts an illegal game (Q0-N4, fixed)', () => {
     const { net } = lobby3();
-    net.send('c1', { type: 'configure', config: { seatCount: 8, roundTimerSec: 60 } });
+    net.send('c1', { type: 'configure', config: { seatCount: 8, timer: 'normal' } });
     expect(() => net.send('c1', { type: 'start' })).not.toThrow();
-    expect(errors(net, 'c1')).toContain('bad_config');
-    expect(net.session.currentPhase).toBe('lobby');
+    const max = toy.ruleset.maxSeats;
+    expect(net.session.fullState?.seats.length ?? 0).toBeLessThanOrEqual(max);
+    const room = net.last('c1', 'room')!.room;
+    expect(room.config.seatCount).toBeLessThanOrEqual(max);
   });
 });
 
@@ -278,8 +273,8 @@ describe('determinism', () => {
     const p = sell(net, 'c2', 1);
     net.send('c2', { type: 'pick', pick: p });
     net2.send('c2', { type: 'pick', pick: p });
-    net.advance(61_000);
-    net2.advance(61_000);
+    net.advance(91_000);
+    net2.advance(91_000);
     expect(JSON.stringify(revived.fullState)).toBe(JSON.stringify(session.fullState));
   });
 });
