@@ -9,6 +9,7 @@ import {
   activeEffects,
   measure,
   neighboursBeaten,
+  neighboursOf,
   scoreTown,
   type Measure,
   type WwRules,
@@ -122,11 +123,24 @@ export function observeWindamere(rules: WwRules, state: WwState): Record<string,
       beat += (spec.amount as number) * neighboursBeaten(rules, state, id, spec.measure as Measure);
     }
     const per = rules.tunables.coinsPerRenown;
-    const net = (received - paid) / per + beat;
+    // D10b (CARDS.md §12): the weaker neighbour's measure pays in Renown (scoreNeighbourMin),
+    // goods sold pay per `per` (scoreSales), and Wend Fair-type coins are counted from the weaker
+    // neighbour's Holdings at game end (an upper bound: the real count is taken at Build).
+    const weaker = (m: Measure) =>
+      Math.min(...neighboursOf(state, id).map((n) => measure(rules, state, n, m)));
+    let d10b = 0;
+    for (const { spec } of activeEffects(rules, state, id, 'scoreNeighbourMin'))
+      d10b += (spec.amount as number) * weaker(spec.measure as Measure);
+    for (const { spec } of activeEffects(rules, state, id, 'scoreSales'))
+      d10b += (spec.amount as number) * Math.floor((data.sold ?? 0) / (spec.per as number));
+    for (const { spec } of activeEffects(rules, state, id, 'onBuildNeighbourMin'))
+      d10b += (((spec.gains as Record<string, number>).coins ?? 0) * weaker('holdings')) / per;
+    const net = (received - paid) / per + beat + d10b;
+    add('nbrD10b', d10b);
     add('nbrNet', net);
     add('nbrBeat', beat);
     add('nbrTolls', tolls / per);
-    add('nbrGross', (received + paid) / per + beat);
+    add('nbrGross', (received + paid) / per + beat + d10b);
     const total = totals[id] ?? 0;
     add('nbrShare', total > 0 ? net / total : 0);
 
