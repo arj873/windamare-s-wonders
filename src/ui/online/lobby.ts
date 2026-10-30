@@ -362,7 +362,7 @@ export class LobbyScreen {
             attrs: { 'data-k': 'remove-bot' },
             on: { click: () => a.configure(withSeatCount(room.config, room.seats.length - 1)) },
           },
-          'Remove',
+          'Remove seat',
         ),
       s.canKick &&
         s.member !== null &&
@@ -374,7 +374,7 @@ export class LobbyScreen {
             attrs: { 'data-k': `kick-seat-${s.index}` },
             on: { click: () => s.member !== null && void this.kick(s.member, name) },
           },
-          'Remove',
+          'Remove player',
         ),
       s.canStand &&
         h(
