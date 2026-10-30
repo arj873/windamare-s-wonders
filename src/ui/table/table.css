@@ -666,6 +666,63 @@
 .dt-cover-card .ww-dialog-actions {
   justify-content: center;
 }
+.dt-kind-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  vertical-align: -3px;
+}
+.dt-card-band .dt-kind-icon {
+  width: 18px;
+  height: 18px;
+}
+.dt-art {
+  display: block;
+  flex: none;
+}
+.dt-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.dt-monument {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dt-monument-art {
+  width: 56px;
+}
+.dt-monument.is-large .dt-monument-art {
+  width: 120px;
+}
+.dt-monument-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.dt-monument-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+.dt-monument.is-large .dt-monument-name {
+  font-size: 16px;
+}
+.dt-monument-progress,
+.dt-monument-perk {
+  color: var(--ink-dim);
+}
+.dt-row-work {
+  grid-column: 2 / -1;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.dt-answer-art {
+  width: 140px;
+  align-self: center;
+}
 .dt-stat {
   display: inline-flex;
   align-items: center;

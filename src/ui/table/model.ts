@@ -17,7 +17,15 @@ import {
   type Prompt,
   type SeatId,
 } from '../../engine';
-import type { CardFace, ChoiceRow, KindInfo, Presenter, SeatStat, UseInfo } from './present';
+import type {
+  CardFace,
+  ChoiceRow,
+  KindInfo,
+  MonumentInfo,
+  Presenter,
+  SeatStat,
+  UseInfo,
+} from './present';
 
 /** Per seat, from the setup screen: what the engine does not know. */
 export interface SeatLook {
@@ -65,6 +73,8 @@ export interface SeatModel {
   /** Tableau grouped by kind (presenter order), play order within a kind. */
   columns: { kind: KindInfo; cards: TableauCard[] }[];
   zones: ZoneModel[];
+  /** The seat's Great Work (monument), or null before it has one. */
+  monument: MonumentInfo | null;
 }
 
 export interface UseOption {
@@ -103,7 +113,13 @@ export interface PromptModel {
   id: number;
   title: string;
   hint: string;
-  answers: { label: string; detail: string; answer: Json; chosen: boolean }[];
+  answers: {
+    label: string;
+    detail: string;
+    art: string | undefined;
+    answer: Json;
+    chosen: boolean;
+  }[];
   /** The viewer answered; the group waits for the others (the answer may still change). */
   answered: boolean;
 }
@@ -241,6 +257,7 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
       counts: columns.map((col) => ({ kind: col.kind, n: col.cards.length })),
       columns,
       zones,
+      monument: present.monument?.(view, s.id) ?? null,
     };
   });
 
@@ -397,6 +414,7 @@ function promptModel<S, T>(input: TableInput<S, T>): PromptModel | null {
           {
             label: info.answer(a.answer),
             detail: info.detail?.(a.answer) ?? '',
+            art: info.art?.(a.answer),
             answer: a.answer,
             chosen: mine.answered && JSON.stringify(mine.answer) === JSON.stringify(a.answer),
           },

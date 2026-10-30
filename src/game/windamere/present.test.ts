@@ -109,7 +109,17 @@ describe('windamerePresenter', () => {
       value: '5',
       icon: '/art/goods/coin.svg',
     });
-    expect(stats.find((s) => s.id === 'work')?.value).toMatch(/ 0\/4$/);
+    const gw = rules.greatWork(newGame().seats[0]!.data.greatWork!); // same seed as `m`
+    expect(m.me!.monument).toEqual({
+      name: gw.name,
+      art: `/art/great-works/${gw.id}.svg`,
+      tiers: 0,
+      total: 4,
+      progress: `Labour 0 · tier I at ${gw.tiers[0]!.threshold}`,
+      perk: expect.any(String),
+    });
+    expect(m.me!.columns).toEqual([]);
+    expect(present.kinds.map((k) => k.icon)).toContain('/art/kinds/holding.svg');
     for (const s of stats.filter((x) => x.group === 'store')) {
       expect(s.icon).toBe(`/art/goods/${s.label.toLowerCase()}.svg`);
     }
