@@ -66,6 +66,31 @@ describe('boot', () => {
     expect(localStorage.getItem('ww.animations')).toBe('off');
   });
 
+  it('offers Sound on/off in the ☰ menu when given a switch (as online does)', () => {
+    const plain = mount();
+    boot(plain).menu.setOpen(true);
+    expect(plain.querySelector('[data-k="choice-2-off"]')).toBeNull(); // no switch, no item
+    document.body.replaceChildren();
+    const root = mount();
+    let muted = false;
+    const setMuted = vi.fn((m: boolean) => {
+      muted = m;
+    });
+    const { menu } = boot(root, {
+      sound: {
+        get muted() {
+          return muted;
+        },
+        setMuted,
+      },
+    });
+    menu.setOpen(true);
+    expect(root.querySelector('[data-k="choice-2-on"]')?.getAttribute('aria-pressed')).toBe('true');
+    click(root, '[data-k="choice-2-off"]');
+    expect(setMuted).toHaveBeenCalledWith(true);
+    expect(muted).toBe(true);
+  });
+
   it('starts a bound game on the draft table, and New game goes back to setup', () => {
     vi.useFakeTimers();
     const root = mount();
@@ -333,6 +358,35 @@ describe('boot', () => {
     expect(game.paused).toBe(false);
     vi.advanceTimersByTime(1000);
     expect(game.clock()!.remainingMs).toBe(left - 1000);
+    app.play?.dispose();
+  });
+
+  it('shows a 2-town Burn once, for both uses, and sends it with the pick (R14.2)', () => {
+    const root = mount();
+    const app = boot(root, {
+      game: windamereBinding(),
+      debug: { seats: 2, seed: 'duel', firstGame: true },
+    });
+    const both = [...root.querySelectorAll<HTMLElement>('[data-pt-role="card"]')].find((card) => {
+      card.click();
+      return root.querySelectorAll('.dt-pop [data-use]:not([disabled])').length === 2;
+    });
+    expect(both).toBeDefined(); // seed 'duel': some card can be built or spent
+    expect(root.querySelectorAll('.dt-pop [data-choice="burn"]')).toHaveLength(1);
+    const alt = root.querySelector<HTMLElement>(
+      '.dt-pop [data-choice="burn"] [data-option]:not(.is-on)',
+    )!;
+    const burned = Number(alt.dataset.option!.replace('burn-', ''));
+    const name = alt.textContent!;
+    alt.click();
+    for (const use of ['build', 'spend']) {
+      expect(root.querySelector(`.dt-pop [data-use="${use}"] .dt-use-detail`)?.textContent).toMatch(
+        new RegExp(`burn ${name}$`),
+      );
+    }
+    root.querySelector<HTMLElement>('.dt-pop [data-use="spend"]')!.click();
+    const pick = app.play!.game.state.seats[0]!.pick as { args?: { burn?: number } } | null;
+    expect(pick?.args?.burn).toBe(burned);
     app.play?.dispose();
   });
 

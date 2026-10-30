@@ -44,6 +44,13 @@ if (root) {
     game: windamereBinding(),
     online,
     homeArt: `${import.meta.env.BASE_URL}art/table/title-key-art.svg`,
+    // ☰ Sound: the fx lane's engine, which remembers the choice.
+    sound: {
+      get muted() {
+        return sfx.settings.muted;
+      },
+      setMuted: (muted) => sfx.setMuted(muted),
+    },
     ...(debug ? { debug } : {}),
   });
   // An invite link (?room=CODE) opens that room's join card straight away.

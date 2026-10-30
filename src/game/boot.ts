@@ -44,6 +44,8 @@ export interface BootOptions<S, T> {
   homeArt?: string;
   /** Overrides the game binding's reveal hook (tests); see src/game/fx.ts. */
   fx?: RevealHook<S, T>;
+  /** Sound on/off in the ☰ menu (the page's `sfx`, which saves the choice); absent = no item. */
+  sound?: { readonly muted: boolean; setMuted(muted: boolean): void };
   /**
    * The online lane's entry points (src/game/online): shows Play online and Join with code on
    * the home screen. `root` is where online screens go; boot steps aside while they show.
@@ -158,6 +160,21 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
         document.documentElement.classList.toggle('no-anim', id === 'off');
       },
     },
+    // Same item as online's ☰ menu (src/game/online/menu.ts).
+    ...(opts.sound
+      ? [
+          {
+            kind: 'choice' as const,
+            label: 'Sound',
+            options: [
+              { id: 'on', label: 'On' },
+              { id: 'off', label: 'Off' },
+            ],
+            value: opts.sound.muted ? 'off' : 'on',
+            onChange: (id: string) => opts.sound?.setMuted(id === 'off'),
+          },
+        ]
+      : []),
   ];
   const menu = new Menu(prefs);
   const corner = document.createElement('div');

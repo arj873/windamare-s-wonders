@@ -666,6 +666,28 @@
   }
 }
 
+/*
+ * The tutorial coach's panel is open (tutorial T4: `data-tut-active` and `--tut-h` = its height
+ * + 20 px, on the app root): keep that much room free under it. Desktop: the Log ends above the
+ * docked panel, so its newest lines stay readable. Tablet: the page can scroll the hand clear of
+ * the bottom sheet. Phone: the pinned hand sits above the sheet (--dt-bottom-inset).
+ */
+@media (min-width: 1101px) {
+  [data-tut-active] .dt-log {
+    margin-bottom: var(--tut-h, 0px);
+  }
+}
+@media (min-width: 721px) and (max-width: 1100px) {
+  [data-tut-active] .dt {
+    padding-bottom: var(--tut-h, 0px);
+  }
+}
+@media (max-width: 720px) {
+  [data-tut-active] {
+    --dt-bottom-inset: var(--tut-h, 0px);
+  }
+}
+
 /* ---- hand tools: Recall (R15.8) and the card list (R6 #8) --------------- */
 .dt-hand-tools {
   margin-left: auto;
