@@ -4,7 +4,17 @@ import { clockMs, type ChatEntry, type RoomInfo } from '../../net/protocol';
 import { ChatPanel } from './chat';
 import { JoinCard, noticeScreen } from './join';
 import { LobbyScreen } from './lobby';
-import { configSummary, inviteUrl, lobbyView, timerHint } from './lobbyModel';
+import {
+  BOT_LEVEL_OPTIONS,
+  configSummary,
+  inviteUrl,
+  lobbyView,
+  seatColor,
+  timerHint,
+  withBotLevel,
+  withColour,
+  withSeatCount,
+} from './lobbyModel';
 import { errorText, fatalText } from './messages';
 
 const RANGE = { min: 2, max: 7 };
@@ -84,6 +94,46 @@ describe('lobbyView', () => {
     expect(f.canAddSeat).toBe(false);
     expect(f.tableFull).toBe(true);
     expect(f.inviteNote).toMatch(/full/);
+  });
+
+  it('seat colours and bot levels come from the room (N4), with old-server fallbacks', () => {
+    // No colour / level on the wire (an older server): table order, easy.
+    const old = lobbyView(room(), 'm1', RANGE);
+    expect(old.seats.map((s) => s.colour)).toEqual([0, 1, 2, 3]);
+    expect(old.seats.map((s) => s.botLevel)).toEqual(['easy', 'easy', 'easy', 'easy']);
+    const r = room({
+      seats: [
+        { occupant: 'm1', status: 'human', colour: 4, botLevel: 'easy' },
+        { occupant: 'm2', status: 'human', colour: 0, botLevel: 'easy' },
+        { occupant: null, status: 'bot', colour: 1, botLevel: 'hard' },
+        { occupant: null, status: 'bot', colour: 2, botLevel: 'medium' },
+      ],
+    });
+    const v = lobbyView(r, 'm1', RANGE);
+    expect(v.seats.map((s) => s.colour)).toEqual([4, 0, 1, 2]);
+    expect(v.seats[0]?.color).toBe(seatColor(4).color);
+    expect(v.seats[0]?.colorLabel).toBe(seatColor(4).name);
+    expect(v.seats.map((s) => s.botLevel)).toEqual(['easy', 'easy', 'hard', 'medium']);
+    // Host: levels on open seats only; colours on every seat.
+    expect(v.seats.map((s) => s.canSetLevel)).toEqual([false, false, true, true]);
+    expect(v.seats.every((s) => s.canSetColour)).toBe(true);
+    const guest = lobbyView(r, 'm2', RANGE);
+    expect(guest.seats.some((s) => s.canSetLevel || s.canSetColour)).toBe(false);
+    // Net's medium is the setup screen's Normal, in the same words as hotseat.
+    expect(BOT_LEVEL_OPTIONS.map((o) => [o.id, o.label])).toEqual([
+      ['easy', 'Easy'],
+      ['medium', 'Normal'],
+      ['hard', 'Hard'],
+    ]);
+    // Config edits: one seat's level; a colour another seat has swaps the two (net wants them
+    // all different); a smaller table trims both lists (net refuses longer ones).
+    expect(withBotLevel(r, 3, 'hard').botLevels).toEqual(['easy', 'easy', 'hard', 'hard']);
+    expect(withColour(r, 0, 1).colours).toEqual([1, 0, 4, 2]);
+    expect(withColour(r, 0, 7).colours).toEqual([7, 0, 1, 2]);
+    const trimmed = withSeatCount(withBotLevel(r, 3, 'hard'), 3);
+    expect(trimmed).toEqual({ seatCount: 3, timer: 'normal', botLevels: ['easy', 'easy', 'hard'] });
+    expect(withSeatCount({ ...r.config, colours: [4, 0, 1, 2] }, 2).colours).toEqual([4, 0]);
+    expect(withSeatCount(r.config, 5)).toEqual({ seatCount: 5, timer: 'normal' });
   });
 
   it('summarises the config and builds the invite link', () => {
@@ -172,19 +222,89 @@ describe('LobbyScreen', () => {
 
   it('host: add / remove bots, clock preset, start, copy link', async () => {
     const { actions, copy, q } = mount(room(), 'm1');
+    // Each edit shows at once and the next builds on it, before the server answers.
     q('add-bot')?.click();
     expect(actions.configure).toHaveBeenLastCalledWith({ seatCount: 5, timer: 'normal' });
+    expect(q('seat-4')).not.toBeNull();
+    q('remove-bot')?.click();
     q('remove-bot')?.click();
     expect(actions.configure).toHaveBeenLastCalledWith({ seatCount: 3, timer: 'normal' });
+    expect(q('seat-3')).toBeNull();
+    q('timer-fast')?.focus();
     q('timer-fast')?.click();
-    expect(actions.configure).toHaveBeenLastCalledWith({ seatCount: 4, timer: 'fast' });
+    expect(actions.configure).toHaveBeenLastCalledWith({ seatCount: 3, timer: 'fast' });
+    expect(q('timer-fast')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.activeElement).toBe(q('timer-fast')); // focus survives the re-render
     q('lobby-start')?.click();
     expect(actions.start).toHaveBeenCalled();
     q('copy')?.click();
     await Promise.resolve();
     expect(copy).toHaveBeenCalledWith('http://x.dev/?room=K7QF2M');
     expect(q('copy')?.textContent).toBe('Copied!');
-    expect(q('summary')?.textContent).toBe('Online · 4 towns · 2 players + 2 bots · Normal clock');
+    expect(q('summary')?.textContent).toBe('Online · 3 towns · 2 players + 1 bot · Fast clock');
+  });
+
+  it('host: bot level on open seats, seat colours with swap', () => {
+    const r = room({
+      seats: [
+        { occupant: 'm1', status: 'human', colour: 0, botLevel: 'easy' },
+        { occupant: 'm2', status: 'human', colour: 1, botLevel: 'easy' },
+        { occupant: null, status: 'bot', colour: 2, botLevel: 'medium' },
+        { occupant: null, status: 'bot', colour: 3, botLevel: 'easy' },
+      ],
+    });
+    const { lobby, actions, q } = mount(r, 'm1');
+    // Everyone reads the level on an open seat; the host also gets the picker there only.
+    expect(q('seat-2')?.textContent).toContain('a Normal bot plays it');
+    expect(q('seat-3')?.textContent).toContain('an Easy bot plays it');
+    expect(q('level-0')).toBeNull();
+    const level = q('level-2') as HTMLSelectElement;
+    expect(level.value).toBe('medium');
+    level.value = 'hard';
+    level.dispatchEvent(new Event('change'));
+    expect(actions.configure).toHaveBeenLastCalledWith({
+      seatCount: 4,
+      timer: 'normal',
+      botLevels: ['easy', 'easy', 'hard', 'easy'],
+    });
+    // Colour: the dot opens the palette; a free colour is taken, a used one swaps.
+    expect(q('swatch-0-5')).toBeNull();
+    q('colour-0')?.click();
+    expect(q('colour-0')?.getAttribute('aria-expanded')).toBe('true');
+    expect(q('swatch-0-0')?.getAttribute('aria-pressed')).toBe('true');
+    expect(q('swatch-0-1')?.getAttribute('aria-label')).toMatch(/swap with seat 2 \(Bob\)/);
+    // Each edit builds on the last one, before the server echoes it (the level stays Hard).
+    const botLevels = ['easy', 'easy', 'hard', 'easy'];
+    q('swatch-0-5')?.click();
+    expect(actions.configure).toHaveBeenLastCalledWith({
+      seatCount: 4,
+      timer: 'normal',
+      botLevels,
+      colours: [5, 1, 2, 3],
+    });
+    expect(q('swatch-0-5')).toBeNull(); // closed after a pick
+    expect(q('seat-0')?.style.getPropertyValue('--seat')).toBe(seatColor(5).color);
+    q('colour-3')?.click();
+    q('swatch-3-1')?.click();
+    expect(actions.configure).toHaveBeenLastCalledWith({
+      seatCount: 4,
+      timer: 'normal',
+      botLevels,
+      colours: [5, 3, 2, 1],
+    });
+    // The palette stays open across a room update; Escape closes it.
+    q('colour-1')?.click();
+    lobby.update(r, 'm1');
+    expect(q('swatch-1-0')).not.toBeNull();
+    q('swatch-1-0')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(q('swatch-1-0')).toBeNull();
+    // A guest sees colours but cannot change them, and has no level picker.
+    const guest = mount(r, 'm2');
+    expect(guest.q('colour-0')).toBeNull();
+    expect(guest.q('level-2')).toBeNull();
+    expect(guest.q('seat-0')?.querySelector('.ol-dot')?.getAttribute('aria-label')).toBe(
+      seatColor(0).name,
+    );
   });
 
   it('guest watching: sit here, read-only settings, waiting for the host', () => {

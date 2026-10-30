@@ -12,7 +12,7 @@ import type { DraftEngine, SeatId } from '../../engine';
 import type { GameSnapshot, RoomClient } from '../../net/client';
 import type { RoomInfo } from '../../net/protocol';
 import { confirmDialog, h, motionOn } from '../../ui';
-import { seatColor } from '../../ui/online/lobbyModel';
+import { seatHex } from '../../ui/online/lobbyModel';
 import { listNames, tableModel, type SeatLook, type TableModel } from '../../ui/table/model';
 import type { Presenter } from '../../ui/table/present';
 import { DraftTable } from '../../ui/table/table';
@@ -45,11 +45,11 @@ const realEvery = (fn: () => void, ms: number): (() => void) => {
   return () => clearInterval(t);
 };
 
-/** Each seat's colour (by table position) and whether a bot plays it now. */
+/** Each seat's colour (the room's palette slot) and whether a bot plays it now. */
 export function roomLooks(room: RoomInfo | null, seats: number): SeatLook[] {
   return Array.from({ length: seats }, (_, i) => {
     const s = room?.seats[i];
-    return { color: seatColor(i).color, bot: !s || s.occupant === null || s.status === 'bot' };
+    return { color: seatHex(room, i), bot: !s || s.occupant === null || s.status === 'bot' };
   });
 }
 
@@ -314,7 +314,7 @@ export class NetPlay<S, T> {
           'span',
           {
             class: `ol-presence-seat${s.away ? ' is-away' : ''}`,
-            style: { '--seat': seatColor(s.seat).color },
+            style: { '--seat': seatHex(c.room, s.seat) },
             attrs: { 'data-seat': String(s.seat), 'data-k': `absent-${s.seat}` },
           },
           h('span', { class: 'ol-dot', attrs: { 'aria-hidden': 'true' } }),

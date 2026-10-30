@@ -11,6 +11,7 @@ import { RoomHost, type Sink } from '../../net/loopback';
 import type { RoomPhase } from '../../net/protocol';
 import { GameSession, type SessionDeps, type SessionOptions } from '../../net/session';
 import type { Clock } from '../../net/transport';
+import { sessionOptionsFrom } from '../../server/room';
 import { realClock } from './backend';
 
 const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -60,7 +61,8 @@ export class DevServer {
       this.clock.now(),
       this.engine,
       deps,
-      this.opts.session,
+      // The Worker's defaults first (the Season card's reading time, R7 net #1), then overrides.
+      { ...sessionOptionsFrom({}), ...this.opts.session },
     );
     this.rooms.set(roomId, new RoomHost(session, this.clock));
     return { roomId, hostToken };

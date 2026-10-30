@@ -1,13 +1,21 @@
 /** Pure lobby logic (UX.md §6, no DOM): what each seat shows and which buttons the viewer gets. */
 import {
+  BOT_LEVELS,
   clockMs,
+  SEAT_COLOURS,
   TIMER_PRESETS,
+  type BotLevel,
   type MemberInfo,
   type RoomConfig,
   type RoomInfo,
+  type SeatInfo,
   type TimerPreset,
 } from '../../net/protocol';
-import { SEAT_COLORS } from '../setup/model';
+import {
+  BOT_LEVELS as SETUP_LEVELS,
+  SEAT_COLORS,
+  type BotLevel as SetupLevel,
+} from '../setup/model';
 
 /** How many towns the ruleset seats (engine `ruleset.minSeats` / `maxSeats`). */
 export interface SeatRange {
@@ -15,15 +23,71 @@ export interface SeatRange {
   max: number;
 }
 
-/** Seat colour by table position (the room protocol has no colour choice yet). */
-export function seatColor(seat: number): { name: string; color: string } {
-  return SEAT_COLORS[seat % SEAT_COLORS.length] ?? { name: 'Seat', color: '#9aa3ad' };
+/** What a palette slot (net's `SeatInfo.colour`, 0..SEAT_COLOURS-1) looks like. */
+export function seatColor(slot: number): { name: string; color: string } {
+  return SEAT_COLORS[slot % SEAT_COLORS.length] ?? { name: 'Seat', color: '#9aa3ad' };
+}
+
+/** The palette slots the host can hand out. */
+export const COLOUR_SLOTS: readonly number[] = Array.from({ length: SEAT_COLOURS }, (_, i) => i);
+
+/** Each seat's palette slot: the server's (it always sends one), else table order. */
+export function roomColours(room: RoomInfo | null, seats = room?.seats.length ?? 0): number[] {
+  return Array.from({ length: seats }, (_, i) => room?.seats[i]?.colour ?? i);
+}
+
+/** A seat's colour (CSS) in this room. */
+export function seatHex(room: RoomInfo | null | undefined, seat: number): string {
+  return seatColor(room?.seats[seat]?.colour ?? seat).color;
+}
+
+/** Net's rule (session `seatColours`): chosen slots first, other seats the lowest unused. */
+export function seatColours(config: RoomConfig, seats: number): number[] {
+  const chosen = config.colours ?? [];
+  const free = COLOUR_SLOTS.filter((c) => !chosen.includes(c));
+  return Array.from({ length: seats }, (_, i) => chosen[i] ?? free.shift() ?? i);
+}
+
+/**
+ * The room as it will be once the server takes `config`: seats added or cut at the end, levels
+ * and colours as chosen. The lobby shows a host edit at once and builds the next edit on it, so
+ * two quick edits do not undo each other; the server's next room message replaces the guess.
+ */
+export function withConfig(room: RoomInfo, config: RoomConfig): RoomInfo {
+  const colours = seatColours(config, config.seatCount);
+  const seats = Array.from({ length: config.seatCount }, (_, i): SeatInfo => {
+    const s = room.seats[i] ?? { occupant: null, status: 'bot' };
+    return { ...s, botLevel: config.botLevels?.[i] ?? 'easy', colour: colours[i] ?? i };
+  });
+  const cut = new Set(room.seats.slice(config.seatCount).map((s) => s.occupant));
+  const members = room.members.map((m) => (cut.has(m.id) ? { ...m, seat: null } : m));
+  return { ...room, config, seats, members };
+}
+
+/** Net's bot levels in the setup screen's words: its `medium` is the setup screen's Normal. */
+const SETUP_LEVEL: Record<BotLevel, SetupLevel> = { easy: 'easy', medium: 'normal', hard: 'hard' };
+export const BOT_LEVEL_OPTIONS: readonly { id: BotLevel; label: string; hint: string }[] =
+  BOT_LEVELS.map((id) => {
+    const s = SETUP_LEVELS.find((l) => l.id === SETUP_LEVEL[id]);
+    return { id, label: s?.label ?? id, hint: s?.hint ?? '' };
+  });
+
+export function botLevelLabel(level: BotLevel): string {
+  return BOT_LEVEL_OPTIONS.find((o) => o.id === level)?.label ?? level;
 }
 
 export interface SeatView {
   index: number;
+  /** Palette slot (see `seatColor`). */
+  colour: number;
   color: string;
   colorLabel: string;
+  /** Level of the bot that plays this seat when nobody does (net's default: easy). */
+  botLevel: BotLevel;
+  /** Host: pick the level of the bot on this open seat. */
+  canSetLevel: boolean;
+  /** Host: pick this seat's colour (taking another seat's colour swaps the two). */
+  canSetColour: boolean;
   /** Occupant's nickname, or null for an open seat (a bot plays it). */
   name: string | null;
   isMine: boolean;
@@ -88,14 +152,20 @@ export function lobbyView(room: RoomInfo, meId: string | null, range: SeatRange)
   const byId = new Map(room.members.map((m) => [m.id, m]));
   const lastIndex = room.seats.length - 1;
   const named = me !== null && me.name !== null && me.name !== '';
+  const colours = roomColours(room);
   const seats = room.seats.map((s, index): SeatView => {
     const occ = s.occupant ? byId.get(s.occupant) : undefined;
-    const look = seatColor(index);
+    const colour = colours[index] ?? index;
+    const look = seatColor(colour);
     const isMine = s.occupant !== null && s.occupant === meId;
     return {
       index,
+      colour,
       color: look.color,
       colorLabel: look.name,
+      botLevel: s.botLevel ?? 'easy',
+      canSetLevel: isHost && s.occupant === null,
+      canSetColour: isHost,
       name: occ ? occ.name || 'Someone' : null,
       isMine,
       isHostSeat: s.occupant !== null && s.occupant === room.host,
@@ -172,8 +242,33 @@ export function configSummary(c: RoomConfig, humans: number): string {
   return [`${c.seatCount} towns`, who, clock].join(' · ');
 }
 
+/** Net refuses per-seat lists longer than the table, so a smaller table trims them. */
 export function withSeatCount(c: RoomConfig, seatCount: number): RoomConfig {
-  return { ...c, seatCount };
+  const { botLevels, colours, ...rest } = c;
+  return {
+    ...rest,
+    seatCount,
+    ...(botLevels ? { botLevels: botLevels.slice(0, seatCount) } : {}),
+    ...(colours ? { colours: colours.slice(0, seatCount) } : {}),
+  };
+}
+
+/** The room's config with one seat's bot level changed (the others as the server sent them). */
+export function withBotLevel(room: RoomInfo, seat: number, level: BotLevel): RoomConfig {
+  const botLevels = room.seats.map((s, i) => (i === seat ? level : (s.botLevel ?? 'easy')));
+  return { ...room.config, botLevels };
+}
+
+/**
+ * The room's config with `seat` on palette slot `slot`. Net wants every colour different, so if
+ * another seat has that slot the two seats swap.
+ */
+export function withColour(room: RoomInfo, seat: number, slot: number): RoomConfig {
+  const colours = roomColours(room);
+  const other = colours.indexOf(slot);
+  if (other >= 0 && other !== seat) colours[other] = colours[seat] ?? seat;
+  colours[seat] = slot;
+  return { ...room.config, colours };
 }
 
 /** The link friends open: this page with `?room=CODE` (keeps an explicit `?server=`). */

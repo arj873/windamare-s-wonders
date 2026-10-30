@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HIDDEN_CARD } from '../../engine';
 import { FakeClock } from '../../net/loopback';
 import { clockMs } from '../../net/protocol';
+import { sessionOptionsFrom } from '../../server/room';
 import { clockText } from '../../ui/table/table';
 import type { KeyStore } from '../../net/transport';
 import { windamereBinding } from '../windamere';
@@ -16,7 +17,8 @@ import { OnlineApp, type OnlineEnv } from './app';
 import { inPageBackend } from './devBackend';
 import { DevServer } from './devServer';
 import { bootOnline } from './index';
-import { presence } from './netPlay';
+import { presence, roomLooks } from './netPlay';
+import { seatColor } from '../../ui/online/lobbyModel';
 import type { WwSeat, WwTable } from '../../engine';
 
 type App = OnlineApp<WwSeat, WwTable>;
@@ -171,9 +173,12 @@ describe('online room visit (O1)', () => {
     await w.settle();
     // Fast clock: the opening Great Work choice is a prompt, then the first pick (RULES.md
     // R15.3; lengths from net's clockMs so a retune does not break this), counted down from the
-    // server's number between messages.
+    // server's number between messages. The first pick of a Season also gets the Worker's
+    // reading time for the Season card (R7 net #1), which the dev server copies.
+    const bonusMs = sessionOptionsFrom({}).openingBonusMs ?? 0;
+    expect(bonusMs).toBe(8_400);
     const promptMs = clockMs('fast', 'prompt', 0) ?? 0;
-    const pickMs = clockMs('fast', 'pick', 0) ?? 0;
+    const pickMs = (clockMs('fast', 'pick', 0) ?? 0) + bonusMs;
     expect(k(ann, 'online-table')).not.toBeNull();
     expect(ann.roomClient?.game?.view.phase.kind).toBe('prompt');
     expect(q(ann, '.dt-timer')?.textContent).toBe(clockText(promptMs));
@@ -357,6 +362,47 @@ async function playToEnd(w: ReturnType<typeof world>, app: App): Promise<number>
   }
   return steps;
 }
+
+describe('online room visit (O3)', () => {
+  it('host sets a bot level and seat colours; the guest and the table follow', async () => {
+    const { w, ann, bob } = await lobbyOfTwo();
+    // The real session accepts the lists and sends them back on every seat.
+    const level = k(ann, 'level-2') as HTMLSelectElement;
+    level.value = 'hard';
+    level.dispatchEvent(new Event('change'));
+    await w.settle();
+    expect(bob.roomClient?.room?.seats.map((s) => s.botLevel)).toEqual([
+      'easy',
+      'easy',
+      'hard',
+      'easy',
+    ]);
+    expect(k(bob, 'seat-2')?.textContent).toContain('a Hard bot plays it');
+    expect(k(bob, 'level-2')).toBeNull();
+    // Ann takes Bob's colour: the two swap.
+    k(ann, 'colour-0')?.click();
+    k(ann, 'swatch-0-1')?.click();
+    await w.settle();
+    expect(bob.roomClient?.room?.seats.map((s) => s.colour)).toEqual([1, 0, 2, 3]);
+    expect(k(bob, 'seat-0')?.style.getPropertyValue('--seat')).toBe(seatColor(1).color);
+    // Then a free one; removing the last seat trims the lists so net still takes the config.
+    k(ann, 'colour-0')?.click();
+    k(ann, 'swatch-0-6')?.click();
+    await w.settle();
+    k(ann, 'remove-bot')?.click();
+    await w.settle();
+    const seats = bob.roomClient?.room?.seats ?? [];
+    expect(seats.map((s) => s.colour)).toEqual([6, 0, 2]);
+    expect(seats.map((s) => s.botLevel)).toEqual(['easy', 'easy', 'hard']);
+    expect(w.toasts).toEqual([]);
+    // In the game the table and the chat use the chosen colours.
+    k(ann, 'lobby-start')?.click();
+    await w.settle();
+    const looks = roomLooks(bob.roomClient?.room ?? null, 3);
+    expect(looks.map((l) => l.color)).toEqual([6, 0, 2].map((c) => seatColor(c).color));
+    expect(looks.map((l) => l.bot)).toEqual([false, false, true]);
+  });
+});
 
 describe('online room visit (O2)', () => {
   it('final scores -> host Rematch -> everyone back in the lobby -> a second game', async () => {

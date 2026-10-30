@@ -16,7 +16,7 @@ import { ConnectionBanner } from '../../ui/online/banner';
 import { ChatPanel, ReactionLayer } from '../../ui/online/chat';
 import { JoinCard, noticeScreen } from '../../ui/online/join';
 import { LobbyScreen } from '../../ui/online/lobby';
-import { inviteUrl, seatColor, type SeatRange } from '../../ui/online/lobbyModel';
+import { inviteUrl, seatHex, type SeatRange } from '../../ui/online/lobbyModel';
 import { errorText, fatalText } from '../../ui/online/messages';
 import { h } from '../../ui/dom';
 import type { Presenter } from '../../ui/table/present';
@@ -184,7 +184,7 @@ export class OnlineApp<S, T> {
           const m = client.room?.members.find((x) => x.id === e.member);
           this.reactions?.show(
             m?.name || 'Someone',
-            e.seat === null ? null : seatColor(e.seat).color,
+            e.seat === null ? null : seatHex(client.room, e.seat),
             e.reaction,
           );
           return;
@@ -192,8 +192,13 @@ export class OnlineApp<S, T> {
         case 'error': {
           const text = errorText(e.code, e.message, e.ref);
           if (text && !client.fatal) env.toast(text, 'error');
-          // A refused pick: redraw from the last view so the hand is as the server has it.
+          // A refused pick: redraw from the last view so the hand is as the server has it. A
+          // refused host edit: the lobby drops its guess and shows the server's room again.
           this.play?.render();
+          const room = client.room;
+          if (this.lobby && room?.phase === 'lobby') {
+            this.lobby.update(room, client.you?.member ?? null);
+          }
           return;
         }
       }
@@ -231,8 +236,9 @@ export class OnlineApp<S, T> {
   }
 
   private colorOf(e: ChatEntry): string | null {
-    const seat = this.client?.room?.members.find((m) => m.id === e.from)?.seat ?? null;
-    return seat === null ? null : seatColor(seat).color;
+    const room = this.client?.room;
+    const seat = room?.members.find((m) => m.id === e.from)?.seat ?? null;
+    return seat === null ? null : seatHex(room, seat);
   }
 
   /** The server says "<name> ran out of time" (R15.6): tell that player what happened. */
