@@ -414,6 +414,8 @@ These answer the open questions from net (MULTIPLAYER.md §2.1, §6) and researc
 | Turn clock (Normal)         | 45, 40, 35, 30, 25 s; Great Work choice 60 s | R15.3  |
 | Clock options               | Off, Relaxed × 1.5, Normal, Fast × 0.5       | R15.3  |
 | Away wait                   | 15 s                                         | R15.5  |
+| First game: Honours         | 0                                            | R19.2  |
+| First game: Great Works     | 1 dealt, no choice                           | R19.4  |
 
 ## R17. Clarifications
 
@@ -455,6 +457,29 @@ That is **well under the 25-35 brief**: a single pick is fast (research online-u
 estimates 11-17 minutes for 20 picks online). The lever is a longer Season: hand 8 with 7 turns
 (28 turns, about 19 minutes), but Holdings would then yield 21 times a game instead of 15, so
 costs need retuning first. Our pick: keep 6 and 5, and measure with bots (B1) and playtests (qa).
+
+## R19. First game (room option, card D7)
+
+A lighter game for a table where someone is new, and for the guided first game (tutorial T3). It
+removes the parts a new player can ignore without changing how a turn works (research R4 D9,
+teach load). Off by default.
+
+- **R19.1** The host turns on **First game** when creating the room (hotseat: on the setup
+  screen). It applies to the whole game and is shown to every seat.
+- **R19.2** **No Honours.** None are revealed (R2.3 deals 0†). R11 does not apply; Honours score
+  nothing (R12.2e).
+- **R19.3** **No upgrades.** A card that lists "upgrades X" can only be built at its full cost and
+  covers nothing (R7.9's last sentence becomes the only way). Nothing is ever covered.
+- **R19.4** **One Great Work.** Each town is dealt 1† Great Work and keeps it: there is no choice
+  (R2.5 is skipped; the Great Work is revealed and its Perk active from the start). So the game has
+  no decision outside a pick (R15.10).
+- **R19.5** The clock defaults to Relaxed online (R15.3); the host may change it.
+- **R19.6** Everything else is unchanged: the pick, the glean, trade, Raids, Lore and scoring.
+  The tie-break (R12.4) still uses Great Work tiers.
+
+Untested: the bots sim cannot run this option until the engine supports it (status Needs). Check
+then: seat fairness, game length, and whether Hall-only or Holding-only towns win too often without
+Honours to pull towards other kinds.
 
 ## Design note: how much score depends on neighbours (research R4 D1)
 

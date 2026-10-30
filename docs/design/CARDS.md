@@ -142,16 +142,16 @@ Roadside Stall is free on purpose. Peddlers' Cart pays when neighbours buy from 
 | `hearth-hall`        | Hearth Hall        | Hall     | 2R 1W    |                         | renown 3                   | 6c         | 1   | 1   | 2   | 2   | 2   |
 | `drovers-market`     | Drovers' Market    | Market   | 1S 1W    |                         | per holding 2c             | 5c         | 1   | 1   | 2   | 2   | 2   |
 | `salt-weigh-house`   | Salt Weigh-house   | Market   | 1P 1S    |                         | exchange S, income 1       | 2S 1c      | 1   | 1   | 1   | 1   | 1   |
-| `counting-house`     | Counting House     | Market   | 1P 2S    |                         | income 2                   | 6c         | 1   | 1   | 1   | 2   | 2   |
-| `fairground`         | Fairground         | Market   | 1R 2W    |                         | toll 1                     | 5c         | 1   | 1   | 1   | 1   | 1   |
-| `gatehouse`          | Gatehouse          | Watch    | 1R 2P    |                         | guard 2                    | 2P 1c      | 1   | 1   | 1   | 2   | 2   |
-| `militia-yard`       | Militia Yard       | Watch    | 1R 2H    | Hurdle Fence (1R 1H)    | guard 3                    | 1H 1lab 1c | 1   | 1   | 2   | 2   | 2   |
-| `watchfire-ridge`    | Watchfire Ridge    | Watch    | 1R 1S 1H | Beacon Hill (1H)        | guard 2, held +1c          | 1S 1H 1c   | 1   | 1   | 1   | 1   | 2   |
+| `counting-house`     | Counting House     | Market   | 1P 1S    |                         | income 2                   | 6c         | 1   | 1   | 1   | 2   | 2   |
+| `fairground`         | Fairground         | Market   | 1R 1W    |                         | toll 1                     | 5c         | 1   | 1   | 1   | 1   | 1   |
+| `gatehouse`          | Gatehouse          | Watch    | 1R 1P    |                         | guard 2                    | 2P 1c      | 1   | 1   | 1   | 2   | 2   |
+| `militia-yard`       | Militia Yard       | Watch    | 1R 1H    | Hurdle Fence (1H)       | guard 3                    | 1H 1lab 1c | 1   | 1   | 2   | 2   | 2   |
+| `watchfire-ridge`    | Watchfire Ridge    | Watch    | 1S 1H    | Beacon Hill (1H)        | guard 2, held +1c          | 1S 1H 1c   | 1   | 1   | 1   | 1   | 2   |
 | `almanac-house`      | Almanac House      | Lore     | 1W 2c    |                         | lore 2                     | 2lab       | 1   | 1   | 1   | 2   | 2   |
-| `star-chamber`       | Star Chamber       | Lore     | 1S 1W 1H |                         | lore 3                     | 2lab 1c    | 1   | 2   | 3   | 3   | 3   |
-| `map-room`           | Map Room           | Lore     | 2W 1H    |                         | lore 4                     | 2lab 1c    | 1   | 2   | 2   | 3   | 3   |
-| `wayfarers-cross`    | Wayfarers' Cross   | Landmark | 2R 1P 1S |                         | score 2/Season with a hall | 1lab 3c    | 1   | 1   | 1   | 1   | 2   |
-| `mustering-stone`    | Mustering Stone    | Landmark | 2P 1H    |                         | score 6 if watches ≥ 3     | 2lab 1c    | 0   | 1   | 1   | 1   | 1   |
+| `star-chamber`       | Star Chamber       | Lore     | 1W 1H    |                         | lore 3                     | 2lab 1c    | 1   | 2   | 3   | 3   | 3   |
+| `map-room`           | Map Room           | Lore     | 1W 1H    |                         | lore 4                     | 2lab 1c    | 1   | 2   | 2   | 3   | 3   |
+| `wayfarers-cross`    | Wayfarers' Cross   | Landmark | 1R 1P 1S |                         | score 2/Season with a hall | 1lab 3c    | 1   | 1   | 1   | 1   | 2   |
+| `mustering-stone`    | Mustering Stone    | Landmark | 1P 1H    |                         | score 6 if watches ≥ 3     | 2lab 1c    | 0   | 1   | 1   | 1   | 1   |
 
 Intent: each Spring Holding has a Summer upgrade named for a place (R4 O8) that **trades its good
 for 1 labour a Yield** (not a doubled good). Upgrading spends a Build and 2 goods to turn up to 10
@@ -170,19 +170,19 @@ Autumn (R4 O6).
 | `players-green`      | Players' Green     | Hall     | 1R 1S 2W |                      | renown 4                      | 2lab 3c    | 1   | 2   | 2   | 2   | 3   |
 | `clock-house`        | Clock House        | Hall     | 1R 1P 2H |                      | renown 4                      | 2H 1lab    | 1   | 1   | 2   | 2   | 2   |
 | `bell-tower`         | Bell Tower         | Hall     | 2P 1H    |                      | renown 4                      | 1H 1lab 1c | 1   | 1   | 1   | 1   | 1   |
-| `merchants-row`      | Merchants' Row     | Market   | 2R 1W 1H |                      | toll 1, income 1              | 6c         | 1   | 1   | 2   | 2   | 2   |
-| `peat-staithe`       | Peat Staithe       | Market   | 1R 1P 1S |                      | exchange P, income 1          | 2P 2c      | 1   | 1   | 1   | 1   | 2   |
-| `pilgrims-inn`       | Pilgrims' Inn      | Market   | 1R 2S 1W |                      | toll hall 2                   | 6c         | 1   | 1   | 1   | 1   | 1   |
-| `factors-house`      | Factor's House     | Market   | 1S 2W    |                      | sell +1c, income 1            | 5c         | 1   | 1   | 2   | 2   | 2   |
-| `ring-dyke`          | Ring Dyke          | Watch    | 3P 2H    | Gatehouse (2H)       | guard 4                       | 2P 1H 1c   | 1   | 2   | 2   | 2   | 3   |
-| `keep`               | Keep               | Watch    | 1R 1S 3H |                      | guard 3                       | 2H 1lab    | 1   | 1   | 2   | 2   | 2   |
-| `outriders`          | Outriders          | Watch    | 1S 2W 1H | Militia Yard (1S 1W) | guard 4, held +1c             | 1S 2W      | 1   | 1   | 1   | 1   | 2   |
+| `merchants-row`      | Merchants' Row     | Market   | 1R 1W 1H |                      | toll 1, income 1              | 6c         | 1   | 1   | 2   | 2   | 2   |
+| `peat-staithe`       | Peat Staithe       | Market   | 1P 1S    |                      | exchange P, income 1          | 2P 2c      | 1   | 1   | 1   | 1   | 2   |
+| `pilgrims-inn`       | Pilgrims' Inn      | Market   | 1R 1S 1W |                      | toll hall 2                   | 6c         | 1   | 1   | 1   | 1   | 1   |
+| `factors-house`      | Factor's House     | Market   | 1S 1W    |                      | sell +1c, income 1            | 5c         | 1   | 1   | 2   | 2   | 2   |
+| `ring-dyke`          | Ring Dyke          | Watch    | 2P 2H    | Gatehouse (2H)       | guard 4                       | 2P 1H 1c   | 1   | 2   | 2   | 2   | 3   |
+| `keep`               | Keep               | Watch    | 1R 1S 2H |                      | guard 3                       | 2H 1lab    | 1   | 1   | 2   | 2   | 2   |
+| `outriders`          | Outriders          | Watch    | 1S 1W 1H | Militia Yard (1S 1W) | guard 4, held +1c             | 1S 2W      | 1   | 1   | 1   | 1   | 2   |
 | `ferrymans-charts`   | Ferryman's Charts  | Lore     | 1R 1W    |                      | lore 3                        | 2lab 2c    | 1   | 1   | 1   | 2   | 2   |
-| `skywatch-loft`      | Skywatch Loft      | Lore     | 1S 1W 1H |                      | lore 4                        | 3lab       | 1   | 1   | 2   | 3   | 3   |
-| `chronicle-house`    | Chronicle House    | Lore     | 1P 2W 1H |                      | lore 5                        | 2lab 1any  | 1   | 2   | 2   | 3   | 3   |
-| `hall-of-banners`    | Hall of Banners    | Landmark | 1R 2W 2H |                      | score 6 if valour ≥ 3         | 2lab 3c    | 1   | 1   | 1   | 1   | 1   |
-| `keystone-arch`      | Keystone Arch      | Landmark | 2P 1S 2H |                      | score 8 if tiers ≥ 3          | 3lab       | 0   | 1   | 1   | 1   | 2   |
-| `harvest-home`       | Harvest Home       | Landmark | 2R 1P 2S |                      | score 2/Season with a holding | 3any       | 1   | 1   | 1   | 2   | 2   |
+| `skywatch-loft`      | Skywatch Loft      | Lore     | 1W 1H    |                      | lore 4                        | 3lab       | 1   | 1   | 2   | 3   | 3   |
+| `chronicle-house`    | Chronicle House    | Lore     | 1P 1W 1H |                      | lore 5                        | 2lab 1any  | 1   | 2   | 2   | 3   | 3   |
+| `hall-of-banners`    | Hall of Banners    | Landmark | 1R 1W 2H |                      | score 6 if valour ≥ 3         | 2lab 3c    | 1   | 1   | 1   | 1   | 1   |
+| `keystone-arch`      | Keystone Arch      | Landmark | 1P 1S 2H |                      | score 8 if tiers ≥ 3          | 3lab       | 0   | 1   | 1   | 1   | 2   |
+| `harvest-home`       | Harvest Home       | Landmark | 1R 1P 2S |                      | score 2/Season with a holding | 3any       | 1   | 1   | 1   | 2   | 2   |
 
 Intent: Root Cellar is the "lay in stores" card: it pays out at Autumn's end, just before the
 Winter with no Yield (and at Winter's end, when goods are worth nothing unless the town has
@@ -406,12 +406,49 @@ inflation); Spring Holdings 3c → 4c (Holding-only 1.96x → 1.88x, Spring Spen
 | I1 net neighbour share, ≥ 10%        | 1.2-2.0%               | 1.5-2.0%               | fail (unchanged)                         |
 | K1 greedy vs random                  | 1.31-1.81x             | 1.38-2.20x             | better, still under target               |
 
-**Still open (D9b, next):**
+### D9b: Summer-Autumn Spends (2026-10-30)
 
-1. **Summer-Autumn Spends 26-36%**: the labour upgrades take goods out of the economy. Next
-   lever: Summer/Autumn Spend bands +1 good on Holdings and Markets, or 1 more good on Crofters'
-   Plot and Orchard Terraces yields.
-2. **Blowouts** went up a little: before, nearly every town reached tier IV, which flattened
+D9 left Summer and Autumn Spends at 21-34% and 26-36% of picks (P3: ≤ 25%): the labour upgrades
+take goods out of the economy. Probes (300 games at 4 seats for the first five rows, 500 games
+for the last two; the Halls-left-out rows also at 3 and 7 seats; same `balance.ts` on a scratch
+copy of the tree):
+
+| Variant                                              | Summer / Autumn Spends at 4 seats | Side effects                                                                 |
+| ---------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| D9 as merged                                         | 30.7 / 35.8%                      |                                                                              |
+| Summer/Autumn Spend bands +1 coin                    | 28.0 / 33.1%                      | little effect                                                                |
+| Orchard Terraces and Crofters' Plot yield +1 good    | 29.6 / 34.3%                      | little effect, blowouts up                                                   |
+| Starting coins 5 → 8                                 | 35.4 / 39.3%                      | worse                                                                        |
+| −1 good on every Summer/Autumn card costing 3+ goods | 23.0 / 22.8%                      | Hall becomes the winner's top source in 43%; Watch-only 0.59 → 0.36x         |
+| same, Halls left out                                 | 23.1 / 24.4%                      | at 3 seats Holding-only 1.48 → 1.82x                                         |
+| **same, Halls and Holdings left out** (shipped)      | 25.3 / 27.3%                      | best spread of winners' top sources; tier IV and Holding-only within targets |
+| same, plus Halls of 4+ goods                         | 24.6 / 25.7%                      | Hall-only up to 1.46x, tier IV 18.5% at 3 seats                              |
+
+**Shipped:** −1 good (the largest, ties in goods order) on the 21 Summer and Autumn Markets,
+Watches, Lore cards and Landmarks that cost 3+ goods. Militia Yard's upgrade cost drops to 1H so it
+stays cheaper than the card (1R 1H).
+
+**After D9b** (1000 games, seed 1, 2-7 seats; D9 in brackets):
+
+| Target                               | After D9b                          | (D9)                                | Status                                        |
+| ------------------------------------ | ---------------------------------- | ----------------------------------- | --------------------------------------------- |
+| P3 Spends Summer / Autumn ≤ 25%      | 17-30% / 18-28%                    | (21-34% / 26-36%)                   | better, still up to 5 over                    |
+| S1 Great Work as winner's top ≤ 55%  | 33-47%                             | (40-56%)                            | **pass** at every count                       |
+| S1 sources that top ≥ 10% of winners | 3 (4 at 2 seats)                   | (3)                                 | 2 seats pass                                  |
+| S4 tier IV 20-50%                    | 23-34%                             | (31-47%)                            | **pass**                                      |
+| S3 Lore run ≥ 3, ≥ 25%               | 23-28%                             | (17-22%)                            | pass at 5-6 seats, near                       |
+| S2 Hall / Holding-only 0.6-1.5x      | 0.95-1.22x / 0.99-1.62x            | (1.11-1.19 / 0.97-1.48)             | Holding 1.62x at 3 seats                      |
+| S2 Watch / Market / Lore-only        | 0.47-1.09 / 0.35-0.79 / 0.14-0.39x | (0.58-1.12 / 0.20-0.70 / 0.10-0.41) | mixed                                         |
+| R3 blowouts ≤ 10%                    | 17-57%                             | (17-58%)                            | fail                                          |
+| K1 greedy vs random                  | 1.30-1.77x                         | (1.38-2.20x)                        | **worse**: cheaper cards help random bots too |
+| I1 net neighbour share ≥ 10%         | 1.4-2.0%                           | (1.5-2.0%)                          | fail                                          |
+
+**Still open:**
+
+1. **Spends** still 25-30% at 4-7 seats in Summer/Autumn. The cut that met P3 everywhere broke
+   Hall or Holding balance; next try belongs with the level-2 bot (greedy Spends whenever no
+   scoring Build is affordable, which a planner may not).
+2. **Blowouts** went up a little in D9: before, nearly every town reached tier IV, which flattened
    scores. Bots' R1/R2 snapshots would tell skill from snowball.
 3. **Market and Lore cannot carry a plan alone.** Possibly fine (support kinds, BALANCE.md §4.8);
    Lore needs the level-2 bot before any change.

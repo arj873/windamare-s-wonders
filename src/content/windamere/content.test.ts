@@ -4,6 +4,7 @@ import {
   AUTUMN,
   CARDS,
   EFFECT_PARAMS,
+  FIRST_GAME,
   GAIN_KEYS,
   GOODS,
   GREAT_WORKS,
@@ -148,6 +149,22 @@ describe('prices (R6.3, R6.6c)', () => {
     for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThan(p[i - 1]!);
     expect(p).not.toContain(2);
     expect(Math.max(...p)).toBeLessThan(TUNABLES.bankPrice);
+  });
+});
+
+describe('First game option (R19)', () => {
+  it('only lowers existing setup numbers and names a real clock option', () => {
+    expect(FIRST_GAME.honoursPerGame).toBeLessThan(TUNABLES.honoursPerGame);
+    expect(FIRST_GAME.greatWorksOffered).toBeLessThan(TUNABLES.greatWorksOffered);
+    expect(FIRST_GAME.greatWorksOffered).toBeGreaterThanOrEqual(1);
+    expect(Object.keys(TUNABLES.clockOptions)).toContain(FIRST_GAME.defaultClock);
+    expect(FIRST_GAME.upgrades).toBe(false);
+  });
+
+  it('still leaves every card buildable (upgrade cards at full cost)', () => {
+    for (const c of CARDS.filter((x) => x.upgrade)) {
+      expect(Object.keys(c.cost).length, c.id).toBeGreaterThan(0);
+    }
   });
 });
 
