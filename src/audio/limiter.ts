@@ -21,7 +21,7 @@ export interface LimiterOptions {
 
 export const DEFAULT_LIMITS: Readonly<LimiterOptions> = {
   cooldownMs: 150,
-  cooldowns: { reveal: 800, raid: 600, yourTurn: 1000, gameEnd: 3000 },
+  cooldowns: { reveal: 800, raid: 600, yourTurn: 1000, gameEnd: 3000, season: 1500, scoreTick: 45 },
   perUpdate: 3,
   windowMs: 1000,
   budget: { normal: 4, low: 2 },

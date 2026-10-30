@@ -36,3 +36,4 @@ export function playRevealWithSound(
 ): Promise<void> {
   return playReveal(events, anchors, { ...opts, onCue: (cue, seat) => playCue(cue, seat, who) });
 }
+export * from './moments';

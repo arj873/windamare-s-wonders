@@ -15,6 +15,8 @@ export type BaseSoundId =
   | 'raidHit'
   | 'tier'
   | 'yourTurn'
+  | 'season'
+  | 'scoreTick'
   | 'gameEnd';
 
 export const BASE_SOUNDS: Readonly<Record<BaseSoundId, SoundRecipe>> = {
@@ -89,6 +91,20 @@ export const BASE_SOUNDS: Readonly<Record<BaseSoundId, SoundRecipe>> = {
       bell(N.C6, 0.13, { gain: 0.34, dur: 1.4 }),
       { kind: 'tone', wave: 'sine', freq: N.C5, at: 0.13, dur: 0.9, attack: 0.05, gain: 0.1 },
     ],
+  },
+  season: {
+    label: 'Season changes',
+    voices: [
+      thud(0, { freq: 130, to: 70, dur: 0.5, gain: 0.4 }),
+      bell(N.G4, 0.02, { gain: 0.26, dur: 1.6 }),
+      bell(N.D5, 0.2, { gain: 0.2, dur: 1.4 }),
+      swish(500, 2200, 0, 0.5, { gain: 0.25 }),
+    ],
+  },
+  scoreTick: {
+    label: 'Score counts up',
+    vary: 120,
+    voices: [ting(N.A5, 0, { gain: 0.1, dur: 0.12 }), tick(4200, 0, { gain: 0.1 })],
   },
   gameEnd: {
     label: 'Game over fanfare',
