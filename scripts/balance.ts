@@ -17,8 +17,9 @@ const argOf = (name: string, def: string) => {
 };
 const games = Number(argOf('games', '1000'));
 const seed = Number(argOf('seed', '1'));
-const seatCounts = argOf('seats', '3,4,5,6,7').split(',').map(Number);
+const seatCounts = argOf('seats', '2,3,4,5,6,7').split(',').map(Number);
 
+const SRCS = ['hall', 'landmark', 'otherCard', 'greatWork', 'valour', 'lore', 'honours', 'purse'];
 const random = (): B => createRandomBot<WwSeat, WwTable>();
 const greedy = (): B => createGreedyBot(windamereAdapter(), 'greedy');
 const KINDS_FOCUS = ['holding', 'hall', 'market', 'watch', 'lore'] as const;
@@ -77,36 +78,44 @@ for (const n of seatCounts) {
 out();
 out();
 out(
-  '| seats | win score median | runner-up median | margin median % | blowouts (>=1.3x) | winner mean by category (town / great work / raids / lore / honours / purse) |',
+  '| seats | win score median | runner-up median | margin median % | blowouts (>=1.3x) | winner mean Renown by source (hall / landmark / other card / great work / valour / lore / honours / purse) |',
 );
 out('|---|---|---|---|---|---|');
 for (const n of seatCounts) {
   const m = (equal[n] as SimSummary).metrics;
-  const cats = ['town', 'greatWork', 'raids', 'lore', 'honours', 'purse']
-    .map((c) => f1(mean(m[`winnerCat.${c}`])))
+  const cats = ['hall', 'landmark', 'otherCard', 'greatWork', 'valour', 'lore', 'honours', 'purse']
+    .map((c) => f1(mean(m[`winnerSrc.${c}`])))
     .join(' / ');
   out(
     `| ${n} | ${f1(quantile(m.winScore, 0.5))} | ${f1(quantile(m.runnerUpScore, 0.5))} | ${f1(quantile(m.marginPct, 0.5))} | ${pct(mean(m.blowout))} | ${cats} |`,
   );
 }
 out();
-out("Winner's largest category (S1; target: none > 55%, at least 4 categories >= 10%):");
+out('Share of all Renown (all towns) by source:');
 out();
-out('| seats | town | greatWork | raids | lore | honours | purse |');
-out('|---|---|---|---|---|---|---|');
+out('| seats | hall | landmark | otherCard | greatWork | valour | lore | honours | purse |');
+out('|---|---|---|---|---|---|---|---|---|');
 for (const n of seatCounts) {
   const m = (equal[n] as SimSummary).metrics;
-  out(
-    `| ${n} | ${['town', 'greatWork', 'raids', 'lore', 'honours', 'purse'].map((c) => pct(mean(m[`winnerLargest.${c}`]))).join(' | ')} |`,
-  );
+  const tot = SRCS.reduce((a, c) => a + mean(m[`townSrc.${c}`]), 0);
+  out(`| ${n} | ${SRCS.map((c) => pct(mean(m[`townSrc.${c}`]) / tot)).join(' | ')} |`);
+}
+out();
+out("Winner's largest source (S1; target: none > 55% of winners, at least 4 sources >= 10%):");
+out();
+out('| seats | hall | landmark | otherCard | greatWork | valour | lore | honours | purse |');
+out('|---|---|---|---|---|---|---|---|---|');
+for (const n of seatCounts) {
+  const m = (equal[n] as SimSummary).metrics;
+  out(`| ${n} | ${SRCS.map((c) => pct(mean(m[`winnerLargest.${c}`]))).join(' | ')} |`);
 }
 out();
 out('Interaction, Lore, Raids, trade (per town unless noted):');
 out();
 out(
-  '| seats | neighbour Renown share median (I1 target >= 10%) | Lore run >= 3 (S3 target >= 25%) | run >= 5 (5-15%) | tier IV (S4) | held Spring / Summer / Autumn / Winter (I3) | sales per game | sales from bank (seller out) | builds per town | Spend share Spring..Winter (P3) |',
+  '| seats | net neighbour Renown share median (I1 target >= 10%) | Tolls Renown-equiv. per town | Lore run >= 3 (S3 target >= 25%) | run >= 5 (5-15%) | tier IV (S4 20-50%) | held Spring / Summer / Autumn / Winter (I3) | sales per game | sales from bank (seller out) | builds per town | Spend share Spring..Winter (P3) |',
 );
-out('|---|---|---|---|---|---|---|---|---|---|');
+out('|---|---|---|---|---|---|---|---|---|---|---|');
 for (const n of seatCounts) {
   const m = (equal[n] as SimSummary).metrics;
   const ge = (xs: number[] | undefined, k: number) =>
@@ -122,9 +131,50 @@ for (const n of seatCounts) {
     })
     .join(' / ');
   out(
-    `| ${n} | ${pct(quantile(m.nbrShare, 0.5))} | ${pct(ge(m.loreRun, 3))} | ${pct(ge(m.loreRun, 5))} | ${pct(ge(m.tiers, 4))} | ${held} | ${f1((m.sale?.length ?? 0) / games)} | ${f1((m.saleShort?.length ?? 0) / games)} | ${f1(mean(m.builtPerTown))} | ${spendShare} |`,
+    `| ${n} | ${pct(quantile(m.nbrShare, 0.5))} | ${f1(mean(m.nbrTolls))} | ${pct(ge(m.loreRun, 3))} | ${pct(ge(m.loreRun, 5))} | ${pct(ge(m.tiers, 4))} | ${held} | ${f1((m.sale?.length ?? 0) / games)} | ${f1((m.saleShort?.length ?? 0) / games)} | ${f1(mean(m.builtPerTown))} | ${spendShare} |`,
   );
 }
+out();
+
+// 1b. Great Works (F2).
+out("### 1b. Great Works (F2: each wins fair x 0.75-1.25; chosen by greedy's rating rule)");
+out();
+out(
+  'Pooled over the equal-greedy tables of all seat counts; fair = 1 / seats, so the ratio is wins per time held x seats of that game.',
+);
+out();
+const gwIds = [
+  ...new Set(
+    seatCounts.flatMap((n) =>
+      Object.keys((equal[n] as SimSummary).metrics)
+        .filter((k) => k.endsWith('.held'))
+        .map((k) => k.split('.')[1] as string),
+    ),
+  ),
+].sort();
+out('| Great Work | towns that held it | win ratio vs fair | tier IV |');
+out('|---|---|---|---|');
+for (const id of gwIds) {
+  let held = 0,
+    winsOverFair = 0,
+    tier4 = 0,
+    count = 0,
+    tiers = 0;
+  for (const n of seatCounts) {
+    const m = (equal[n] as SimSummary).metrics;
+    const h = m[`gw.${id}.held`]?.length ?? 0;
+    held += h;
+    winsOverFair += (m[`gw.${id}.won`] ?? []).reduce((a, b) => a + b, 0) * n; // vs fair 1/n
+    tier4 += (m[`gw.${id}.tiers`] ?? []).filter((t) => t >= 4).length;
+    tiers += (m[`gw.${id}.tiers`] ?? []).reduce((a, b) => a + b, 0);
+    count += h;
+  }
+  out(
+    `| ${id} | ${held} towns total | ${count ? (winsOverFair / count).toFixed(2) : 'n/a'}x | ${count ? pct(tier4 / count) : 'n/a'} (mean tiers ${count ? (tiers / count).toFixed(1) : 'n/a'}) |`,
+  );
+}
+out();
+out('F3 (choice rate when offered) is not measured: the offers leave the state once chosen.');
 out();
 
 // 2. Skill signal: one greedy among random bots.

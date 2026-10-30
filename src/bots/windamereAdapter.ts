@@ -7,7 +7,16 @@
  * alike; neighbour purchases are not priced in. A Spend's value is its band: goods and coins 1,
  * labour 1.5, "any good" 1. Untuned first guesses, not measured play.
  */
-import type { CardDef, EffectSpec, WwCardDef, WwPickArgs, WwSeat, WwTable } from '../engine';
+import { windamereContent } from '../engine';
+import type {
+  CardDef,
+  EffectSpec,
+  WwCardDef,
+  WwContent,
+  WwPickArgs,
+  WwSeat,
+  WwTable,
+} from '../engine';
 import type { GreedyAdapter } from './greedy';
 
 const ALWAYS = new Set([
@@ -24,6 +33,7 @@ const ALWAYS = new Set([
   'scoreSeasons',
 ]);
 const WINTER = 3;
+const CONTENT = windamereContent();
 
 const sum = (g: Record<string, number> | undefined) =>
   Object.values(g ?? {}).reduce((a, b) => a + b, 0);
@@ -37,10 +47,34 @@ export interface WindamereGreedyOptions {
   focus?: string;
 }
 
+/**
+ * The Great Work choice (R2.5): the offer with the most Renown printed on its tiers, plus 1 for a
+ * Perk that scores or defends (renown, guard) and 0.5 for an economy Perk; ties go to the lower
+ * labour total (easier to finish). An untuned first guess; it only needs to be a rule, not index 0.
+ */
+export function rateGreatWork(content: WwContent, id: string): number {
+  const gw = content.greatWorks.find((g) => g.id === id);
+  if (!gw) return 0;
+  const renown = (specs: readonly EffectSpec[]) =>
+    specs.reduce((a, e) => a + (e.type === 'renown' ? (e.amount as number) : 0), 0);
+  const tiers = gw.tiers.reduce((a, t) => a + renown(t.reward), 0);
+  const perk = gw.perk.reduce(
+    (a, e) => a + (e.type === 'renown' || e.type === 'guard' ? 1 : 0.5),
+    0,
+  );
+  const labour = gw.tiers.reduce((a, t) => a + t.threshold, 0);
+  return tiers + perk - labour / 1000;
+}
+
 export function windamereAdapter(
   options: WindamereGreedyOptions = {},
 ): GreedyAdapter<WwSeat, WwTable> {
   return {
+    rateAnswer(_view, _seat, kind, answer) {
+      return kind === 'greatWork' && typeof answer === 'string'
+        ? rateGreatWork(CONTENT, answer)
+        : null;
+    },
     assess(view, _seat, pick, def: CardDef | undefined) {
       const d = def as WwCardDef | undefined;
       if (!d) return { scoringBuild: false, cost: 0, value: 0 };
