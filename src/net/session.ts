@@ -179,7 +179,9 @@ export class GameSession<S, T> {
     s.host = snap.host;
     s.nextMember = snap.nextMember;
     s.nextChat = snap.nextChat;
-    s.members = snap.members.map((m) => ({ ...m, conn: null }));
+    // Sockets survive a Durable Object hibernation; `reconcile` drops the ones that did not.
+    s.members = snap.members.map((m) => ({ ...m }));
+    for (const m of s.members) if (m.conn !== null) s.conns.set(m.conn, m.id);
     s.seats = snap.seats;
     s.chat = snap.chat;
     s.emptySince = snap.emptySince;
@@ -203,7 +205,7 @@ export class GameSession<S, T> {
       host: this.host,
       nextMember: this.nextMember,
       nextChat: this.nextChat,
-      members: this.members.map((m) => ({ ...m, conn: null })),
+      members: this.members,
       seats: this.seats,
       chat: this.chat,
       game:
@@ -544,7 +546,7 @@ export class GameSession<S, T> {
       v: PROTOCOL_VERSION,
       type: 'welcome',
       you: { member: m.id, token: m.token },
-      room: this.roomInfo(),
+      room: this.room(),
       chat: this.chat,
     });
     this.roomDirty = true;
@@ -788,7 +790,7 @@ export class GameSession<S, T> {
 
   // ---- outbound views ------------------------------------------------------
 
-  private roomInfo(): RoomInfo {
+  room(): RoomInfo {
     const seats: SeatInfo[] = this.seats.map((s) => ({
       occupant: s.occupant,
       status:
@@ -819,7 +821,7 @@ export class GameSession<S, T> {
   }
 
   private broadcastRoom(): void {
-    const room = this.roomInfo();
+    const room = this.room();
     for (const m of this.connected()) {
       this.send(m.conn as string, { v: PROTOCOL_VERSION, type: 'room', room });
     }

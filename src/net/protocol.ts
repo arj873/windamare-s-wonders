@@ -19,6 +19,10 @@ import type { DraftAction, DraftView, Json, Pick } from '../engine';
 
 export const PROTOCOL_VERSION = 1;
 
+/** Keep-alive: raw text frames, answered by the runtime without waking the Durable Object. */
+export const PING = 'ping';
+export const PONG = 'pong';
+
 export const LIMITS = {
   messageChars: 8_000,
   name: 16,
