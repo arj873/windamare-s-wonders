@@ -1,6 +1,7 @@
 /** The D2c turn on the real engine (test fixture): R3-R6, R13 turn effects, R15.6/R15.7, R17. */
 import { describe, expect, it } from 'vitest';
 import type { Card, Json, Pick, SeatId } from '../core';
+import { eventsOf } from './events';
 import { argsOf, type WwPickArgs } from './pick';
 import { FX_CARDS } from './testing/fixture';
 import {
@@ -307,7 +308,11 @@ describe('paying and buying (R6, R15.7, R17.9-R17.11)', () => {
     expect(townData(after, 0).coins).toBe(3); // paid the price it saw
     expect(townData(after, 1)).toMatchObject({ coins: 5, store: { slate: 0 } }); // sold nothing
     expect(after.seats[0]!.tableau.some((c) => c.id === apiary.id)).toBe(true);
-    expect(after.log.filter((l) => l.kind === 'saleShort')).toHaveLength(2);
+    const trades = eventsOf(after).filter((x) => x.event.type === 'trade');
+    expect(trades.map((x) => x.event)).toEqual([
+      { type: 'trade', seller: 1, buyer: 0, good: 'slate', price: 1, filled: false, bonus: 0 },
+      { type: 'trade', seller: 1, buyer: 0, good: 'slate', price: 1, filled: false, bonus: 0 },
+    ]);
   });
 
   it('R6.7 and R17.10 both neighbours may buy from one town; short goods alternate from its left', () => {
@@ -316,11 +321,11 @@ describe('paying and buying (R6, R15.7, R17.9-R17.11)', () => {
     const m1 = setHand(s, 1, ['tf-mint'])[0]!; // 1 honey, from seat 0 (its right)
     const m2 = setHand(s, 2, ['tf-mint'])[0]!; // 1 honey, from seat 0 (its left)
     const after = playTurn(s, { 1: pk(m1, 'build'), 2: pk(m2, 'build') });
-    const sales = after.log.filter((l) => l.kind === 'sale' || l.kind === 'saleShort');
+    const sales = eventsOf(after).flatMap((x) => (x.event.type === 'trade' ? [x.event] : []));
     // Seat 0's left neighbour (seat 1) is served first.
-    expect(sales.map((l) => [l.kind, (l.data as { buyer: number }).buyer])).toEqual([
-      ['sale', 1],
-      ['saleShort', 2],
+    expect(sales.map((t) => [t.buyer, t.filled])).toEqual([
+      [1, true],
+      [2, false],
     ]);
     expect(townData(after, 0)).toMatchObject({ coins: 5 + 1 + 1, store: { honey: 0 } });
     expect(after.seats[1]!.tableau).toHaveLength(1);

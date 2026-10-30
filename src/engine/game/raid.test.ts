@@ -141,6 +141,7 @@ describe('Raids (R9)', () => {
     expect(s.phase).toEqual({ kind: 'gameOver' });
     expect(s.result?.scores.map((x) => x.seat)).toEqual([0, 1]);
     const kinds = s.log.map((e) => e.kind);
-    expect(kinds.indexOf('raidPlundered')).toBeLessThan(kinds.indexOf('gameOver'));
+    expect(kinds.indexOf('raid')).toBeLessThan(kinds.indexOf('seasonEnd'));
+    expect(kinds.indexOf('seasonEnd')).toBeLessThan(kinds.indexOf('gameOver'));
   });
 });

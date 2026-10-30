@@ -1,6 +1,8 @@
 /** R2.4, R2.5 the Great Work choice and R8 the labour track. */
 import type { Ctx, EffectSpec, Json, PromptHandler, SeatId } from '../core';
 import type { WwRules } from './content';
+import { emit, gained, holdings } from './events';
+import { updateHonourLeaders } from './honours';
 import { greatWorkEffects, townOf } from './town';
 import type { WwSeat, WwState, WwTable } from './types';
 
@@ -41,9 +43,13 @@ export function greatWorkChoice(rules: WwRules): PromptHandler<WwSeat, WwTable> 
       const town = townOf(ctx.state, prompt.seat);
       const gw = rules.greatWork(answer as string);
       town.data.greatWork = gw.id;
-      ctx.log(prompt.seat, 'greatWork', `${town.name} will raise ${gw.name}.`, {
-        data: { greatWork: gw.id },
-      });
+      emit(
+        ctx,
+        { type: 'greatWork', seat: prompt.seat, greatWork: gw.id },
+        `${town.name} will raise ${gw.name}.`,
+      );
+      // The group applies in seat order; after the last town, the Perks may move an Honour.
+      if (prompt.seat === ctx.state.seats.length - 1) updateHonourLeaders(rules, ctx);
     },
     // R15.6, R15.10: the timeout choice is the first offered.
     defaultAnswer: (_state, prompt) => offersOf(prompt.data)[0] ?? null,
@@ -70,14 +76,18 @@ export function greatWorkCheck(rules: WwRules, ctx: Ctx<WwSeat, WwTable>, seat: 
     if (!tier) break;
     town.tiers += 1;
     done += 1;
+    const before = holdings(town);
     ctx.trigger(seat, tier.reward, null);
-    ctx.log(
-      seat,
-      'tier',
-      `${townOf(ctx.state, seat).name} completes ${gw.name} tier ${town.tiers}.`,
+    emit(
+      ctx,
       {
-        data: { greatWork: gw.id, tier: town.tiers },
+        type: 'tier',
+        seat,
+        greatWork: gw.id,
+        tier: town.tiers,
+        gains: gained(before, holdings(town)),
       },
+      `${townOf(ctx.state, seat).name} completes ${gw.name} tier ${town.tiers}.`,
     );
     next = nextThreshold(rules, town);
   }

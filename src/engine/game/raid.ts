@@ -2,6 +2,7 @@
 import type { Ctx, Rng } from '../core';
 import { neighboursOf } from '../core';
 import type { WwRules } from './content';
+import { emit, gained, holdings, isEmpty } from './events';
 import { addGains } from './gains';
 import { activeEffects, guardOf, townOf } from './town';
 import {
@@ -27,9 +28,11 @@ export function revealRaid(rules: WwRules, ctx: Ctx<WwSeat, WwTable>, season: nu
   if (!raid || raid.revealed) return;
   raid.revealed = true;
   const def = rules.raid(raid.id);
-  ctx.log(null, 'raid', `${def.name} (strength ${def.strength}) threatens this Season.`, {
-    data: { raid: def.id, season, strength: def.strength },
-  });
+  emit(
+    ctx,
+    { type: 'raidRevealed', season, raid: def.id, strength: def.strength },
+    `${def.name} (strength ${def.strength}) threatens this Season.`,
+  );
 }
 
 /** The current Season's Raid, if revealed. */
@@ -58,29 +61,24 @@ export function resolveRaid(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): RaidOutc
   for (const s of seats) {
     const town = townOf(state, s);
     const guard = guards[s] ?? 0;
+    const base = { type: 'raid', seat: s, raid: def.id, guard, strength: def.strength } as const;
     if (outcome[s] === 'held') {
       // R9.4: a Valour token worth the Season's value. R9.7: no surplus.
       const value = t.valourBySeason[season] ?? 0;
       town.data.valour.push(value);
-      ctx.log(
-        s,
-        'raidHeld',
+      emit(
+        ctx,
+        { ...base, outcome: 'held', valour: value, lost: 0 },
         `${town.name} holds (Guard ${guard} vs ${def.strength}): Valour ${value}.`,
-        {
-          data: { raid: def.id, guard, strength: def.strength, valour: value },
-        },
       );
     } else {
       // R9.5: coins only, at most all of them (R17.6).
       const lost = Math.min(town.data.coins, (def.strength - guard) * t.plunderPerPoint);
       town.data.coins -= lost;
-      ctx.log(
-        s,
-        'raidPlundered',
+      emit(
+        ctx,
+        { ...base, outcome: 'plundered', valour: 0, lost },
         `${town.name} is plundered (Guard ${guard} vs ${def.strength}): -${lost} coins.`,
-        {
-          data: { raid: def.id, guard, strength: def.strength, lost },
-        },
       );
     }
   }
@@ -98,17 +96,40 @@ export function resolveRaid(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): RaidOutc
       payer.data.coins -= bounty;
       const taker = townOf(state, n);
       taker.data.coins += bounty;
-      ctx.log(n, 'bounty', `${taker.name} takes a bounty of ${bounty} from ${payer.name}.`, {
-        data: { from: p, bounty },
-      });
+      emit(
+        ctx,
+        { type: 'bounty', from: p, to: n, coins: bounty },
+        `${taker.name} takes a bounty of ${bounty} from ${payer.name}.`,
+      );
     }
   }
   // R13 heldBonus: after R9.6, each time the town holds.
   for (const s of seats) {
     if (outcome[s] !== 'held') continue;
+    const town = townOf(state, s);
+    const before = holdings(town.data);
     for (const e of activeEffects(rules, state, s, 'heldBonus')) {
-      addGains(townOf(state, s).data, e.spec.gains as Gains);
+      addGains(town.data, e.spec.gains as Gains);
     }
+    const gains = gained(before, holdings(town.data));
+    if (!isEmpty(gains))
+      emit(ctx, { type: 'heldBonus', seat: s, gains }, `${town.name}'s defenders are rewarded.`);
   }
   return outcome;
+}
+
+/**
+ * R3.6: every "at Season end" effect, in seat order, after the Raid. (Here rather than as the
+ * core's per-effect round-end hook, so that the Honours can be updated after them.)
+ */
+export function seasonEndEffects(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): void {
+  for (const s of ctx.state.seats) {
+    const before = holdings(s.data);
+    for (const e of activeEffects(rules, ctx.state, s.id, 'seasonEnd')) {
+      addGains(s.data, e.spec.gains as Gains);
+    }
+    const gains = gained(before, holdings(s.data));
+    if (!isEmpty(gains))
+      emit(ctx, { type: 'seasonEnd', seat: s.id, gains }, `${s.name} gathers its stores.`);
+  }
 }

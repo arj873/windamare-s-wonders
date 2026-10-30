@@ -609,6 +609,7 @@ interface WwSeat {
 interface WwTable {
   honours: string[]; // the 3 revealed at setup
   raids: { id: string; revealed: boolean }[]; // by Season; unrevealed ones masked in views
+  leaders: SeatId[][]; // per Honour, its leaders as of the last turn / Season end (R11.3)
 }
 ```
 
@@ -630,8 +631,8 @@ Score by source (R12.2): on an uncovered card, printed `renown` and `score…` e
 Readers for ui and bots: `measure(rules, state, seat, id)` (R11.5), `guardOf`, `countKind`,
 `kindCounts`, `honourStandings`, `scoreTown`; all read public information only.
 
-`windamereRuleset(rules)` wires these into a core `Ruleset` (Season end: `resolveRaid`, then the
-core runs `seasonEnd` effects in seat order, R3.6).
+`windamereRuleset(rules)` wires these into a core `Ruleset` (Season end, `onRoundEnd`:
+`resolveRaid`, then every `seasonEnd` effect in seat order, R3.6, then the Honours' leaders).
 
 ### 15.1 The turn (R3, R4, R6; `turn.ts`, `pick.ts`, `pay.ts`)
 
@@ -704,6 +705,57 @@ Tolls, `scoreBeat`). `legalPicks` lists each choice with every other card as the
 
 **Recall** (R15.8) is on (`recall: true`, §7): each town's `recall` lists the hands it passed this
 Season. Timeouts use the fallback pick (R15.6); the Easy bot is bots' lane.
+
+### 15.4 The event log (E3; `events.ts`)
+
+What happened, step by step, for ui to animate a turn and show history. Every event is a core
+log entry (§4) with `kind` = the event's `type`, `data` = the event, `seat` = who it is about, and
+a plain-English `text`. So it is in the state, in every view, and redacted by the core like any
+log entry (`to`; no Windamere event needs it today, since every event is public, R1.11).
+
+```ts
+type WwEvent =
+  | { type: 'greatWork'; seat; greatWork } //                      R2.5, all towns at once
+  | { type: 'raidRevealed'; season; raid; strength } //            R2.6, R3.2
+  | { type: 'spend'; seat; card: Card; gains: Gains } //           step 1 (band + spendBonus)
+  | { type: 'glean'; seat; gains } //                              step 1; the card stays face down
+  | { type: 'burn'; seat } //                                      step 1, 2 seats; not which card
+  | {
+      type: 'pay';
+      seat;
+      card;
+      goods;
+      exchanges: { give; for }[];
+      bank: GoodId[];
+      buys: { from; good; price }[];
+      coins;
+    } //                    step 2a
+  | { type: 'trade'; seller; buyer; good; price; filled; bonus } // step 2b, one per good;
+  //                                     filled: false = the seller ran short, the bank sold it
+  | { type: 'build'; seat; card; cover: CardId | null; gains } //  step 2c ("when built", buildBonus)
+  | { type: 'tier'; seat; greatWork; tier; gains } //              Great Work checks (one-off gains)
+  | { type: 'toll'; seat; coins; from: SeatId[] } //               step 3
+  | { type: 'yield'; seat; gains } //                              step 4 (yield + income)
+  | { type: 'raid'; seat; raid; outcome: 'held' | 'plundered'; guard; strength; valour; lost }
+  | { type: 'bounty'; from; to; coins } //                         R9.6
+  | { type: 'heldBonus'; seat; gains }
+  | { type: 'seasonEnd'; seat; gains } //                          R3.6
+  | { type: 'honour'; honour; leaders: SeatId[]; was: SeatId[]; best }; // R11.3, on change
+```
+
+`gains` are the changes to the town's goods, coins and labour that the event caused (nonzero
+keys only). Order = the order things happened: the core's `reveal` entry (cards and roles), then
+the resolve steps step-major (every town's Spend, then every Pay, every trade, every Build, ...),
+then the end-of-turn `honour` changes, then on the last turn the Season end (Raids, bounties,
+held bonuses, Season-end gains, Honours) and the next Season's `raidRevealed`. All entries of one
+action share its `seq`.
+
+Readers (work on views): `eventsOf(state)` → `{ seq, round, turn, text, event }[]`, every event;
+`latestEvents(state)` → the events of the latest action that had any (what to animate);
+`EVENT_TYPES`. `table.leaders` keeps the current Honour leaders. Tests: one turn's exact sequence
+and payloads, Exchanges/bank/cover, tiers, a Season end, the Great Work reveal, a 2-player burn,
+and over a whole random game: every view gets the same events, and every card an event names was
+revealed in a pick first.
 
 **Shipped content** (`shipped.ts`): `windamereContent()` maps design's `src/content/windamere`
 (goods, cards, Great Works, Raids, Honours, its R16 `TUNABLES`) to `WwContent`; design keeps its

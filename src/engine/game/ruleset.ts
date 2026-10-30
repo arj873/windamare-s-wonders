@@ -4,7 +4,8 @@ import { COVERED } from './build';
 import type { WwRules } from './content';
 import { GREAT_WORK_CHOICE, greatWorkChoice, greatWorkSpecs, offerGreatWorks } from './greatWork';
 import { defaultPick, legalPicks, normalizePick, validatePick } from './pick';
-import { resolveRaid, revealRaid } from './raid';
+import { updateHonourLeaders } from './honours';
+import { resolveRaid, revealRaid, seasonEndEffects } from './raid';
 import { scoreTown, tiebreakOf } from './score';
 import { maskTable, setupSeat, setupTable } from './setup';
 import { GLEAN, onLeftovers, resolveSteps, roundSpec } from './turn';
@@ -38,9 +39,11 @@ export function windamereRuleset(rules: WwRules): Ruleset<WwSeat, WwTable> {
     defaultPick: (state, seat) => defaultPick(rules, state, seat),
     onLeftovers,
     resolve: resolveSteps(rules),
-    // R3.6: the Raid, then the core runs every `seasonEnd` effect in seat order.
+    // R3.6: the Raid, then every `seasonEnd` effect in seat order; then the Honours (R11.3).
     onRoundEnd: (ctx) => {
       resolveRaid(rules, ctx);
+      seasonEndEffects(rules, ctx);
+      updateHonourLeaders(rules, ctx);
     },
     score: (state, seat) => scoreTown(rules, state, seat),
     tiebreak: tiebreakOf,
