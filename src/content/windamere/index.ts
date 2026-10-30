@@ -4,3 +4,4 @@ export { g } from './dsl';
 export { FIRST_GAME, TUNABLES } from './tunables';
 export { CARDS, SPRING, SUMMER, AUTUMN, WINTER } from './cards';
 export { GREAT_WORKS, RAIDS, HONOURS } from './extras';
+export { PENDING_CARDS, PENDING_SWAPS } from './pending';

@@ -112,7 +112,8 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
 - **R4.6** **Pass.** After each of turns 1 to 4, each town passes the rest of its hand in the
   Season's direction and the next turn starts. After the fifth turn the Season ends (R3.6).
 - **R4.7** Steps 1 and 4 read only the town's own pick and state. Step 2 also reads the
-  neighbours' stores (R6.7), step 3 which cards the neighbours Built. A pick that was legal when
+  neighbours' stores (R6.7) and, for the pending `onBuildNeighbourMin` (R13), the neighbours'
+  cards; step 3 reads which cards the neighbours Built. A pick that was legal when
   submitted is still legal when it resolves: a purchase always costs the price the buyer saw,
   even when the seller runs short (R6.7), and nothing a neighbour does can take goods or coins
   that a town's own Build needs. Seat order never changes the outcome.
@@ -310,6 +311,17 @@ when the effect acts.
 | `scoreThreshold` | `measure`, `atLeast`, `amount` | end (R12.2a-b)         | `amount` Renown if the town's `measure` is at least `atLeast`.                                |
 | `scoreSeasons`   | `kind`, `amount`               | end (R12.2a-b)         | `amount` Renown per Season whose deck gave the town at least one uncovered card of `kind`.    |
 
+**Pending** (ruled in D10, waiting for engine handlers; only the staged cards in
+`src/content/windamere/pending.ts` use them, R13.5). The **weaker neighbour** for a kind or
+measure is the neighbour with less of it (with 2 seats, the one neighbour; a tie counts that
+number). These read neighbours as they stood when the step began (R4.8).
+
+| Type                  | Params              | When         | Meaning                                                                                    |
+| --------------------- | ------------------- | ------------ | ------------------------------------------------------------------------------------------ |
+| `onBuildNeighbourMin` | `kind`, `gains`     | step 2, once | Gain `gains` once per uncovered card of `kind` in the weaker neighbour for that kind.      |
+| `scoreNeighbourMin`   | `measure`, `amount` | end (R12.2a) | `amount` Renown per point of `measure` (R11.5) of the weaker neighbour for that measure.   |
+| `scoreSales`          | `per`, `amount`     | end (R12.2a) | `amount` Renown per `per` goods this town sold to neighbours over the game (filled, R6.7). |
+
 Rules for effects:
 
 - **R13.1** Effects act only while their card is uncovered (or, for a tier, once it is complete).
@@ -320,6 +332,8 @@ Rules for effects:
 - **R13.4** "any" appears only in Spend bands and in a card's own `onBuild`, where the pick names
   the good (R4.3). Effects that act outside a pick (`yield`, `toll`, `heldBonus`, `seasonEnd`,
   tier rewards) never use it. So resolution never stops to ask a town a question (R15.10).
+- **R13.5** A pending type is not used by any shipped card. When the engine lands its handler, the
+  staged cards join the decks with the copy swaps listed in `pending.ts` (decks stay 6 per seat).
 
 ## R14. Two-player variant
 
@@ -457,6 +471,10 @@ That is **well under the 25-35 brief**: a single pick is fast (research online-u
 estimates 11-17 minutes for 20 picks online). The lever is a longer Season: hand 8 with 7 turns
 (28 turns, about 19 minutes), but Holdings would then yield 21 times a game instead of 15, so
 costs need retuning first. Our pick: keep 6 and 5, and measure with bots (B1) and playtests (qa).
+
+**Open (decided 2026-10-30, orchestrator for the human): no change now.** The online clock and
+bots make games quicker than a table game; revisit with qa's playtest timings. If playtests also
+come in under 25 minutes, the lever above (hand 8, 7 turns) is the first candidate.
 
 ## R19. First game (room option, card D7)
 

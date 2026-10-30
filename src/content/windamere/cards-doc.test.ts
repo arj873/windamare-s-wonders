@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { EffectSpec } from '../../engine';
-import { CARDS, GREAT_WORKS, HONOURS, RAIDS } from './index';
+import { CARDS, GREAT_WORKS, HONOURS, PENDING_CARDS, RAIDS } from './index';
 import type { Gains } from './index';
 
 const SHORT: Record<string, string> = {
@@ -77,6 +77,12 @@ function ef(e: EffectSpec): string {
       return `score ${p('amount')} if ${p('measure')} ≥ ${p('atLeast')}`;
     case 'scoreSeasons':
       return `score ${p('amount')}/Season with a ${p('kind')}`;
+    case 'onBuildNeighbourMin':
+      return `on build ${gains()} per ${p('kind')} of the weaker neighbour`;
+    case 'scoreNeighbourMin':
+      return `score ${p('amount')} per ${p('measure')} of the weaker neighbour`;
+    case 'scoreSales':
+      return `score ${p('amount')}/${p('per')} goods sold`;
     default:
       return `?${e.type}`;
   }
@@ -87,7 +93,7 @@ const names = new Map(CARDS.map((c) => [c.id, c.name]));
 
 function dataRows(): string[] {
   const rows: string[] = [];
-  for (const c of CARDS) {
+  for (const c of [...CARDS, ...PENDING_CARDS]) {
     const up = c.upgrade
       ? `${c.upgrade.of.map((i) => names.get(i)).join(' or ')} (${gs(c.upgrade.cost)})`
       : '';
@@ -126,6 +132,8 @@ describe('docs/design/CARDS.md matches src/content', () => {
       missingFromDoc: want.filter((r) => !doc.includes(r)),
       notInData: doc.filter((r) => !want.includes(r)),
     }).toEqual({ missingFromDoc: [], notInData: [] });
-    expect(doc).toHaveLength(CARDS.length + GREAT_WORKS.length + RAIDS.length + HONOURS.length);
+    expect(doc).toHaveLength(
+      CARDS.length + PENDING_CARDS.length + GREAT_WORKS.length + RAIDS.length + HONOURS.length,
+    );
   });
 });
