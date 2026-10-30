@@ -68,6 +68,33 @@ describe('DraftTable', () => {
     expect(table.selection).toBeNull();
   });
 
+  it('shows a spectator towns instead of a hand: seat 0 first, then any town they follow', () => {
+    const state = newToyGame(3);
+    const { el, table } = mount(state);
+    table.update(model(state, 'spectator'));
+    expect(el.classList.contains('is-watching')).toBe(true);
+    expect($(el, '.dt-hand')).toBeNull();
+    expect($(el, '.dt-watch')).not.toBeNull();
+    const town = () => $(el, '.dt-town')!;
+    expect(town().dataset.seat).toBe('0');
+    expect($(el, '.dt-town h2')?.textContent).toBe('Watching');
+    expect($(el, '.dt-left')?.dataset.seat).toBe(String(model(state, 0).left!.seat));
+    expect($(el, '.dt-right')?.dataset.seat).toBe(String(model(state, 0).right!.seat));
+    expect($(el, '[data-k="follow-0"]')?.getAttribute('aria-checked')).toBe('true');
+    // Follow from the bar, or by clicking a neighbour panel.
+    $(el, '[data-k="follow-2"]')!.click();
+    expect(town().dataset.seat).toBe('2');
+    expect($(el, '.dt-left')?.dataset.seat).toBe(String(model(state, 2).left!.seat));
+    const nb = $(el, '.dt-right')!;
+    nb.click();
+    expect(town().dataset.seat).toBe(nb.dataset.seat);
+    // A seated player sees their hand again, and neighbour panels do not follow.
+    table.update(model(state, 0));
+    expect(el.classList.contains('is-watching')).toBe(false);
+    expect($(el, '.dt-hand')).not.toBeNull();
+    expect($(el, '.dt-left')?.hasAttribute('data-act')).toBe(false);
+  });
+
   it('says under a payment row why an option is closed (R7 #5: no hover on touch)', () => {
     const state = newToyGame(3);
     const { el, table } = mount(state);

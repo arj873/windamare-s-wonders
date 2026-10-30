@@ -324,6 +324,34 @@
   color: var(--ink-dim);
 }
 
+/* ---- spectator (online, no seat): the hand row becomes "follow a town" ------ */
+.dt-watch {
+  grid-area: hand;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+}
+.dt-follow {
+  flex-wrap: wrap;
+}
+.dt-follow .seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dt-nb.is-followable {
+  cursor: pointer;
+}
+.dt-nb.is-followable:hover {
+  border-color: var(--accent);
+}
+
 /* ---- hand (C) ----------------------------------------------------------- */
 .dt-hand {
   grid-area: hand;
@@ -1132,6 +1160,9 @@
    */
   .dt {
     padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px);
+  }
+  .dt.is-watching {
+    padding-bottom: 8px; /* a spectator has no pinned hand; the Watching row stays in flow */
   }
   .dt-hand {
     position: fixed;

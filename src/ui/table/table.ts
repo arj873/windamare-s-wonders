@@ -7,7 +7,7 @@
  * delegated from the root through `data-act`, so re-renders can patch the DOM in place
  * (patchChildren) without stale listeners. Card faces are text placeholders until art A3.
  */
-import type { CardId, Json, Pick } from '../../engine';
+import type { CardId, Json, Pick, SeatId } from '../../engine';
 import { openDialog } from '../dialog';
 import { showToast } from '../toast';
 import { h, patchChildren, type Child } from '../dom';
@@ -104,6 +104,8 @@ export class DraftTable {
   /** The Season-end card (UX.md §10.1): the action it was closed for, and its auto-close. */
   private seasonSeen: string | null = null;
   private seasonUp = false;
+  /** The town a spectator watches (online, no seat): seat 0 until they pick another. */
+  private following: SeatId = 0;
   private seasonTimerFor: string | null = null;
   private seasonTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -278,6 +280,11 @@ export class DraftTable {
       case 'rematch':
         this.handlers.rematch?.();
         break;
+      case 'follow':
+        // A spectator (no seat of their own) watches another town.
+        this.following = Number(a);
+        this.render();
+        break;
     }
   }
 
@@ -350,12 +357,17 @@ export class DraftTable {
     this.element.dataset.viewer = m.viewer === null ? '' : String(m.viewer);
     this.seasonUp =
       !m.result && !this.cover && m.seasonEnd !== null && m.actionKey !== this.seasonSeen;
+    // A spectator (online, no seat) has no hand: they watch a town and its neighbours instead.
+    const watched = m.me ? null : (m.seats.find((s) => s.seat === this.following) ?? m.seats[0]);
+    const seatOf = (id: SeatId | null | undefined) =>
+      id == null ? null : (m.seats.find((s) => s.seat === id) ?? null);
+    this.element.classList.toggle('is-watching', watched != null);
     patchChildren(this.element, [
       this.top(m),
-      this.neighbour(m.left, 'left', m),
-      this.town(m),
-      this.neighbour(m.right, 'right', m),
-      this.cover ? this.hiddenHand() : this.hand(m),
+      this.neighbour(watched ? seatOf(watched.left) : m.left, 'left', m),
+      watched ? this.watchedTown(watched) : this.town(m),
+      this.neighbour(watched ? seatOf(watched.right) : m.right, 'right', m),
+      watched ? this.watchBar(m, watched) : this.cover ? this.hiddenHand() : this.hand(m),
       this.side(m),
       ...(m.result
         ? [this.result(m.result)]
@@ -536,15 +548,20 @@ export class DraftTable {
     if (!s) return h('section', { class: `${area} is-empty`, attrs: { 'aria-hidden': 'true' } });
     const arrow = side === 'left' ? '◀' : '▶';
     const passing = m.pass?.dir === side;
+    // A spectator clicks a neighbour panel to follow that town (the Watching bar does it too).
+    const follow: Record<string, string> = m.me
+      ? {}
+      : { 'data-act': `follow:${s.seat}`, title: `Watch ${s.name}` };
     return h(
       'section',
       {
-        class: `${area} seat`,
+        class: `${area} seat${m.me ? '' : ' is-followable'}`,
         style: { '--seat': s.color },
         attrs: {
           'aria-label': `${side === 'left' ? 'Left' : 'Right'} neighbour: ${s.name}`,
           'data-seat': String(s.seat),
           'data-tut': 'neighbours',
+          ...follow,
         },
       },
       h(
@@ -595,12 +612,42 @@ export class DraftTable {
         h('span', { class: 'dt-town-name' }, me.name),
         this.stats(me, 'labelled'),
       ),
-      this.monument(me.monument, 'large'),
-      me.columns.length
+      ...this.tableau(me, 'Cards you build land here.'),
+      this.zones(me),
+      this.stage(m),
+    );
+  }
+
+  /** A spectator's centre panel: the followed town, drawn like your own minus the pick slot. */
+  private watchedTown(s: SeatModel): HTMLElement {
+    return h(
+      'section',
+      {
+        class: 'dt-town is-watched',
+        style: { '--seat': s.color },
+        attrs: { 'aria-label': `${s.name}'s town`, 'data-seat': String(s.seat) },
+      },
+      h(
+        'header',
+        { class: 'dt-town-head' },
+        h('h2', {}, 'Watching'),
+        h('span', { class: 'dt-town-name' }, s.name),
+        this.stats(s, 'labelled'),
+      ),
+      ...this.tableau(s, 'Nothing built yet.'),
+      this.zones(s),
+    );
+  }
+
+  /** The Great Work and the built cards by kind, with their effects (R6 #10). */
+  private tableau(s: SeatModel, empty: string): Child[] {
+    return [
+      this.monument(s.monument, 'large'),
+      s.columns.length
         ? h(
             'div',
             { class: 'dt-cols' },
-            ...me.columns.map((col) =>
+            ...s.columns.map((col) =>
               h(
                 'div',
                 { class: 'dt-col' },
@@ -614,9 +661,40 @@ export class DraftTable {
               ),
             ),
           )
-        : h('p', { class: 'muted dt-empty' }, 'Cards you build land here.'),
-      this.zones(me),
-      this.stage(m),
+        : h('p', { class: 'muted dt-empty' }, empty),
+    ];
+  }
+
+  /**
+   * Where a player's hand would be: a spectator's row of towns to follow (seat 0 first). The
+   * neighbour panels follow on click too.
+   */
+  private watchBar(m: TableModel, watched: SeatModel): HTMLElement {
+    return h(
+      'section',
+      { class: 'dt-watch', attrs: { 'aria-label': 'Watching' } },
+      h('h2', {}, 'You are watching'),
+      h(
+        'div',
+        { class: 'seg dt-follow', attrs: { role: 'radiogroup', 'aria-label': 'Follow a town' } },
+        ...m.seats.map((s) =>
+          h(
+            'button',
+            {
+              class: `seg-btn${s.seat === watched.seat ? ' is-on' : ''}`,
+              style: { '--seat': s.color },
+              attrs: {
+                role: 'radio',
+                'aria-checked': String(s.seat === watched.seat),
+                'data-act': `follow:${s.seat}`,
+                'data-k': `follow-${s.seat}`,
+              },
+            },
+            h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
+            ` ${s.name}`,
+          ),
+        ),
+      ),
     );
   }
 
