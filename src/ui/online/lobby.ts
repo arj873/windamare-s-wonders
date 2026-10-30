@@ -1,0 +1,439 @@
+/**
+ * Online lobby (UX.md §6, port of Catan's LobbyScreen): invite link, nickname, seats in table
+ * order (sit, move, stand up; the host adds and removes bot seats), the host's settings (clock
+ * preset; read-only for guests), chat, and Start. Re-renders the seats on every room update; the
+ * name field, the chat and the copy button persist.
+ */
+import { LIMITS, type RoomConfig, type RoomInfo, type TimerPreset } from '../../net/protocol';
+import { append, h } from '../dom';
+import {
+  lobbyView,
+  TIMER_OPTIONS,
+  timerHint,
+  withSeatCount,
+  type LobbyView,
+  type SeatRange,
+  type SeatView,
+} from './lobbyModel';
+import '../shell.css';
+import '../setup/setup.css';
+import './online.css';
+
+export interface LobbyActions {
+  setName(name: string): void;
+  takeSeat(seat: number): void;
+  leaveSeat(): void;
+  configure(config: RoomConfig): void;
+  start(): void;
+  leave(): void;
+}
+
+export interface LobbyOptions {
+  roomId: string;
+  inviteUrl: string;
+  range: SeatRange;
+  actions: LobbyActions;
+  /** The chat panel element (moved here while the lobby is shown). */
+  chat: HTMLElement;
+  /** Clipboard write; default navigator.clipboard with a select() fallback. */
+  copy?: (text: string) => Promise<void>;
+}
+
+async function defaultCopy(text: string, input: HTMLInputElement): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    input.select();
+    document.execCommand('copy');
+  }
+}
+
+export class LobbyScreen {
+  readonly element: HTMLElement;
+  private readonly seatsBox: HTMLElement;
+  private readonly specBox: HTMLElement;
+  private readonly roleBox: HTMLElement;
+  private readonly watchBox: HTMLElement;
+  private readonly inviteNote: HTMLElement;
+  private readonly configBox: HTMLElement;
+  private readonly configNote: HTMLElement;
+  private readonly chatBox: HTMLElement;
+  private readonly footerInfo: HTMLElement;
+  private readonly footerActions: HTMLElement;
+  private readonly nameInput: HTMLInputElement;
+  private readonly linkInput: HTMLInputElement;
+  private readonly copyLabel: HTMLElement;
+  private room: RoomInfo | null = null;
+  private view: LobbyView | null = null;
+  private copiedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private readonly opts: LobbyOptions) {
+    this.linkInput = h('input', {
+      class: 'input ol-link',
+      value: opts.inviteUrl,
+      attrs: { readonly: '', 'aria-label': 'Invite link', 'data-k': 'invite' },
+      on: { focus: (e) => (e.target as HTMLInputElement).select() },
+    });
+    this.copyLabel = h('span', { attrs: { 'aria-live': 'polite' } }, 'Copy link');
+    const copyBtn = h(
+      'button',
+      {
+        class: 'btn btn-primary ol-copy',
+        attrs: { 'data-k': 'copy' },
+        on: { click: () => void this.copy() },
+      },
+      this.copyLabel,
+    );
+    this.nameInput = h('input', {
+      class: 'input ol-name',
+      maxLength: LIMITS.name,
+      placeholder: 'Your nickname',
+      attrs: { 'aria-label': 'Nickname', 'data-k': 'nickname', autocomplete: 'nickname' },
+      on: {
+        keydown: (e) => {
+          if (e.key === 'Enter') this.commitName();
+        },
+        change: () => this.commitName(),
+      },
+    });
+    this.roleBox = h('span', { class: 'ol-role' });
+    this.watchBox = h('div', {
+      class: 'ol-watch',
+      attrs: { role: 'status', 'data-k': 'watching' },
+    });
+    this.watchBox.hidden = true;
+    this.inviteNote = h('p', { class: 'su-hint muted', attrs: { 'data-k': 'invite-note' } });
+    this.seatsBox = h('ol', { class: 'ol-seats', attrs: { 'aria-label': 'Seats in table order' } });
+    this.specBox = h('div', { class: 'ol-specs' });
+    this.configBox = h('div', { class: 'ol-config' });
+    this.configNote = h('p', { class: 'su-hint muted' });
+    this.chatBox = h('div', { class: 'ol-chat-slot' });
+    this.footerInfo = h('div', { class: 'su-summary ol-summary', attrs: { 'data-k': 'summary' } });
+    this.footerActions = h('div', { class: 'ol-footer-actions' });
+
+    const section = (title: string, id: string, ...body: Node[]) =>
+      h(
+        'section',
+        { class: 'su-sec', attrs: { 'aria-labelledby': `ol-h-${id}` } },
+        h('h2', { id: `ol-h-${id}` }, title),
+        ...body,
+      );
+
+    this.element = h(
+      'div',
+      {
+        class: 'ww-shell setup ol-lobby',
+        attrs: { role: 'main', 'aria-label': 'Room lobby' },
+      },
+      h(
+        'div',
+        { class: 'su-scroll' },
+        h(
+          'div',
+          { class: 'ol-inner' },
+          h(
+            'div',
+            { class: 'ol-main' },
+            h(
+              'header',
+              { class: 'su-head' },
+              h(
+                'div',
+                {},
+                h('h1', {}, 'Lobby'),
+                h(
+                  'p',
+                  { class: 'muted' },
+                  'Room ',
+                  h('b', { class: 'ol-code', attrs: { 'data-k': 'room-code' } }, opts.roomId),
+                ),
+              ),
+            ),
+            this.watchBox,
+            section(
+              'Invite friends',
+              'invite',
+              h('div', { class: 'ol-row' }, this.linkInput, copyBtn),
+              this.inviteNote,
+            ),
+            section(
+              'You',
+              'you',
+              h(
+                'div',
+                { class: 'ol-row' },
+                this.nameInput,
+                h(
+                  'button',
+                  {
+                    class: 'btn',
+                    attrs: { 'data-k': 'save-name' },
+                    on: { click: () => this.commitName() },
+                  },
+                  'Save',
+                ),
+                this.roleBox,
+              ),
+            ),
+            section('Seats', 'seats', this.seatsBox, this.specBox),
+            section('Game settings', 'config', this.configBox, this.configNote),
+          ),
+          h('aside', { class: 'ol-side' }, section('Chat', 'chat', this.chatBox)),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'su-footer' },
+        h('div', { class: 'su-footer-in' }, this.footerInfo, this.footerActions),
+      ),
+    );
+    this.chatBox.append(opts.chat);
+  }
+
+  /** Re-render from a room update. */
+  update(room: RoomInfo, me: string | null): void {
+    this.room = room;
+    const v = lobbyView(room, me, this.opts.range);
+    this.view = v;
+    if (document.activeElement !== this.nameInput) this.nameInput.value = v.me?.name ?? '';
+    this.roleBox.replaceChildren();
+    append(this.roleBox, [
+      v.isHost && h('span', { class: 'ol-tag is-host' }, 'Host'),
+      h('span', { class: 'ol-tag' }, v.me?.seat != null ? 'Player' : 'Watching'),
+    ]);
+    this.inviteNote.textContent = v.inviteNote;
+    this.renderWatching(v);
+    this.renderSeats(v);
+    this.renderConfig(room.config, v);
+    this.renderFooter(v);
+  }
+
+  /** Put the chat panel back here (after a game). */
+  attachChat(chat: HTMLElement): void {
+    this.chatBox.append(chat);
+  }
+
+  destroy(): void {
+    if (this.copiedTimer !== null) clearTimeout(this.copiedTimer);
+    this.element.remove();
+  }
+
+  private commitName(): void {
+    const name = this.nameInput.value.trim();
+    if (name === '' || name === this.view?.me?.name) return;
+    this.opts.actions.setName(name);
+  }
+
+  private async copy(): Promise<void> {
+    const text = this.opts.inviteUrl;
+    await (this.opts.copy ? this.opts.copy(text) : defaultCopy(text, this.linkInput));
+    this.copyLabel.textContent = 'Copied!';
+    if (this.copiedTimer !== null) clearTimeout(this.copiedTimer);
+    this.copiedTimer = setTimeout(() => (this.copyLabel.textContent = 'Copy link'), 1800);
+  }
+
+  private renderWatching(v: LobbyView): void {
+    const w = v.watching;
+    this.watchBox.hidden = w === null;
+    if (!w) return;
+    const seat = w.openSeat;
+    const next = !w.named
+      ? 'Enter a nickname below to take a seat.'
+      : seat !== null
+        ? 'Take an open seat:'
+        : v.tableFull
+          ? 'Every seat has a player; you can sit if one frees up.'
+          : v.isHost
+            ? 'Add a seat below to sit down.'
+            : 'Ask the host to add a seat.';
+    this.watchBox.replaceChildren();
+    append(this.watchBox, [
+      h('span', { class: 'ol-watch-text' }, h('b', {}, "You're watching."), ` ${next}`),
+      w.named &&
+        seat !== null &&
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-primary',
+            attrs: { 'data-k': 'watch-sit' },
+            on: { click: () => this.opts.actions.takeSeat(seat) },
+          },
+          'Sit here',
+        ),
+    ]);
+  }
+
+  private renderSeats(v: LobbyView): void {
+    const a = this.opts.actions;
+    const room = this.room;
+    this.seatsBox.replaceChildren(...v.seats.map((s) => this.seatCard(s, v)));
+    if (v.canAddSeat && room) {
+      this.seatsBox.append(
+        h(
+          'li',
+          { class: 'ol-seat-add-row' },
+          h(
+            'button',
+            {
+              class: 'btn btn-ghost ol-seat-add',
+              title: 'Add a seat; a bot plays it unless someone sits down',
+              attrs: { 'data-k': 'add-bot' },
+              on: { click: () => a.configure(withSeatCount(room.config, room.seats.length + 1)) },
+            },
+            '+ Add bot',
+          ),
+        ),
+      );
+    }
+    this.specBox.replaceChildren();
+    if (v.spectators.length > 0) {
+      this.specBox.append(
+        h(
+          'p',
+          { class: 'ol-spec-list' },
+          h('span', { class: 'muted' }, 'Watching: '),
+          ...v.spectators.map((m) =>
+            h(
+              'span',
+              { class: `ol-spec${m.connected ? '' : ' is-away'}` },
+              m.name ?? 'Someone',
+              m.id === room?.host && h('span', { class: 'ol-tag is-host' }, 'Host'),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  private seatCard(s: SeatView, v: LobbyView): HTMLElement {
+    const a = this.opts.actions;
+    const room = this.room;
+    const meSeated = v.me?.seat != null;
+    const name = s.name ?? 'Bot';
+    const sub =
+      s.name === null
+        ? 'Open seat · a bot plays it'
+        : s.isAway
+          ? 'Disconnected · seat kept for a minute'
+          : 'Connected';
+    const buttons: (HTMLElement | false)[] = [
+      s.canRemove &&
+        !!room &&
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-ghost',
+            title: 'Remove this seat',
+            attrs: { 'data-k': 'remove-bot' },
+            on: { click: () => a.configure(withSeatCount(room.config, room.seats.length - 1)) },
+          },
+          'Remove',
+        ),
+      s.canStand &&
+        h(
+          'button',
+          { class: 'btn btn-sm', attrs: { 'data-k': 'stand' }, on: { click: () => a.leaveSeat() } },
+          'Stand up',
+        ),
+      s.canSit &&
+        h(
+          'button',
+          {
+            class: 'btn btn-sm btn-primary',
+            attrs: { 'data-k': `sit-${s.index}` },
+            on: { click: () => a.takeSeat(s.index) },
+          },
+          meSeated ? 'Move here' : 'Sit here',
+        ),
+    ];
+    return h(
+      'li',
+      {
+        class: `ol-seat${s.isMine ? ' is-mine' : ''}${s.name === null ? ' is-open' : ''}${s.isAway ? ' is-away' : ''}`,
+        style: { '--seat': s.color },
+        attrs: { 'data-seat': String(s.index), 'data-k': `seat-${s.index}` },
+      },
+      h('span', { class: 'ol-seat-no', attrs: { 'aria-hidden': 'true' } }, String(s.index + 1)),
+      h('span', { class: 'ol-dot', attrs: { 'aria-hidden': 'true' } }),
+      h(
+        'div',
+        { class: 'ol-seat-main' },
+        h(
+          'div',
+          { class: 'ol-seat-name' },
+          h('span', { class: 'ol-seat-label', title: name }, name),
+          s.isMine && h('span', { class: 'ol-tag' }, 'You'),
+          s.isHostSeat && h('span', { class: 'ol-tag is-host' }, 'Host'),
+          s.name === null && h('span', { class: 'ol-tag is-bot' }, 'bot'),
+        ),
+        h('div', { class: 'ol-seat-sub muted' }, sub),
+      ),
+      h('div', { class: 'ol-seat-actions' }, ...buttons),
+    );
+  }
+
+  private renderConfig(config: RoomConfig, v: LobbyView): void {
+    const a = this.opts.actions;
+    const pick = (timer: TimerPreset) => {
+      if (timer !== config.timer) a.configure({ ...config, timer });
+    };
+    this.configBox.replaceChildren(
+      h(
+        'div',
+        { class: 'su-field ol-field' },
+        h('span', { class: 'ol-field-label' }, 'Pick clock'),
+        h(
+          'div',
+          { class: 'seg', attrs: { role: 'group', 'aria-label': 'Pick clock' } },
+          ...TIMER_OPTIONS.map((t) =>
+            h(
+              'button',
+              {
+                class: `seg-btn${t.id === config.timer ? ' is-on' : ''}`,
+                disabled: !v.isHost,
+                title: t.hint,
+                attrs: { 'aria-pressed': String(t.id === config.timer), 'data-k': `timer-${t.id}` },
+                on: { click: () => pick(t.id) },
+              },
+              t.label,
+            ),
+          ),
+        ),
+        h('small', { class: 'muted' }, `${timerHint(config.timer)}; shorter later in a Season.`),
+      ),
+    );
+    this.configNote.textContent = v.isHost
+      ? 'You are the host: add bots or wait for friends, then start. Open seats are played by bots.'
+      : `Only the host${v.hostName ? ` (${v.hostName})` : ''} can change the settings.`;
+  }
+
+  private renderFooter(v: LobbyView): void {
+    const a = this.opts.actions;
+    this.footerInfo.replaceChildren(h('strong', {}, 'Online'), ` · ${v.summary}`);
+    this.footerActions.replaceChildren(
+      h(
+        'button',
+        { class: 'btn btn-ghost', attrs: { 'data-k': 'leave' }, on: { click: () => a.leave() } },
+        'Leave',
+      ),
+      v.isHost
+        ? h(
+            'button',
+            {
+              class: 'btn btn-primary btn-lg',
+              disabled: v.startBlocked !== null,
+              title: v.startBlocked ?? 'Start the game; bots play the open seats',
+              attrs: { 'data-k': 'lobby-start' },
+              on: { click: () => a.start() },
+            },
+            'Start game',
+          )
+        : h(
+            'span',
+            { class: 'ol-waiting', attrs: { 'data-k': 'waiting-host' } },
+            h('span', { class: 'ol-spin', attrs: { 'aria-hidden': 'true' } }),
+            v.hostName ? `Waiting for ${v.hostName} to start…` : 'Waiting for the host to start…',
+          ),
+    );
+  }
+}

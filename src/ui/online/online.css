@@ -1,0 +1,492 @@
+/*
+ * Online screens (UX.md §4.1, §6, §7.6, §11.5): lobby, join card, notices, chat, reactions,
+ * connection banner, and the chat dock + presence strip over the draft table. Port of Catan's
+ * online.css layout; colours, fonts and shadows are ww-art's tokens.
+ */
+
+/* ---- shared bits ---------------------------------------------------------- */
+.ol-spin {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  border-radius: 99px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: ol-spin 0.9s linear infinite;
+}
+@keyframes ol-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.no-anim .ol-spin {
+  animation: none;
+}
+.ol-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--surface-sunken);
+  color: var(--ink-dim);
+}
+.ol-tag.is-host {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ol-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 99px;
+  background: var(--seat, var(--ink-dim));
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.ol-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ol-row > .input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* ---- connection banner ---------------------------------------------------- */
+.ol-banner {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--surface-raised);
+  color: var(--raised-ink);
+  border: 2px solid var(--edge);
+  border-top: 0;
+  box-shadow: var(--panel-shadow);
+  font: 600 14px/1.3 var(--font-ui);
+}
+.ol-banner[hidden] {
+  display: none;
+}
+
+/* ---- full-screen cards (join, notices) ------------------------------------ */
+.ol-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--page-bg);
+  overflow-y: auto;
+}
+.ol-card {
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 22px 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+}
+.ol-card h1 {
+  font-size: 26px;
+  line-height: 1.1;
+}
+.ol-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.ol-card-actions .btn {
+  flex: 1 1 auto;
+}
+.ol-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+.ol-error {
+  min-height: 1.3em;
+  color: var(--bad);
+  font-size: 13px;
+}
+.ol-error:empty {
+  min-height: 0;
+}
+
+/* ---- lobby ---------------------------------------------------------------- */
+.ol-inner {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 22px 0 26px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  align-items: start;
+}
+.ol-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.ol-side {
+  position: sticky;
+  top: 22px;
+}
+.ol-lobby .su-footer-in {
+  width: min(1120px, calc(100% - 32px));
+}
+.ol-summary {
+  display: block;
+}
+.ol-code {
+  font-family: var(--font-num, var(--font-ui));
+  letter-spacing: 0.12em;
+}
+.ol-copy {
+  min-width: 112px;
+}
+.ol-role {
+  display: inline-flex;
+  gap: 6px;
+}
+.ol-watch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--raised-ink);
+  border: 2px solid var(--edge);
+}
+.ol-watch[hidden] {
+  display: none;
+}
+.ol-watch-text {
+  flex: 1;
+}
+.ol-seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ol-seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--btn-radius, 10px);
+  background: var(--surface-sunken);
+  border: 2px solid transparent;
+}
+.ol-seat.is-mine {
+  border-color: var(--seat);
+}
+.ol-seat.is-open {
+  opacity: 0.85;
+}
+.ol-seat.is-away .ol-seat-label {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.ol-seat-no {
+  flex: none;
+  width: 18px;
+  text-align: right;
+  font-family: var(--font-num, var(--font-ui));
+  color: var(--ink-dim);
+}
+.ol-seat-main {
+  flex: 1;
+  min-width: 0;
+}
+.ol-seat-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ol-seat-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ol-seat-sub {
+  font-size: 12px;
+}
+.ol-seat-actions {
+  display: flex;
+  gap: 6px;
+}
+.ol-seat-add-row {
+  display: flex;
+}
+.ol-seat-add {
+  flex: 1;
+  border-style: dashed;
+}
+.ol-spec-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.ol-spec {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--surface-sunken);
+}
+.ol-spec.is-away {
+  opacity: 0.6;
+}
+.ol-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ol-field-label {
+  font-weight: 700;
+}
+.ol-config .seg-btn:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.ol-config .seg-btn.is-on:disabled {
+  opacity: 1;
+}
+.ol-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ol-waiting {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-dim);
+}
+@media (max-width: 900px) {
+  .ol-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ol-side {
+    position: static;
+  }
+}
+
+/* ---- chat ----------------------------------------------------------------- */
+.ol-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.ol-chat-list {
+  height: 260px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border-radius: var(--btn-radius, 10px);
+  background: var(--surface-sunken);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.ol-chat-row {
+  padding: 2px 0;
+}
+.ol-chat-row.is-system {
+  color: var(--ink-dim);
+  font-style: italic;
+}
+.ol-chat-name {
+  color: var(--seat, var(--ink-strong));
+}
+.ol-reacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ol-react {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 99px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+.ol-react.is-text {
+  font-size: 12px;
+  font-weight: 800;
+}
+.ol-react:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ol-chat-compose {
+  display: flex;
+  gap: 6px;
+}
+.ol-chat-input {
+  flex: 1;
+  min-width: 0;
+}
+.ol-chat-note {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.ol-chat-note:empty {
+  display: none;
+}
+
+/* ---- reactions ------------------------------------------------------------ */
+.ol-reaction-layer {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+.ol-bubble {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 6px;
+  border-radius: 99px;
+  background: var(--surface-raised);
+  color: var(--raised-ink);
+  border: 2px solid var(--seat, var(--edge));
+  box-shadow: var(--panel-shadow);
+  font: 700 13px/1.2 var(--font-ui);
+  animation: ol-pop 0.25s ease-out;
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+.ol-bubble.is-leaving {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.ol-bubble-face {
+  font-size: 22px;
+}
+.ol-bubble-face.is-text {
+  font-size: 13px;
+  font-weight: 900;
+}
+@keyframes ol-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+.no-anim .ol-bubble {
+  animation: none;
+}
+
+/* ---- online table: presence strip and chat dock --------------------------- */
+.ol-play {
+  position: relative;
+}
+.ol-presence {
+  position: fixed;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: var(--surface-raised);
+  color: var(--raised-ink);
+  border: 1.5px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+  font: 600 12px/1.3 var(--font-ui);
+  white-space: nowrap;
+}
+.ol-presence:empty {
+  display: none;
+}
+.ol-presence-seat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ol-presence-seat.is-away {
+  opacity: 0.6;
+}
+.ol-dock {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 26;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.ol-dock-panel {
+  width: min(320px, calc(100vw - 24px));
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+}
+.ol-dock-panel[hidden] {
+  display: none;
+}
+.ol-dock-panel .ol-chat-list {
+  height: 200px;
+}
+.ol-dock-toggle {
+  position: relative;
+}
+.ol-dock-toggle.has-unread::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 99px;
+  background: var(--bad);
+}
