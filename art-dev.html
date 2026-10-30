@@ -120,6 +120,10 @@
       <div class="row" id="live"></div>
     </section>
     <section>
+      <h2>Seasons</h2>
+      <div class="row" id="seasons"></div>
+    </section>
+    <section>
       <h2>Goods, coin, labour, Guard, Valour, Renown</h2>
       <div class="row" id="goods"></div>
     </section>
@@ -209,6 +213,9 @@
         (k) =>
           `<div class="cell"><div class="kind-head" data-kind="${k}" style="padding:4px 8px;border-radius:6px;font-family:var(--font-display)">${k} <span class="kind-badge" data-kind="${k}" style="font-size:14px;background:#fff"></span></div><span class="kind-badge" data-kind="${k}" style="font-size:14px"></span> <span class="kind-badge" data-kind="${k}" style="font-size:28px"></span></div>`,
       ).join('');
+      $('seasons').innerHTML = ['spring', 'summer', 'autumn', 'winter']
+        .map((s) => cell(`/art/seasons/${s}.svg`, s))
+        .join('');
       $('goods').innerHTML = GOODS.map((i) => cell(`/art/goods/${i}.svg`, i)).join('');
       $('ranks').innerHTML = [1, 2, 3, 4, 5, 6]
         .map((n) => cell(`/art/badges/lore-${n}.svg`, `rank ${n}`))

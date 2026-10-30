@@ -11,5 +11,7 @@
 <g id="spend"><rect x="12" y="208" width="176" height="22" rx="8" fill="#3c1204" fill-opacity=".18" stroke="var(--card-edge,#3a1a0c)" stroke-width="1.5" stroke-dasharray="4 3"/></g>
 <g id="band"><rect x="12" y="236" width="176" height="32" rx="8" fill="var(--kind-color,#6b6f78)" stroke="var(--card-edge,#3a1a0c)" stroke-width="2"/>
 <!-- Kind shape+icon (public/art/kinds/*.svg) goes at x=18,y=238,28x28; kind label text to its right. -->
-<rect x="18" y="238" width="28" height="28" rx="14" fill="#fff" opacity=".85"/></g>
+<rect x="18" y="238" width="28" height="28" rx="14" fill="#fff" opacity=".85"/>
+<!-- Season marker: public/art/seasons/*.svg at x=156,y=240,24x24 (id season). -->
+<rect id="season" x="156" y="240" width="24" height="24" rx="6" fill="#fff" opacity=".6"/></g>
 </svg>

@@ -72,6 +72,31 @@ Holding is a house (pointed top, flat base), Market a circle, so the two no long
 12-14 px (UX review 1 #6). The card frame's unset-colour fallback is now neutral grey, not blue,
 so a missing `--kind-color` is visible as a bug rather than passing as a kind.
 
+## Warning colours (`--warn-ink`, `--warn-edge`)
+
+Computed WCAG contrast, with Machado 2009 protan/deutan/tritan simulation (script run in A9;
+numbers are from my own calculation, not a tool audit):
+
+| Pair                                     | Normal | Protan | Deutan | Tritan |
+| ---------------------------------------- | ------ | ------ | ------ | ------ |
+| `--warn-ink` #9b1c0c on `--bad` #ffcdb8  | 5.72   | 7.14   | 5.11   | 5.11   |
+| `--warn-ink` on `--card-paper` #fbf3e2   | 7.41   | 9.71   | 6.43   | 6.87   |
+| `--warn-ink` on `--card-paper-2` #ecdcc0 | 6.07   | 7.85   | 5.30   | 5.62   |
+| `--warn-edge` #b83a0a on `--bad`         | 4.02   | 5.01   | 3.60   | 3.89   |
+| `--warn-edge` on `--card-paper-2`        | 4.27   | 5.50   | 3.73   | 4.28   |
+
+Text passes AA (4.5) everywhere on light surfaces. ui's fallback edge #d9480f dropped to 2.66
+(deutan, on `--bad`), under the 3:1 non-text bar, so the token is the darker #b83a0a (min 3.60).
+**Do not use `--warn-ink` on the terracotta `--surface`** (contrast 1.2). Warning ink vs the
+normal dark ink is not reliably a hue difference for colour-blind players, so a warning must also
+carry a word or icon (e.g. "Bank: 3 coins"), never colour alone. That is a ui job.
+
+## Season marker
+
+`public/art/seasons/{spring,summer,autumn,winter}.svg` (32×32): a cream tile whose shape differs
+per season (round, square, squircle, circle-ish) with a glyph (sprout, sun, leaf, snowflake). The
+card frame has a `season` slot at the right end of the kind band (x=156, y=240, 24×24).
+
 ## Goods and counters (`public/art/goods/`, 32×32)
 
 Goods per RULES.md "Goods (final names)", in goods order: **reed** (straw-green bundle of stalks),
@@ -141,5 +166,5 @@ except goods glyphs, which are ours from Colonizers of Windamere.
 ## Open
 
 - Reconcile table chrome with `docs/design/UX.md`.
-- Season marker on the card frame; Spend band layout for 3+ gains.
+- Spend band layout for 3+ gains.
 - Card art illustrations: none yet, the art window is a flat placeholder.
