@@ -72,10 +72,15 @@ const BAND_LABELS: Record<string, string> = {
 
 const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * Where public/ is served. `import.meta.env` exists only under Vite: plain node/tsx (qa's
+ * playtest text layer) has none, so fall back to the site root there.
+ */
+const BASE: string = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 /** Art A5's icons (public/art/goods/): the five goods plus coin, guard, labour, renown, valour. */
-const icon = (name: string): string => `${import.meta.env.BASE_URL}art/goods/${name}.svg`;
+const icon = (name: string): string => `${BASE}art/goods/${name}.svg`;
 /** Any file under public/art (kinds/<kind>, great-works/<content id>: art A6). */
-const art = (path: string): string => `${import.meta.env.BASE_URL}art/${path}.svg`;
+const art = (path: string): string => `${BASE}art/${path}.svg`;
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 /** A Raid's Season as a round index (Raids are drawn per Season, R2.6). */
 const raidSeason = (season: string): number =>
