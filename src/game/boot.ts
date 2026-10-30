@@ -5,10 +5,8 @@
  */
 import {
   BOT_SPEEDS,
-  loadAnimations,
   loadBotSpeed,
   Menu,
-  saveAnimations,
   saveBotSpeed,
   SetupScreen,
   showToast,
@@ -17,8 +15,9 @@ import {
   type MenuItem,
   type NewGameConfig,
 } from '../ui';
+import { FX_SPEED_LABEL, FX_SPEEDS, fxSpeed, type FxSpeed } from '../ui/fx/speed';
 import { HomeScreen, NAME_KEY } from '../ui/home/screen';
-import { browserStorage, loadPref } from '../ui/prefs';
+import { browserStorage, carryOverAnimationsOff, loadPref, syncMotionClass } from '../ui/prefs';
 import {
   CLOCKS,
   MAX_PLAYERS,
@@ -114,7 +113,8 @@ export interface BootHandle<S, T> {
 }
 
 export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): BootHandle<S, T> {
-  document.documentElement.classList.toggle('no-anim', !loadAnimations());
+  carryOverAnimationsOff();
+  syncMotionClass();
   let home: HomeScreen | null = null;
   let setup: SetupScreen | null = null;
   let play: PlayHandle<S, T> | null = null;
@@ -147,19 +147,15 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   };
   const prefs: MenuItem[] = [
     botSpeed,
+    // fx F6: one motion setting for the reveal, the moments and CSS motion (prefs.ts keeps
+    // <html>.no-anim in step). Fast plays every animation at double speed.
     {
       kind: 'choice',
       label: 'Animations',
-      options: [
-        { id: 'on', label: 'On' },
-        { id: 'off', label: 'Off' },
-      ],
-      value: loadAnimations() ? 'on' : 'off',
-      onChange: (id) => {
-        saveAnimations(id === 'on');
-        document.documentElement.classList.toggle('no-anim', id === 'off');
-      },
-    },
+      options: FX_SPEEDS.map((id) => ({ id, label: FX_SPEED_LABEL[id] })),
+      value: fxSpeed.get(),
+      onChange: (id: FxSpeed) => fxSpeed.set(id),
+    } satisfies MenuChoice<FxSpeed>,
     // Same item as online's ☰ menu (src/game/online/menu.ts).
     ...(opts.sound
       ? [

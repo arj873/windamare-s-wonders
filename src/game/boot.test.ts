@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toy } from '../engine/core/testing/helpers';
+import { fxSpeed } from '../ui/fx/speed';
+import { motionOn, saveAnimations } from '../ui/prefs';
 import { toyPresenter } from '../ui/table/testing/toy';
 import { boot, debugFromSearch } from './boot';
 import { BOT_LEVEL } from './play';
 import { windamereBinding } from './windamere';
 
 beforeEach(() => {
+  localStorage.clear();
+  fxSpeed.set('normal'); // the page's one setting outlives a test
   localStorage.clear();
 });
 
@@ -57,13 +61,41 @@ describe('boot', () => {
     expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ mode: 'standard' }));
   });
 
-  it('remembers the Animations choice and flags <html>', () => {
+  it('sets Animations Fast / Normal / Off through fx F6 and flags <html> on Off', () => {
     const root = mount();
     const { menu } = boot(root);
     menu.setOpen(true);
+    expect([...root.querySelectorAll('[data-k^="choice-1-"]')].map((b) => b.textContent)).toEqual([
+      'Fast',
+      'Normal',
+      'Off',
+    ]);
+    expect(root.querySelector('[data-k="choice-1-normal"]')?.getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    click(root, '[data-k="choice-1-fast"]');
+    expect(fxSpeed.get()).toBe('fast');
+    expect(fxSpeed.factor).toBe(2);
+    expect(document.documentElement.classList.contains('no-anim')).toBe(false);
     click(root, '[data-k="choice-1-off"]');
+    expect(fxSpeed.off).toBe(true);
+    expect(localStorage.getItem('ww:fxspeed')).toBe('off');
     expect(document.documentElement.classList.contains('no-anim')).toBe(true);
-    expect(localStorage.getItem('ww.animations')).toBe('off');
+    expect(motionOn()).toBe(false);
+    // Online's On/Off item writes the same setting: On = Normal again.
+    saveAnimations(true);
+    expect(fxSpeed.get()).toBe('normal');
+    expect(document.documentElement.classList.contains('no-anim')).toBe(false);
+  });
+
+  it('carries an Animations Off saved before F6 over once', () => {
+    localStorage.setItem('ww.animations', 'off');
+    boot(mount());
+    expect(fxSpeed.get()).toBe('off');
+    fxSpeed.set('fast'); // chosen since: the old Off no longer applies
+    document.body.replaceChildren();
+    boot(mount());
+    expect(fxSpeed.get()).toBe('fast');
   });
 
   it('offers Sound on/off in the ☰ menu when given a switch (as online does)', () => {

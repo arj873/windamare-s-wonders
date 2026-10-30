@@ -3,6 +3,8 @@
  * Every storage access is guarded: full or blocked storage just means nothing is remembered.
  */
 
+import { FX_SPEED_KEY, fxSpeed } from './fx/speed';
+
 export type PrefStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 export const ANIMATIONS_KEY = 'ww.animations';
@@ -33,13 +35,40 @@ export function savePref(storage: PrefStorage | null, key: string, value: string
   }
 }
 
-/** The "Animations" menu setting: on unless the player turned it off. */
-export function loadAnimations(storage: PrefStorage | null = browserStorage()): boolean {
-  return loadPref(storage, ANIMATIONS_KEY) !== 'off';
+/*
+ * Motion is one setting since fx F6: `fxSpeed` (Fast / Normal / Off, src/ui/fx/speed.ts, saved by
+ * fx). The ☰ menu shows it; the older On/Off calls below read and write it (on = not Off).
+ */
+
+/** Animations play at all (the setting is not Off). */
+export function loadAnimations(): boolean {
+  return !fxSpeed.off;
 }
 
-export function saveAnimations(on: boolean, storage: PrefStorage | null = browserStorage()): void {
-  savePref(storage, ANIMATIONS_KEY, on ? 'on' : 'off');
+/** On/Off callers (online's menu): Off = Off; On = Normal unless the player chose Fast. */
+export function saveAnimations(on: boolean): void {
+  if (!on) fxSpeed.set('off');
+  else if (fxSpeed.off) fxSpeed.set('normal');
+}
+
+let motionClassSynced = false;
+/** `<html>.no-anim` (CSS motion off) follows the setting from now on (subscribes once). */
+export function syncMotionClass(): void {
+  const apply = () => document.documentElement.classList.toggle('no-anim', fxSpeed.off);
+  apply();
+  if (motionClassSynced) return;
+  motionClassSynced = true;
+  fxSpeed.onChange(apply);
+}
+
+/**
+ * Before F6 "Animations: Off" was saved under `ww.animations`. A player who chose it keeps it:
+ * Off carries over once, while the new setting has never been saved.
+ */
+export function carryOverAnimationsOff(storage: PrefStorage | null = browserStorage()): void {
+  if (loadPref(storage, ANIMATIONS_KEY) === 'off' && loadPref(storage, FX_SPEED_KEY) === null) {
+    fxSpeed.set('off');
+  }
 }
 
 /** The system asks for reduced motion (false where it cannot be asked: node, old browsers). */
@@ -51,9 +80,9 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
-/** Animations should play: the menu setting is on and the system does not ask for less motion. */
-export function motionOn(storage: PrefStorage | null = browserStorage()): boolean {
-  return loadAnimations(storage) && !prefersReducedMotion();
+/** Animations should play: the setting is not Off and the system does not ask for less motion. */
+export function motionOn(): boolean {
+  return loadAnimations() && !prefersReducedMotion();
 }
 
 /** Bot speed presets (menu): delay before a bot locks its pick. UX.md §1: Normal 300–900 ms. */
