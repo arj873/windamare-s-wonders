@@ -765,7 +765,14 @@ export class DraftTable {
           { class: 'ww-dialog-actions' },
           h(
             'button',
-            { class: 'btn btn-primary', attrs: { 'data-act': 'season-ok', 'data-k': 'season-ok' } },
+            {
+              class: 'btn btn-primary',
+              attrs: {
+                'data-act': 'season-ok',
+                'data-k': 'season-ok',
+                'data-pt-role': 'season-ok',
+              },
+            },
             'Continue',
           ),
         ),

@@ -1002,6 +1002,7 @@ it. Without `debug=1` nothing of this exists.
 | choice option (button)      | `data-pt-role="choice"`, `data-option` = `cover-<cardId>`, `full`, `buy-<seat>`, `exchange-<good>`, `bank`; disabled ones carry `data-why` |
 | ready mark (Change pick)    | `data-pt-role="unpick"` (shown while your pick waits face down)                                                                            |
 | prompt answer (Great Work)  | `data-pt-role="answer"`, `data-answer` = the answer (a Great Work id)                                                                      |
+| Season-end card's Continue  | `data-pt-role="season-ok"` (the card covers the table until it closes: press it, or wait 8 s)                                              |
 | cost / Spend amount         | `.dt-part` with `role="img"` and `aria-label` ("3 coins", "1 Reed")                                                                        |
 | final scores                | `.dt-band-card` per town, best first                                                                                                       |
 
