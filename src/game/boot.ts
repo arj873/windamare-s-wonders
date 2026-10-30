@@ -147,6 +147,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
       ...(play ? { onBack: showPlay } : { onBack: showHome, backLabel: 'Back' }),
       ...(nickname ? { playerName: nickname } : {}),
       ...(opts.game?.clock ? { clockHint: opts.game.clock.hint } : {}),
+      ...(opts.game?.firstGame ? { firstGame: { hint: opts.game.firstGame.hint } } : {}),
     });
     menu.setItems(prefs);
     root.replaceChildren(setup.element, corner);

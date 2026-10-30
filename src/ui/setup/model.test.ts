@@ -16,6 +16,7 @@ import {
   setSeatName,
   setSeed,
   setClock,
+  setFirstGame,
   setupError,
   shuffleSeats,
   STORAGE_KEY,
@@ -132,6 +133,18 @@ describe('setup draft', () => {
     expect(cfg.clock).toBe('normal');
     expect(cfg).not.toHaveProperty('seed');
     expect(buildConfig(setSeed(d, ' abc ')).seed).toBe('abc');
+  });
+
+  it('turns the First game on with a Relaxed clock (R19.5) and builds it into the config', () => {
+    const d = setFirstGame(defaultSetup(), true);
+    expect(d).toMatchObject({ firstGame: true, clock: 'relaxed' });
+    expect(buildConfig(d).firstGame).toBe(true);
+    expect(summaryLine(d)).toBe('First game · 4 players (3 bots) · Relaxed clock');
+    const off = setFirstGame(setClock(d, 'fast'), false);
+    expect(off).toMatchObject({ firstGame: false, clock: 'fast' }); // turning off keeps the clock
+    expect(buildConfig(off)).not.toHaveProperty('firstGame');
+    expect(sanitizeSetup({ firstGame: true }).firstGame).toBe(true);
+    expect(sanitizeSetup({ firstGame: 'yes' }).firstGame).toBe(false);
   });
 
   it('offers exactly R15.3 clock options with their scales', () => {

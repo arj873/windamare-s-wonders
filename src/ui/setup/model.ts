@@ -87,6 +87,8 @@ export interface SetupDraft {
   seats: SeatDraft[];
   /** R15.3 turn clock. */
   clock: ClockId;
+  /** RULES.md R19: the lighter First game (no Honours, one Great Work dealt, no upgrades). */
+  firstGame: boolean;
   seed: string;
 }
 
@@ -103,6 +105,8 @@ export interface NewGameConfig {
   players: SeatConfig[];
   /** R15.3 turn clock; the game turns it into seconds per turn. */
   clock: ClockId;
+  /** R19 First game; the game turns it into its own option (Windamere: options.firstGame). */
+  firstGame?: boolean;
   seed?: string;
 }
 
@@ -123,7 +127,7 @@ function newSeat(index: number, taken: ReadonlySet<string>): SeatDraft {
 export function defaultSetup(players = DEFAULT_PLAYERS): SetupDraft {
   const seats: SeatDraft[] = [];
   for (let i = 0; i < players; i++) seats.push(newSeat(i, new Set(seats.map((s) => s.color))));
-  return { mode: STANDARD.id, seats, clock: DEFAULT_CLOCK, seed: '' };
+  return { mode: STANDARD.id, seats, clock: DEFAULT_CLOCK, firstGame: false, seed: '' };
 }
 
 function withSeat(draft: SetupDraft, index: number, patch: Partial<SeatDraft>): SetupDraft {
@@ -225,6 +229,11 @@ export function setClock(draft: SetupDraft, clock: ClockId): SetupDraft {
   return CLOCKS.some((c) => c.id === clock) ? { ...draft, clock } : draft;
 }
 
+/** R19 First game on or off. Turning it on sets the Relaxed clock (R19.5); the player may change it. */
+export function setFirstGame(draft: SetupDraft, on: boolean): SetupDraft {
+  return on ? { ...draft, firstGame: true, clock: 'relaxed' } : { ...draft, firstGame: false };
+}
+
 export function setMode(draft: SetupDraft, id: string): SetupDraft {
   return MODES.some((m) => m.id === id) ? { ...draft, mode: id } : draft;
 }
@@ -251,7 +260,8 @@ export function summaryLine(draft: SetupDraft): string {
   const bots = n - humanCount(draft);
   const who = bots === 0 ? `${n} players` : `${n} players (${bots} bot${bots === 1 ? '' : 's'})`;
   const clock = draft.clock === 'off' ? '' : ` · ${clockLabel(draft.clock)} clock`;
-  return `${modeOf(draft).name} · ${who}${clock}`;
+  const mode = draft.firstGame ? 'First game' : modeOf(draft).name;
+  return `${mode} · ${who}${clock}`;
 }
 
 /** Why Start is off, or null. */
@@ -282,7 +292,12 @@ export function buildConfig(draft: SetupDraft): NewGameConfig {
       ...(s.controller === 'bot' ? { botLevel: s.botLevel ?? DEFAULT_BOT_LEVEL } : {}),
     };
   });
-  const cfg: NewGameConfig = { mode: draft.mode, players, clock: draft.clock };
+  const cfg: NewGameConfig = {
+    mode: draft.mode,
+    players,
+    clock: draft.clock,
+    ...(draft.firstGame ? { firstGame: true } : {}),
+  };
   const seed = draft.seed.trim();
   if (seed) cfg.seed = seed;
   return cfg;
@@ -342,7 +357,7 @@ export function sanitizeSetup(raw: unknown): SetupDraft {
     typeof raw['mode'] === 'string' && MODES.some((m) => m.id === raw['mode'])
       ? raw['mode']
       : base.mode;
-  return { mode, seats, clock, seed: '' };
+  return { mode, seats, clock, firstGame: raw['firstGame'] === true, seed: '' };
 }
 
 export function loadSetup(storage: SetupStorage | null): SetupDraft {

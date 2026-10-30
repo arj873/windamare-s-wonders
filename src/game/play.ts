@@ -38,6 +38,12 @@ export interface GameBinding<S, T> {
     hint(scale: number): string;
   };
   /**
+   * RULES.md R19 First game: the ruleset options that turn it on (Windamere:
+   * `{ firstGame: true }`, ENGINE.md §15.5) and the setup screen's line about it. Absent = the
+   * game has no First game and setup shows no toggle.
+   */
+  firstGame?: { options: Record<string, Json>; hint: string };
+  /**
    * The tutorial lane's help (src/ui/help): tooltips for every `data-term` on the table, the
    * '?' key and "How to play" open the rules, "All cards" opens the card list.
    */
@@ -93,8 +99,18 @@ export function gameConfig(cfg: NewGameConfig, options?: Record<string, Json>): 
   return {
     seed: cfg.seed ?? randomSeed(),
     seats: cfg.players.map((p) => ({ name: p.name })),
-    ...(options ? { options } : {}),
+    ...(options && Object.keys(options).length > 0 ? { options } : {}),
   };
+}
+
+/** The ruleset options for a new game: the binding's, plus its First game ones when chosen. */
+export function gameOptions<S, T>(
+  binding: GameBinding<S, T>,
+  cfg: NewGameConfig,
+): Record<string, Json> | undefined {
+  const first = cfg.firstGame ? binding.firstGame?.options : undefined;
+  if (!binding.options && !first) return undefined;
+  return { ...binding.options, ...first };
 }
 
 /** Start a game, or return why the engine refused the setup. */
@@ -104,7 +120,7 @@ export function playLocal<S, T>(
   hooks: PlayHooks<S, T>,
 ): PlayHandle<S, T> | string {
   const { engine, present } = binding;
-  const config = gameConfig(cfg, binding.options);
+  const config = gameConfig(cfg, gameOptions(binding, cfg));
   const err = engine.validateConfig(config);
   if (err) return `Can't start: ${err}`;
 

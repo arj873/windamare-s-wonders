@@ -226,6 +226,28 @@ describe('boot', () => {
     expect(BOT_LEVEL).toEqual({ easy: 'easy', normal: 'medium', hard: 'hard' });
   });
 
+  it('starts a First game: no Great Work choice, no Honours, Relaxed clock (R19)', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    toSetup(root);
+    expect(root.querySelector('[data-k="first-game-on"]')).not.toBeNull();
+    click(root, '[data-k="first-game-on"]');
+    expect(root.querySelector('[data-k="clock-relaxed"]')?.getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    click(root, '[data-k="start"]');
+    const s = app.play!.game.state;
+    expect(s.config.options).toEqual({ firstGame: true });
+    expect(s.phase.kind).toBe('pick'); // the Great Work is dealt, no choice screen
+    expect(root.querySelector('.dt-prompt')).toBeNull();
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(6);
+    expect(root.querySelector('.dt-side-fact')).toBeNull(); // no Honours to list
+    expect(app.play!.game.clock()?.totalMs).toBe(68_000); // Relaxed: 45 s × 1.5, rounded up
+    app.play?.dispose();
+  });
+
   it('refuses a setup the ruleset cannot seat, with a notice', () => {
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });

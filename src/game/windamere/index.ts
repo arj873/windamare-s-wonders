@@ -1,6 +1,6 @@
 /** Windamere's Wonders bound for the app: engine + presenter, ready for boot({ game }). */
 import { SEASONS } from '../../content/windamere';
-import type { WwSeat, WwTable } from '../../engine';
+import { FIRST_GAME_OPTION, type WwSeat, type WwTable } from '../../engine';
 import { attachHelp, openCardList } from '../../ui/help';
 import type { GameBinding } from '../play';
 import { windamere } from './content';
@@ -24,6 +24,11 @@ export function windamereBinding(
     present: windamerePresenter(rules, engine),
     fx: windamereFx(rules, { local: mode === 'online' ? 'viewer' : 'humans' }),
     clock: windamereClock,
+    // RULES.md R19 / ENGINE.md §15.5: the engine skips the Great Work choice and the Honours.
+    firstGame: {
+      options: { [FIRST_GAME_OPTION]: true },
+      hint: 'For someone new: no Honours, one Great Work dealt to each town (no choice), no upgrades, and a Relaxed clock.',
+    },
     // Tutorial lane (src/ui/help): tooltips, rules overlay, the card list on the current Season.
     help: {
       attach: (root) => attachHelp(root),
