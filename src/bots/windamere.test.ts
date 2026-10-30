@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGreedyBot, createRandomBot, runSim } from './index';
+import { createGreedyBot, createRandomBot, createWindamereBot, pickFor, runSim } from './index';
 import { windamere, windamereRules } from './windamere';
 import { windamereAdapter } from './windamereAdapter';
 import { observeWindamere, SOURCES, sourcesOf } from './windamereMetrics';
@@ -71,5 +71,46 @@ describe('bots on the Windamere ruleset', () => {
       1,
     );
     expect(checked).toBe(32);
+  });
+
+  it('pickFor plays all three levels on the Windamere engine, deterministically and legally', () => {
+    for (const level of ['easy', 'medium', 'hard'] as const) {
+      let s = windamere.createGame({
+        seed: 5,
+        seats: [{ name: 'a' }, { name: 'b' }, { name: 'c' }],
+      });
+      for (let i = 0; i < 400 && s.phase.kind !== 'gameOver'; i++) {
+        const seat = windamere.waitingOn(s)[0] as number;
+        const view = windamere.viewFor(s, seat);
+        const a = pickFor(windamere, view, seat, { level });
+        expect(pickFor(windamere, view, seat, { level })).toEqual(a);
+        const r = windamere.applyAction(s, a!);
+        if (!r.ok) throw new Error(`${level}: ${r.error}`);
+        s = r.state;
+      }
+      expect(s.phase.kind).toBe('gameOver');
+    }
+  });
+
+  it('level 2 and 3 beat random and level-1 bots at a mixed table', () => {
+    const { summary } = runSim(
+      {
+        engine: windamere,
+        bots: [
+          createRandomBot<WwSeat, WwTable>(),
+          createGreedyBot(windamereAdapter(), 'greedy'),
+          createWindamereBot(2),
+          createWindamereBot(3),
+        ],
+        seats: 4,
+      },
+      40,
+      1,
+    );
+    expect(summary.violations).toEqual([]);
+    // Fair share is 0.25 per seat; the smart bots take most wins (measured: ~0.45-0.55 each).
+    expect(summary.winByBot.level2).toBeGreaterThan(0.3);
+    expect(summary.winByBot.level3).toBeGreaterThan(0.3);
+    expect(summary.winByBot.random).toBeLessThan(0.1);
   });
 });
