@@ -115,17 +115,19 @@ Landmarks start in Summer (R4 O13, O14). Lore ranks by Season: Spring 1-2, Summe
 | `ferry-steps`    | Ferry Steps    | Hall    | 1S 1W    |                 | renown 2          | 1lab 2c | 1   | 1   | 1   | 2   | 2   |
 | `roadside-stall` | Roadside Stall | Market  | —        |                 | income 1          | 3c      | 1   | 1   | 2   | 2   | 3   |
 | `wax-chandler`   | Wax Chandler   | Market  | 1W       |                 | exchange W        | 1W 2c   | 1   | 1   | 1   | 1   | 1   |
-| `toll-bridge`    | Toll Bridge    | Market  | 1R       |                 | toll holding 1    | 4c      | 0   | 1   | 1   | 2   | 2   |
+| `toll-bridge`    | Toll Bridge    | Market  | 2c       |                 | toll holding 1    | 4c      | 0   | 1   | 1   | 2   | 2   |
 | `peddlers-cart`  | Peddlers' Cart | Market  | 2c       |                 | sell +1c          | 3c      | 1   | 1   | 1   | 1   | 2   |
-| `hurdle-fence`   | Hurdle Fence   | Watch   | 1R       |                 | guard 1           | 1R 1c   | 1   | 2   | 2   | 3   | 3   |
-| `beacon-hill`    | Beacon Hill    | Watch   | 1H       |                 | guard 1, held +1c | 1H 1c   | 1   | 1   | 1   | 1   | 2   |
+| `hurdle-fence`   | Hurdle Fence   | Watch   | 2c       |                 | guard 1           | 1R 1c   | 1   | 2   | 2   | 3   | 3   |
+| `beacon-hill`    | Beacon Hill    | Watch   | 2c       |                 | guard 1, held +1c | 1H 1c   | 1   | 1   | 1   | 1   | 2   |
 | `ditch-and-bank` | Ditch and Bank | Watch   | 1P 1S 1c |                 | guard 2           | 1lab 2c | 1   | 1   | 2   | 2   | 2   |
-| `tally-hut`      | Tally Hut      | Lore    | 1W       |                 | lore 1            | 1lab 1c | 2   | 3   | 3   | 4   | 4   |
+| `tally-hut`      | Tally Hut      | Lore    | 2c       |                 | lore 1            | 1lab 1c | 2   | 3   | 3   | 4   | 4   |
 | `rune-stone`     | Rune Stone     | Lore    | 1P 1c    |                 | lore 2            | 1P 1lab | 1   | 2   | 3   | 3   | 4   |
 
-Intent: a Spring Holding costs 3 coins (was 2: research R4 D4, a turn-1 Holding now yields up
-to 15 times), so with 5 starting coins turn 1 is "build one Holding" or "Spend for goods".
-Roadside Stall is free on purpose. Peddlers' Cart pays when neighbours buy from you (R6.6).
+Intent: on turn 1 every store is empty and the bank charges 6 against 5 starting coins, so only
+cards priced in coins can be built. Spring Holdings cost 3 coins (was 2: research R4 D4, a
+turn-1 Holding yields up to 15 times); Roadside Stall is free; Peddlers' Cart and, since D11,
+Hurdle Fence, Beacon Hill, Tally Hut and Toll Bridge cost 2 coins, so most opening hands offer
+3+ real Builds (§13). Peddlers' Cart pays when neighbours buy from you (R6.6).
 
 ## 4. Summer (Season 2)
 
@@ -510,3 +512,30 @@ Renown amounts, so the payoff size changed scores, not bot choices (picks were i
 What is left for I1 at 4-7 seats: there is 1 copy of each rivalry card per game, so at 7 seats
 most towns never see one. The D10b cards add 4 more neighbour cards; if I1 is still under 10% at
 5-7 seats after they ship, the next lever is a second copy of the rivalry cards at 6-7 seats.
+
+## 13. D11: turn-1 affordability (2026-10-30)
+
+Research R7 (`ux-review-2.md` §4) saw 1-2 of 6 opening cards buildable in three games. On turn 1
+every store is empty (nothing to buy from neighbours), there are no Exchanges, and the bank
+charges 6 against 5 starting coins, so only cards priced in coins can be built.
+
+**Measured** by dealing 100,000 opening hands per seat count from the Spring deck (scratch
+script, not committed): a card is buildable if coin cost + 6 per good ≤ 5.
+
+| Option                                        | Hands with ≥ 3 buildable | Hands with ≤ 1 | Note                                                                          |
+| --------------------------------------------- | ------------------------ | -------------- | ----------------------------------------------------------------------------- |
+| Before (D10)                                  | 30-43%                   | 20-31%         | 7-15 coin-priced copies per deck                                              |
+| Starting coins 6                              | 89-94%                   | 0-2%           | most new Builds buy one good at the bank for the whole purse (ux-review-1 #2) |
+| Starting coins 7                              | 98-99%                   | 0%             | same trap, more coins in play                                                 |
+| **4 Spring cards 1 good → 2 coins** (shipped) | **85-89%**               | **1-3%**       | real Builds, no bank purchase                                                 |
+| 6 cards (also Rune Stone, Fell Pasture → 3c)  | 97-98%                   | 0%             | Spring would barely use goods                                                 |
+
+**Shipped:** Hurdle Fence 1R → 2c, Beacon Hill 1H → 2c, Tally Hut 1W → 2c, Toll Bridge 1R → 2c.
+Mean buildable cards in an opening hand: 2.0-2.3 → 3.6-3.8. Cards that still cost goods in
+Spring: Fell Pasture, Hewers' Camp, Moot Stone, Ferry Steps, Wax Chandler, Ditch and Bank, Rune
+Stone (from turn 2, Spends and Yields give goods to build or sell).
+
+**Side effects in the bots sim** (`balance.ts`, 500 games, seed 1, 3/4/7 seats; about 2.5 points
+of noise): Spring Raid hold rate 41-43% → 43-47%; Summer/Autumn Spends +1 to +4 points; greedy vs
+random 2.00-2.16x → 1.72-1.89x (random bots can now build on turn 1 too); winner's top sources,
+I1, Lore and blowouts within noise.
