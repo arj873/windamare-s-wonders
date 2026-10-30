@@ -33,11 +33,23 @@ const newGame = (): WwState => advance(fresh(), (s) => s.phase.kind === 'pick');
 const model = (state: WwState, viewer = 0) =>
   tableModel({ view: engine.viewFor(state, viewer), engine, present, looks });
 
-/** Seat 0 holds `fell-pasture` (cost 1 Reed + 1 coin) as its first card, with an empty store. */
+/**
+ * A card whose only good is 1 Reed (plus any coins), with no upgrade: found in the content, so
+ * design can retune or rename cards without breaking this test.
+ */
+const ONE_REED = rules.content.cards.find(
+  (c) =>
+    c.cost.reed === 1 &&
+    Object.keys(c.cost).every((k) => k === 'reed' || k === 'coins') &&
+    !c.upgrade &&
+    c.kind !== 'landmark',
+)!;
+
+/** Seat 0 holds ONE_REED as its first card, with an empty store; neighbours hold some Reed. */
 function pastureState(coins: number, leftReed: number, rightReed: number): WwState {
   const s = structuredClone(newGame());
   const me = s.seats[0]!;
-  me.hand[0] = { id: me.hand[0]!.id, def: 'fell-pasture' };
+  me.hand[0] = { id: me.hand[0]!.id, def: ONE_REED.id };
   me.data.coins = coins;
   me.data.greatWork = null; // no Perk (a discount or Exchange would change the options)
   for (const g of rules.goods) {
@@ -120,19 +132,28 @@ describe('windamerePresenter', () => {
   });
 
   it('lets a Build buy a missing good from either neighbour or the bank', () => {
+    // Prices come from the content's tunables (design tunes them), not from this test.
+    const bankPrice = rules.tunables.bankPrice;
+    const spring = rules.tunables.marketPrice[0]!;
+    const coins = rules.card(ONE_REED.id).cost.coins ?? 0;
+    const pay = coins ? `pay ${coins} coin${coins === 1 ? '' : 's'} · ` : '';
     const m = model(pastureState(20, 2, 0));
     const build = m.hand[0]!.options.find((o) => o.use.id === 'build')!;
     expect(build.pick).not.toBeNull();
-    expect(build.detail).toBe('pay 1 coin · buy Reed from Bo (1g)');
+    expect(build.detail).toBe(`${pay}buy Reed from Bo (${spring}g)`);
     const row = build.choices.find((r) => r.label === 'Get Reed')!;
-    expect(row.options.map((o) => o.label)).toEqual(['Bo 1g', 'Dee 1g', 'Bank 5g']);
+    expect(row.options.map((o) => o.label)).toEqual([
+      `Bo ${spring}g`,
+      `Dee ${spring}g`,
+      `Bank ${bankPrice}g`,
+    ]);
     expect(row.options.map((o) => o.selected)).toEqual([true, false, false]);
     expect(row.options[1]!.why).toMatch(/Dee holds only 0 reed/);
     const bank = row.options[2]!;
     expect(bank.why).toBeNull();
     const refined = m.refine(bank.pick)!;
     expect(refined.pick).not.toBeNull();
-    expect(refined.detail).toBe('pay 1 coin · Reed from the bank (5g)');
+    expect(refined.detail).toBe(`${pay}Reed from the bank (${bankPrice}g)`);
   });
 
   it('explains a Build nobody can pay for', () => {
