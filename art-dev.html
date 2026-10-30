@@ -164,11 +164,11 @@
     <script>
       const KINDS = ['holding', 'hall', 'market', 'watch', 'lore', 'landmark'];
       const GOODS = [
-        'lumber',
-        'brick',
-        'wool',
-        'grain',
-        'ore',
+        'reed',
+        'peat',
+        'salt',
+        'wax',
+        'horn',
         'coin',
         'labour',
         'guard',
@@ -200,12 +200,12 @@
 
       // Sample content is placeholder text, not final card data (CARDS.md owns that).
       const SAMPLES = [
-        ['holding', 'Sample Holding', 'Yields 1 lumber.', ['brick']],
-        ['hall', 'Sample Hall', '3 Renown.', ['lumber', 'brick']],
+        ['holding', 'Sample Holding', 'Yields 1 reed.', ['peat']],
+        ['hall', 'Sample Hall', '3 Renown.', ['reed', 'peat']],
         ['market', 'Sample Market', '+1 coin each Yield.', ['coin', 'coin']],
-        ['watch', 'Sample Watch', '+2 Guard.', ['ore', 'ore']],
-        ['lore', 'Sample Lore', 'Rank 3.', ['wool', 'grain']],
-        ['landmark', 'Sample Mark', 'Scores from your town.', ['ore', 'brick', 'lumber']],
+        ['watch', 'Sample Watch', '+2 Guard.', ['horn', 'horn']],
+        ['lore', 'Sample Lore', 'Rank 3.', ['wax', 'salt']],
+        ['landmark', 'Sample Mark', 'Scores from your town.', ['horn', 'peat', 'reed']],
       ];
       fetch('/art/card-frame.svg')
         .then((r) => r.text())
