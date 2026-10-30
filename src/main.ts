@@ -2,6 +2,7 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/nunito';
 import '@fontsource/marcellus';
 import './ui/theme/tokens.css';
+import './ui/theme/chrome.css';
 import { APP_TITLE } from './shared/title';
 
 const root = document.getElementById('app');
