@@ -1,16 +1,15 @@
 /**
  * The tutorial game: a normal hotseat game with R19 "First game" on (no Honours, no upgrades,
- * one dealt Great Work), you at seat 0 and 3 Easy bots. Nothing is rigged. UNTESTED: the
- * engine option (E6) is not on main yet, and the seed below is a placeholder; a seed search
- * (like catan's `learn-34`) needs the option first.
+ * one dealt Great Work, revealed at the start), you at seat 0 and 3 Easy bots. Nothing is rigged.
+ * The seed was picked by headless search (seeds.test.ts, `SEEDS=30 pnpm exec vitest run
+ * src/ui/tutorial/seeds`): a stand-in learner (Normal bot) sees every lesson, with no recap.
  */
-import type { Json } from '../../engine';
+import { FIRST_GAME_OPTION, type Json } from '../../engine';
 import type { NewGameConfig } from '../setup/model';
 
-export const TUTORIAL_SEED = 'learn-1';
+export const TUTORIAL_SEED = 'learn-5';
 export const TUTORIAL_ME = 0;
-/** Ruleset option name for R19. TODO: confirm against ENGINE.md when E6 lands. */
-export const FIRST_GAME_OPTION = 'firstGame';
+
 export const TUTORIAL_OPTIONS: Record<string, Json> = { [FIRST_GAME_OPTION]: true };
 /** Bot moves are at least this slow while the coach is on (ms per move). */
 export const TUTORIAL_PACE_MS = 900;
