@@ -685,7 +685,8 @@ export class DraftTable {
             'data-playable': String(c.playable),
             'aria-pressed': String(open),
             'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
-            'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.face.alt ? `. ${c.face.alt}` : ''}${c.staged ? '. Your locked pick' : ''}`,
+            'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.face.alt ? `. ${c.face.alt}` : ''}${c.badge ? `. ${c.badge.text}` : ''}${c.staged ? '. Your locked pick' : ''}`,
+            'data-afford': c.badge?.tone ?? '',
           },
         },
         h(
@@ -697,11 +698,19 @@ export class DraftTable {
         c.face.cost && h('span', { class: 'dt-card-cost' }, c.face.cost),
         h('span', { class: 'dt-card-text' }, c.face.text),
         c.face.alt && h('span', { class: 'dt-card-alt' }, c.face.alt),
+        // R6 #1: can I build this, and what does it cost? Before the tap.
+        c.badge &&
+          !c.staged &&
+          h(
+            'span',
+            { class: `dt-card-afford is-${c.badge.tone}`, attrs: { 'aria-hidden': 'true' } },
+            c.badge.text,
+          ),
         h('span', { class: 'dt-card-kind' }, c.kind.label),
         h(
           'span',
           { class: 'dt-card-badge', attrs: { 'aria-hidden': 'true' } },
-          c.staged ? '✓ locked' : c.playable ? `${i + 1}` : '✗',
+          c.staged ? '✓ locked' : i < 9 ? `${i + 1}` : '',
         ),
       ),
       open && this.popover(c),

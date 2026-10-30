@@ -37,6 +37,7 @@ import type {
   CardFace,
   ChoiceOption,
   ChoiceRow,
+  HandBadge,
   MonumentInfo,
   Presenter,
   PurseInfo,
@@ -271,6 +272,18 @@ export function windamerePresenter(
     return rows;
   }
 
+  /** R6 #1: a hand card's Build at a glance, from its default legal Build (null = illegal). */
+  function badge(view: View, seat: SeatId, pick: Pick | null): HandBadge {
+    if (!pick) return { text: '✗ Spend only', tone: 'no' };
+    const p = purse(view, seat, pick);
+    const spent = p ? p.before - p.after : 0;
+    const coins = spent > 0 ? ` · ${spent}g` : '';
+    const pay = argsOf(pick).pay ?? [];
+    if (pay.some((x) => x.via === 'bank')) return { text: `Build: bank${coins}`, tone: 'warn' };
+    if (pay.length > 0) return { text: `Build: buy ${pay.length}${coins}`, tone: 'buy' };
+    return { text: `✓ Build${coins}`, tone: 'ok' };
+  }
+
   /** R6 #2: coins before → after a pick; a Build that pays the bank is flagged. */
   function purse(view: View, seat: SeatId, pick: Pick): PurseInfo | null {
     const s = view.seats[seat];
@@ -414,5 +427,6 @@ export function windamerePresenter(
     choices,
     whyNot,
     purse,
+    badge,
   };
 }

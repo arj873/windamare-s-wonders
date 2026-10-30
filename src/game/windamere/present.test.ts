@@ -173,6 +173,26 @@ describe('windamerePresenter', () => {
     expect(row.options[0]!.warn).toBe(false);
   });
 
+  it('badges each hand card with its Build before the tap (R6 #1)', () => {
+    const spring = rules.tunables.marketPrice[0]!;
+    const coins = rules.card(ONE_REED.id).cost.coins ?? 0;
+    expect(model(pastureState(20, 2, 0)).hand[0]!.badge).toEqual({
+      text: `Build: buy 1 · ${coins + spring}g`,
+      tone: 'buy',
+    });
+    expect(model(pastureState(20, 0, 0)).hand[0]!.badge).toEqual({
+      text: `Build: bank · ${coins + rules.tunables.bankPrice}g`,
+      tone: 'warn',
+    });
+    expect(model(pastureState(0, 0, 0)).hand[0]!.badge).toEqual({
+      text: '✗ Spend only',
+      tone: 'no',
+    });
+    const own = structuredClone(pastureState(20, 0, 0));
+    own.seats[0]!.data.store.reed = 1; // pays from its own store
+    expect(model(own).hand[0]!.badge?.tone).toBe('ok');
+  });
+
   it('never highlights a Build that can only pay the bank (R6 #2)', () => {
     const m = model(pastureState(20, 0, 0)); // nobody sells Reed: the bank is the only way
     const card = m.hand[0]!;

@@ -76,6 +76,13 @@ export interface ChoiceOption {
   warn?: boolean;
 }
 
+/** A hand card's affordability at a glance: "✓ Build", "Build: buy 2 · 4g", "✗ Spend only". */
+export interface HandBadge {
+  text: string;
+  /** ok = from your own store; buy = needs purchases; warn = needs the bank; no = not possible. */
+  tone: 'ok' | 'buy' | 'warn' | 'no';
+}
+
 /** What a pick does to the player's coins (R6 #2: never spend the purse unawares). */
 export interface PurseInfo {
   before: number;
@@ -125,6 +132,11 @@ export interface Presenter<S = unknown, T = unknown> {
   choices?(view: DraftView<S, T>, seat: SeatId, pick: Pick): ChoiceRow[];
   /** Coins before → after a legal pick, and whether it pays the bank. */
   purse?(view: DraftView<S, T>, seat: SeatId, pick: Pick): PurseInfo | null;
+  /**
+   * The badge on a hand card (R6 #1: affordability before the tap), from its primary use's
+   * legal pick (null when that use is not possible).
+   */
+  badge?(view: DraftView<S, T>, seat: SeatId, pick: Pick | null): HandBadge;
   /** A player-facing reason for the engine's refusal `error` of `pick`. */
   whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
 }

@@ -21,6 +21,7 @@ import type {
   CardFace,
   ChoiceRow,
   KindInfo,
+  HandBadge,
   MonumentInfo,
   PurseInfo,
   Presenter,
@@ -103,6 +104,8 @@ export interface HandCard {
   playable: boolean;
   /** This is the viewer's submitted pick (it stays in the hand until the reveal). */
   staged: boolean;
+  /** Affordability before the tap (R6 #1), or null when the presenter gives none. */
+  badge: HandBadge | null;
 }
 
 export interface RevealLine {
@@ -388,6 +391,7 @@ function handCards<S, T>(
       options,
       playable: options.some((o) => o.pick !== null),
       staged: seat.pick?.card === c.id,
+      badge: picking ? (present.badge?.(view, viewer, options[0]?.pick ?? null) ?? null) : null,
     };
   });
 }

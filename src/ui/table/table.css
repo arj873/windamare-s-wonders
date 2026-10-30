@@ -749,6 +749,34 @@
   font-weight: 700;
   background: rgba(31, 79, 160, 0.12);
 }
+/* R6 #1: affordability on the card, before the tap. Glyph + text, never colour alone. */
+.dt-card-afford {
+  margin: 0 6px 3px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dt-card-afford.is-ok {
+  background: var(--good);
+  color: var(--ink-strong);
+}
+.dt-card-afford.is-buy {
+  background: var(--card-paper-2);
+  color: var(--ink-strong);
+  border: 1px solid var(--card-edge);
+}
+.dt-card-afford.is-warn {
+  background: var(--bad);
+  color: var(--warn-ink, #9b1c0c);
+}
+.dt-card-afford.is-no {
+  color: var(--ink-dark);
+  opacity: 0.75;
+}
 .dt-use-ok {
   display: flex;
   flex-direction: column;
