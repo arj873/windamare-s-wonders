@@ -1,0 +1,293 @@
+/**
+ * The draft engine bound to one ruleset (docs/ENGINE.md §2, §6). Pure: no input is mutated, all
+ * randomness comes from `state.rng`.
+ */
+import { checkRuleset } from './effects';
+import { cloneJson, cloneState, isJson } from './clone';
+import { makeCtx } from './ctx';
+import { afterStage, allPicked, continueAfter, deal, openHead, reveal, totalRounds } from './flow';
+import { checkInvariants } from './invariants';
+import { Rng } from './rng';
+import { isSeat } from './seats';
+import type {
+  ActionResult,
+  DraftAction,
+  DraftState,
+  DraftView,
+  GameConfig,
+  Json,
+  Pick,
+  Ruleset,
+  SeatId,
+  Viewer,
+} from './types';
+import { isDraftView, viewFor } from './view';
+
+export interface DraftEngine<S, T> {
+  readonly ruleset: Ruleset<S, T>;
+  validateConfig(config: GameConfig): string | null;
+  createGame(config: GameConfig): DraftState<S, T>;
+  applyAction(state: DraftState<S, T>, action: DraftAction): ActionResult<S, T>;
+  legalActions(state: DraftState<S, T>, seat?: SeatId): DraftAction[];
+  legalPicks(state: DraftState<S, T>, seat: SeatId): Pick[];
+  defaultPick(state: DraftState<S, T>, seat: SeatId): Pick | null;
+  defaultAction(state: DraftState<S, T>, seat: SeatId): DraftAction | null;
+  waitingOn(state: DraftState<S, T>): SeatId[];
+  viewFor(state: DraftState<S, T>, viewer: Viewer): DraftView<S, T>;
+}
+
+const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
+
+const isRecord = (x: unknown): x is Record<string, unknown> =>
+  typeof x === 'object' && x !== null && !Array.isArray(x);
+
+/** Bind the core to a ruleset. Throws if `checkRuleset` finds problems. */
+export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T> {
+  const problems = checkRuleset(rules);
+  if (problems.length > 0) throw new Error(`ruleset ${rules.id}: ${problems.join('; ')}`);
+
+  function validateConfig(config: GameConfig): string | null {
+    if (!isRecord(config)) return 'config is not an object';
+    const { seed, seats, options } = config;
+    if (
+      typeof seed === 'number' ? !Number.isFinite(seed) : typeof seed !== 'string' || seed === ''
+    ) {
+      return 'seed must be a finite number or a non-empty string';
+    }
+    if (!Array.isArray(seats)) return 'seats must be an array';
+    if (seats.length < rules.minSeats || seats.length > rules.maxSeats) {
+      return `${seats.length} seats; this game takes ${rules.minSeats}-${rules.maxSeats}`;
+    }
+    for (const [i, s] of seats.entries()) {
+      if (!isRecord(s) || typeof s.name !== 'string' || s.name.trim() === '') {
+        return `seat ${i} needs a name`;
+      }
+    }
+    if (options !== undefined) {
+      if (!isRecord(options) || !isJson(options)) return 'options must be a JSON object';
+      const err = rules.validateOptions?.(options);
+      if (err) return err;
+    }
+    const rounds = totalRounds(rules, config);
+    if (!Number.isInteger(rounds) || rounds < 1)
+      return `rounds must be a positive integer, got ${rounds}`;
+    return null;
+  }
+
+  function createGame(input: GameConfig): DraftState<S, T> {
+    const err = validateConfig(input);
+    if (err) throw new Error(`createGame: ${err}`);
+    const config = cloneJson(input);
+    const rng = Rng.fromSeed(config.seed);
+    const zoneNames = Object.keys(rules.zones ?? {});
+    const draft: DraftState<S, T> = {
+      schemaVersion: 1,
+      ruleset: { id: rules.id, version: rules.version },
+      config,
+      seq: 0,
+      round: 0,
+      turn: 0,
+      roundPicks: 0,
+      passDirection: 'left',
+      phase: { kind: 'pick' },
+      seats: config.seats.map((s, id) => ({
+        id,
+        name: s.name,
+        hand: [],
+        pick: null,
+        tableau: [],
+        zones: Object.fromEntries(zoneNames.map((z) => [z, []])),
+        data: null as S,
+      })),
+      deck: [],
+      discard: [],
+      box: [],
+      table: null as T,
+      prompts: [],
+      nextCardId: 0,
+      nextPromptId: 0,
+      lastReveal: null,
+      log: [],
+      rng: rng.state,
+      result: null,
+    };
+    const ctx = makeCtx(rules, draft, rng);
+    draft.table = rules.setupTable(ctx);
+    for (const s of draft.seats) s.data = rules.setupSeat(ctx, s.id);
+    ctx.log(null, 'start', `Game started with ${draft.seats.length} players.`);
+    deal(ctx, 0);
+    rules.onGameStart?.(ctx);
+    afterStage(ctx, 'start');
+    draft.rng = rng.state;
+    assertInvariants(draft);
+    return draft;
+  }
+
+  /** Why `pick` is not acceptable for `seat` now, or null. Works on a view for the viewer. */
+  function checkPick(state: DraftState<S, T>, seat: SeatId, pick: unknown): string | null {
+    if (state.phase.kind !== 'pick') return 'not the pick phase';
+    if (!isRecord(pick)) return 'pick must be an object';
+    const { card, use, args } = pick;
+    if (typeof card !== 'number' || !Number.isInteger(card)) return 'pick.card must be a card id';
+    if (typeof use !== 'string' || use === '') return 'pick.use must be a string';
+    if (args !== undefined && !isJson(args)) return 'pick.args must be JSON';
+    const s = state.seats[seat];
+    if (!s || s.hand.length === 0) return 'you hold no cards';
+    if (!s.hand.some((c) => c.id === card)) return `card ${card} is not in your hand`;
+    return rules.validatePick(state, seat, pick as unknown as Pick);
+  }
+
+  function applyAction(state: DraftState<S, T>, action: DraftAction): ActionResult<S, T> {
+    if (state.ruleset.id !== rules.id) {
+      throw new Error(`state of ruleset ${state.ruleset.id}, engine of ${rules.id}`);
+    }
+    if (isDraftView(state)) throw new Error('applyAction: got a view, not a state');
+    if (!isRecord(action)) return fail('action must be an object');
+    const seat = action.seat;
+    if (!isSeat(state, seat)) return fail(`invalid seat: ${String(seat)}`);
+    if (state.phase.kind === 'gameOver') return fail('game is over');
+
+    const draft = cloneState(state);
+    const rng = new Rng(draft.rng);
+    const ctx = makeCtx(rules, draft, rng);
+    const me = draft.seats[seat];
+    if (!me) return fail(`invalid seat: ${seat}`);
+
+    switch (action.type) {
+      case 'pick': {
+        const err = checkPick(draft, seat, action.pick);
+        if (err) return fail(err);
+        const { card, use, args } = action.pick;
+        draft.seq += 1;
+        me.pick = { card, use, ...(args !== undefined ? { args: cloneJson(args) } : {}) };
+        if (allPicked(draft)) reveal(ctx);
+        break;
+      }
+      case 'unpick': {
+        if (draft.phase.kind !== 'pick') return fail('not the pick phase');
+        if (me.pick === null) return fail('nothing to unpick');
+        draft.seq += 1;
+        me.pick = null;
+        break;
+      }
+      case 'answer': {
+        const phase = draft.phase;
+        const head = draft.prompts[0];
+        if (phase.kind !== 'prompt' || !head) return fail('no prompt is open');
+        if (action.prompt !== head.id) return fail(`prompt ${String(action.prompt)} is not open`);
+        if (seat !== head.seat) return fail('the open prompt is not yours');
+        if (!isJson(action.answer)) return fail('answer must be JSON');
+        const handler = rules.prompts[head.kind];
+        if (!handler) throw new Error(`unknown prompt kind: ${head.kind}`);
+        const err = handler.validate(draft, head, action.answer);
+        if (err) return fail(err);
+        draft.seq += 1;
+        draft.prompts.shift();
+        handler.apply(ctx, head, cloneJson(action.answer));
+        if (draft.prompts.length === 0) continueAfter(ctx, phase.then);
+        else openHead(ctx);
+        break;
+      }
+      default:
+        return fail(`unknown action type: ${String((action as { type?: unknown }).type)}`);
+    }
+    draft.rng = rng.state;
+    assertInvariants(draft);
+    return { ok: true, state: draft };
+  }
+
+  /** On a view only the viewer's own seat is known well enough to list its moves. */
+  const knows = (state: DraftState<S, T>, seat: SeatId) =>
+    !isDraftView(state) || state.view.viewer === seat;
+
+  function legalPicks(state: DraftState<S, T>, seat: SeatId): Pick[] {
+    const s = state.seats[seat];
+    if (state.phase.kind !== 'pick' || !s || s.hand.length === 0 || !knows(state, seat)) return [];
+    return rules.legalPicks(state, seat).filter((p) => checkPick(state, seat, p) === null);
+  }
+
+  function legalAnswers(state: DraftState<S, T>, seat: SeatId): DraftAction[] {
+    const head = state.prompts[0];
+    if (state.phase.kind !== 'prompt' || !head || head.seat !== seat) return [];
+    const handler = rules.prompts[head.kind];
+    if (!handler) return [];
+    return handler
+      .answers(state, head)
+      .filter((a) => handler.validate(state, head, a) === null)
+      .map((answer) => ({ type: 'answer', seat, prompt: head.id, answer }));
+  }
+
+  function legalActions(state: DraftState<S, T>, seat?: SeatId): DraftAction[] {
+    if (state.phase.kind === 'gameOver') return [];
+    const seats = seat === undefined ? state.seats.map((s) => s.id) : [seat];
+    const out: DraftAction[] = [];
+    for (const s of seats) {
+      if (!state.seats[s] || !knows(state, s)) continue;
+      if (state.phase.kind === 'pick') {
+        for (const pick of legalPicks(state, s)) out.push({ type: 'pick', seat: s, pick });
+        if (state.seats[s]?.pick) out.push({ type: 'unpick', seat: s });
+      } else {
+        out.push(...legalAnswers(state, s));
+      }
+    }
+    return out;
+  }
+
+  function defaultPick(state: DraftState<S, T>, seat: SeatId): Pick | null {
+    const legal = legalPicks(state, seat);
+    if (legal.length === 0) return null;
+    const preferred = rules.defaultPick?.(state, seat);
+    if (preferred && checkPick(state, seat, preferred) === null) return preferred;
+    return legal[0] ?? null;
+  }
+
+  function waitingOn(state: DraftState<S, T>): SeatId[] {
+    switch (state.phase.kind) {
+      case 'gameOver':
+        return [];
+      case 'prompt':
+        return state.prompts[0] ? [state.prompts[0].seat] : [];
+      case 'pick': {
+        const submitted = (i: number) =>
+          isDraftView(state) ? state.view.submitted[i] === true : state.seats[i]?.pick !== null;
+        return state.seats.filter((s) => s.hand.length > 0 && !submitted(s.id)).map((s) => s.id);
+      }
+    }
+  }
+
+  function defaultAction(state: DraftState<S, T>, seat: SeatId): DraftAction | null {
+    if (!waitingOn(state).includes(seat)) return null;
+    if (state.phase.kind === 'pick') {
+      const pick = defaultPick(state, seat);
+      return pick ? { type: 'pick', seat, pick } : null;
+    }
+    const head = state.prompts[0];
+    const handler = head && rules.prompts[head.kind];
+    if (!head || !handler) return null;
+    const answers = legalAnswers(state, seat);
+    const preferred: Json | undefined = handler.defaultAnswer?.(state, head);
+    if (preferred !== undefined && handler.validate(state, head, preferred) === null) {
+      return { type: 'answer', seat, prompt: head.id, answer: preferred };
+    }
+    return answers[0] ?? null;
+  }
+
+  return {
+    ruleset: rules,
+    validateConfig,
+    createGame,
+    applyAction,
+    legalActions,
+    legalPicks,
+    defaultPick,
+    defaultAction,
+    waitingOn,
+    viewFor: (state, viewer) => viewFor(rules, state, viewer),
+  };
+}
+
+/** Ruleset code broke a core invariant: a bug, not a bad action. */
+function assertInvariants(state: DraftState<unknown, unknown>): void {
+  const errors = checkInvariants(state);
+  if (errors.length > 0) throw new Error(`engine invariant broken: ${errors.join('; ')}`);
+}

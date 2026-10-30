@@ -3,9 +3,8 @@
 Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this file.
 **If you change a public type in `src/engine/core/types.ts`, update this file in the same commit.**
 
-Status (2026-10-29): **contract only** (E1). Code and tests land once the platform scaffold (P1)
-is on `main`; until then every section below is the plan, untested. Sections that change on the
-way get a note here.
+Status (2026-10-29): **E1 implemented** in `src/engine/core/` with 70 vitest tests (toy ruleset,
+§12). Everything below is what the code does. Not measured yet: simulation speed (§11).
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
 resolution order, hand passing, rounds, prompts, scoring hooks and per-seat views. It does not
@@ -38,7 +37,7 @@ src/engine/index.ts  barrel                            import from here, not dee
 Bind the core to a ruleset once; every consumer uses the bound functions.
 
 ```ts
-import { createDraftEngine } from './engine/core';
+import { createDraftEngine } from '../engine'; // the barrel, src/engine/index.ts
 const engine = createDraftEngine(windamereRuleset); // E2 exports this ready-made from the barrel
 
 engine.validateConfig(config): string | null        // null = ok; net calls this on room configs
@@ -58,8 +57,9 @@ engine.ruleset                                      // the ruleset (card defs: e
 
 **Arrival order never matters.** Picks arrive one `pick` action at a time, but nothing resolves
 until the last one is in, and the reveal resolves them in `resolveOrder` (seat order by default),
-never in arrival order. The state after the reveal is identical for every arrival order, with or
-without earlier `unpick` / re-picks (tested). This is net's "batch resolution" (MULTIPLAYER.md §6).
+never in arrival order. The state after the reveal is identical for every arrival order (tested
+on all 24 orders of 4 seats). Earlier `unpick` / re-picks change only `seq` (and the `seq` of
+log entries), which count actions. This is net's "batch resolution" (MULTIPLAYER.md §6).
 
 ```ts
 interface GameConfig {
@@ -101,18 +101,20 @@ Helpers: `leftOf(state, s)`, `rightOf(state, s)`, `neighboursOf(state, s)` → `
 The Windamere ruleset fixes both: consumers use its concrete `GameState` type.
 
 ```ts
-interface DraftState<S = Json, T = Json> {
+interface DraftState<S = unknown, T = unknown> {
   schemaVersion: 1;
   ruleset: { id: string; version: number }; // the engine refuses states of another ruleset id
   config: GameConfig; // fixed after createGame
   seq: number; // +1 per accepted action (net: stale-action guard)
   round: number; // 0-based round ("age") index
   turn: number; // 0-based pick number within the round
+  roundPicks: number; // picks per seat this round (RoundSpec.picks)
   passDirection: 'left' | 'right'; // this round's
   phase: Phase;
   seats: SeatState<S>[]; // index = SeatId
   deck: Card[]; // undealt cards of this round; hidden from everyone
   discard: Card[]; // visibility: ruleset.discardVisibility (default hidden)
+  box: Card[]; // out of the game (earlier rounds' undealt cards, ctx.toBox); hidden
   table: T; // ruleset table data; public unless ruleset masks it
   prompts: Prompt[]; // pending follow-up decisions, answered in order (§6)
   nextCardId: number;
@@ -127,7 +129,8 @@ interface SeatState<S> {
   id: SeatId;
   name: string;
   hand: Card[]; // owner only
-  pick: Pick | null; // submitted, not yet revealed; owner only (others: view.submitted)
+  pick: Pick | null; // submitted, not yet revealed; owner only (others: view.submitted);
+  //                    the picked card stays in `hand` until the reveal
   tableau: Card[]; // public, in the order played
   zones: Record<string, Card[]>; // ruleset zones (e.g. cards tucked under a monument); visibility per zone
   data: S; // ruleset seat data
@@ -135,7 +138,8 @@ interface SeatState<S> {
 
 type Phase =
   | { kind: 'pick' } // every seat with a hand picks, simultaneously
-  | { kind: 'prompt' } // prompts[0] is open; its seat answers (§6)
+  | { kind: 'prompt'; then: 'start' | 'turn' | 'roundEnd' } // prompts[0] is open (§6);
+  //                     `then` = the stage the flow continues after once the queue is empty
   | { kind: 'gameOver' };
 
 interface Pick {
@@ -175,9 +179,11 @@ interface GameResult {
 }
 ```
 
-Card conservation (tested): every card dealt this game is in exactly one place: a hand, a pick,
-a tableau, a seat zone, the deck or the discard. `checkInvariants(state)` (exported) returns the
-violations; qa may call it in audits.
+Card conservation: every card dealt this game (ids `0 .. nextCardId-1`) is in exactly one list:
+a hand, a tableau, a seat zone, the deck, the discard or the box. `checkInvariants(state)`
+(exported) returns the violations (also: picks point at cards in their hand, phase matches
+prompts and result); qa may call it in audits. The engine runs it after every action and
+throws on a violation: that is a ruleset bug, not a bad action.
 
 ## 5. Flow
 
@@ -194,8 +200,9 @@ pick phase (simultaneous)
        so this turn's effects see them)
     3. resolve steps (§8), step-major: step 1 for every seat, then step 2 for every seat, ...
        seats in ruleset.resolveOrder (default 0..n-1). Every picked card must end up somewhere
-       (tableau, zone, discard): checked
-    4. prompts? → prompt phase until the queue is empty
+       (tableau, zone, discard, box): checked, throws otherwise
+    4. prompts? → prompt phase until the queue is empty (each prompt's `refresh` runs when it
+       becomes the open one, §8)
     5. turn < picks - 1 → pass hands in passDirection, turn += 1 → pick
        else → ROUND END
 
@@ -211,8 +218,10 @@ game end
 Dealing a round: `ruleset.roundSpec(state, round)` returns
 `{ handSize, picks, pass: 'left' | 'right', deck: CardDefId[] }`. The core shuffles `deck` with
 the state RNG, assigns ids, deals `handSize` cards to each seat (seat 0 first), and keeps the rest
-in `state.deck`. `picks <= handSize`; when `picks < handSize` the leftovers are discarded on the
-last turn (step 2 above). `deck.length >= handSize * seats` or `createGame` / the deal throws.
+in `state.deck`; the previous round's undealt cards go to the box. `picks <= handSize`; when
+`picks < handSize` the leftovers are discarded on the last turn (step 2 above).
+`deck.length >= handSize * seats` and every face must be in the catalog, or the deal throws.
+If no seat holds a card when a pick phase would start (a ruleset took them all), the round ends.
 
 The core does all of this inside the one `applyAction` that completes a phase, so a state handed
 out by the engine is always waiting for someone (`waitingOn` is never empty, except at gameOver).
@@ -235,17 +244,24 @@ type ActionResult<S, T> = { ok: true; state: DraftState<S, T> } | { ok: false; e
 `applyAction` pipeline:
 
 ```
-not a known action shape / unknown type / seat not 0..n-1   → error
-state.ruleset.id !== engine ruleset id                      → throws (programmer error)
+state of another ruleset id, or a view                      → throws (programmer error)
+action not an object / seat not 0..n-1                      → error
 phase gameOver                                              → error 'game is over'
 draft = clone(state)
-pick:    phase pick, seat has cards, card in seat's hand, ruleset.validatePick → error | store
+pick:    phase pick, pick shape (card id, non-empty use, JSON args), seat has cards,
+         card in seat's hand, ruleset.validatePick           → error
+         seq += 1; store { card, use, args? } (other keys dropped)
          all seats with cards have picked → reveal + resolve + advance (§5)
-unpick:  phase pick, seat has a pick → clear it
-answer:  phase prompt, prompt === prompts[0].id, seat === prompts[0].seat,
-         ruleset.prompts[kind].validate → error | apply, shift; queue empty → advance (§5)
-draft.seq += 1; write back rng; return { ok: true, state: draft }
+unpick:  phase pick, seat has a pick → seq += 1; clear it
+answer:  phase prompt, prompt === prompts[0].id, seat === prompts[0].seat, JSON answer,
+         ruleset.prompts[kind].validate                      → error
+         seq += 1; shift; apply; queue empty → advance (§5), else refresh the next prompt
+unknown type                                                → error
+write back rng; checkInvariants (throws on a ruleset bug); return { ok: true, state: draft }
 ```
+
+Errors are short English strings (`'not the pick phase'`, `'card 12 is not in your hand'`,
+`'the open prompt is not yours'`, or the ruleset's own, e.g. `'not enough coins'`).
 
 **Prompts** are follow-up decisions that effects create during resolution, round end or game
 start ("choose a card from the discard pile to build for free"). They are answered **one at a
@@ -258,9 +274,12 @@ deciding at once, hidden); the queue can grow that later.
 - **Sound:** every action returned is accepted by `applyAction` (tested on random playouts).
 - **Complete** for `unpick` and `answer`, and for `pick` up to `args`: a ruleset whose `args`
   are open-ended (e.g. many ways to pay) returns a bounded, documented sample.
-- **View-safe:** `legalActions(viewFor(s, seat), seat)` equals `legalActions(s, seat)`. Rulesets
-  must decide legality from the seat's own hand, own data and public information only (tested).
-  So bots and online clients can compute their moves from a view.
+- **View-safe:** `legalActions(viewFor(s, seat), seat)` equals `legalActions(s, seat)`, and so
+  do `defaultAction` and `waitingOn` (tested at every step of random playouts). Rulesets must
+  decide legality from the seat's own hand, own data and public information only; a prompt's
+  `validate` should read `prompt.data` (kept fresh by `refresh`), not hidden piles. So bots and
+  online clients compute their moves from a view. On a view, only the viewer's own moves are
+  listed (other seats' hands are placeholders).
 
 ## 7. Views and hidden information (`viewFor`)
 
@@ -292,7 +311,13 @@ A view has the `DraftState` shape, so UI renders it unchanged. Masked for everyo
 | `rng`, `config.seed`                   | `[0, 0, 0, 0]`, `HIDDEN_SEED`                                               |
 | ruleset secrets                        | `ruleset.maskSeat(data, viewer, owner)`, `ruleset.maskTable(table, viewer)` |
 
-At `gameOver`, owner-only zones are revealed; deck, rng and seed stay hidden.
+At `gameOver`, owner-only zones are revealed; `'hidden'` zones, deck, box, rng and seed stay
+hidden. A view shares unchanged parts with the state: treat it as read-only.
+
+Leak test (net's ask): for random mid-game states and every viewer, scrambling everything that
+viewer may not know (cards across hidden lists, other seats' picks, rng, seed, private log
+texts) leaves `viewFor` unchanged. A deliberately unmasked deck makes it fail (checked once by
+hand).
 
 Not in a view on purpose: what a seat could _remember_ (the cards it saw in a hand it passed on).
 Clients and bots that want that memory track it themselves from successive views. Open question
@@ -357,8 +382,7 @@ interface CardDef {
   cost?: Json; // interpreted by the ruleset
   tags?: string[];
   effects: EffectSpec[];
-  [extra: string]: Json | undefined; // more ruleset fields (era, min player count ...)
-}
+} // a ruleset extends it for more fields (era, min player count ...): `interface WCard extends CardDef`
 
 interface EffectSpec {
   type: string;
@@ -384,6 +408,7 @@ interface EffectHandler<S, T> {
 
 ```ts
 interface PromptHandler<S, T> {
+  refresh?(state, prompt): Json; // new `data` when the prompt becomes the open one
   answers(state, prompt): Json[]; // legal answers (sound)
   validate(state, prompt, answer: Json): string | null;
   apply(ctx: Ctx<S, T>, prompt, answer: Json): void;
@@ -404,12 +429,16 @@ ctx.def(card | defId)            // CardDef; throws on unknown ids
 ctx.play(seat, card)             // → tableau, then each spec's onPlay
 ctx.place(seat, zone, card)      // → a seat zone (no triggers)
 ctx.toDiscard(card)
-ctx.take(card)                   // remove a card from wherever it is (e.g. from the discard)
+ctx.toBox(card)                  // out of the game
+ctx.take(cardId)                 // remove a card from wherever it is; the caller must put it somewhere
 ctx.trigger(seat, specs, source) // run onPlay of arbitrary specs (a monument stage)
 ctx.prompt(seat, kind, data)     // queue a prompt
 ctx.log(seat, kind, text, { data?, to? })
 ctx.left(seat), ctx.right(seat), ctx.neighbours(seat)
 ```
+
+`play`, `place`, `toDiscard` and `toBox` take a card that is in no list (just revealed, or
+`take`n first) and throw otherwise, so a card can never be in two places.
 
 Ruleset code must not touch `deck`/`hands` dealing, `phase`, `seq`, `round`, `turn`, `prompts`
 (except through `ctx.prompt`) or ids: the core owns them.
@@ -438,17 +467,21 @@ copy); the core writes the state back. Nobody else reads or writes `state.rng`; 
 
 ## 11. Cloning
 
-`applyAction` deep-copies the state (plain-JSON copy, `cloneJson`); `config` is shared between
-states (fixed after createGame, never mutate it). Simulation cost is measured once bots exist.
+`applyAction` deep-copies the state (`cloneState`: a hand-written plain-JSON copy that keeps key
+order); `config` is shared between states (fixed after createGame, never mutate it). Simulation
+cost is not measured yet; it will be once bots exist.
 
 ## 12. Tests and the toy ruleset
 
-`src/engine/core/testing/toy.ts` is a tiny placeholder ruleset (a handful of made-up cards,
-coins, two uses: `build` and `sell`) used by the engine's tests only. It is not game content and
-never ships. Core tests cover: purity (frozen input), JSON round-trip, determinism per seed,
-card conservation, hidden picks and views, reveal and step-major resolution order, passing in
-both directions, round end and leftovers, prompts, scoring and ties, legalActions soundness and
-view-safety on random playouts.
+`src/engine/core/testing/toy.ts` is a tiny placeholder ruleset (six made-up `toy-*` cards, coins,
+three uses `build` / `sell` / `stash`, an owner-only `stash` zone, round-end income, a salvage
+prompt, an optional opening prompt) used by the engine's tests only; `testing/helpers.ts` wraps
+it. It is not game content and never ships. Other lanes may use it in their own tests until E2
+lands. Tests (`src/engine/core/*.test.ts`, 70 with the copied rng tests): purity (deep-frozen
+input), JSON round trip mid-game, determinism per seed, card conservation, hidden picks and the
+leak test, reveal and step-major resolution order, passing both ways, leftovers and boxed decks,
+prompts (in-turn and at start), scoring and ties, malformed actions, ruleset bugs caught,
+legalActions soundness and view-safety on random playouts (2-5 seats).
 
 ## 13. Decisions and open questions
 
