@@ -19,6 +19,10 @@ Look (always allowed):
   status                 your town, neighbours, Raid, prices, what you must do, log tail
   cards                  your hand, numbered, with what Build and Spend would do now
   result                 final scores (after the game)
+  console | shot [name]  (browser mode) new console errors | screenshot path
+  check                  (browser mode) does the UI agree with the engine on Build/Spend?
+  autoplay [--moves N]   (browser mode) play all seats to the end through the UI, list problems
+  dom <css selector>     (browser mode) what the page has there, and what covers it
   report --title "..." --severity blocker|major|minor|visual --expected "..." --actual "..." --steps "..."
 
 Act (only when it is your move):

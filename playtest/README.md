@@ -1,24 +1,47 @@
 # Playtest harness (qa, card Q2)
 
-## Layer 1 is built: text mode (no browser)
+## Two layers, both built
 
 ```
-pnpm pt:serve --seats 3 --humans 1,2 --seed demo --level medium   # one game, bots in the other seats
-pnpm -s pt 1 status | cards | choose <n> | pick <n> build|spend [flags] | unpick | wait | result
-pnpm -s pt 1 report --title ... --severity ... --expected ... --actual ... --steps ...
+pnpm pt:serve --seats 3 --humans 1,2 --seed demo --level medium    # text mode: engine in-process, bots
+pnpm pt:serve --browser --seats 3 --seed demo [--headed] [--port 4187] [--no-build]
+pnpm -s pt <seat> status | cards | choose <n> | pick <n> build|spend [flags] | unpick | wait | result
+pnpm -s pt <seat> report --title ... --severity ... --expected ... --actual ... --steps ...
 pnpm -s pt stop
 ```
 
-It runs the real engine and the shipped bots (`pickFor`) and prints what that seat's `viewFor`
-allows, using the UI's own `windamerePresenter` for the Build/Spend lines and the refusal wording.
-So it finds rules, wording and flow problems, not UI bugs. Tests: `playtest/*.test.ts` (a scripted
-human plays whole games at 2, 3 and 7 seats; two humans never see each other's hand or pick).
-`boot.ts` patches `import.meta.env` for node (see Needs in the status file). `--pay` takes one
-entry per missing good, as `cards` lists them: `buy:<seat>`, `bank`, `exchange:<good>` or `auto`.
+**Text mode** runs the real engine and the shipped bots (`pickFor`) and prints what that seat's
+`viewFor` allows, using the UI's own `windamerePresenter` for the Build/Spend lines and refusal
+wording. It finds rules, wording and flow problems, not UI bugs.
 
-Layers 2 and 3 (browser, online) below are still plans: they need the ui hooks and a scripted room.
+**Browser mode** builds the app (into `.scratch/qa/pt-dist`, outside the repo and `/tmp`), serves it
+with `vite preview` on 127.0.0.1:`--port`, opens system Chrome (`/usr/bin/google-chrome-stable`,
+override with `PT_CHROME`) on `/?debug=1&seats=N&seed=S` and plays by **clicking the real UI**
+(UX.md §18 hooks). State is read from `window.__pt.view(seat)`, never from the engine in the
+page. After each click the view is compared with what the click should have done: "UI PROBLEM:
+clicked Build but nothing was recorded" is a finding. Extra commands:
 
-## Plan for the browser layer
+- `check` - for every card in the hand, is Build/Spend enabled on screen exactly when the engine says
+  it is legal, and does a disabled button's `data-why` equal the engine's reason?
+- `autoplay [--moves 400]` - plays every seat to the end of the game through the UI (first Build the
+  engine allows, else Spend) and lists the problems it met. A smoke test, not a player.
+- `dom <css>` - match count, first HTML, bounding box, and what covers it (for bug reports).
+- `shot [name]` and `console` (new console errors and page errors).
+
+Hotseat rule: the page is drawn for ONE seat at a time. The UI stays on a human while they still
+have to act, then moves to the next, so play the seat `status` says the table is drawn for (the
+`[UI: table drawn for seat N]` line); other seats get "table is drawn for seat N". The Season-end
+summary dialog is modal: the harness presses Continue before it acts. `unpick` only works while the table is still drawn for you (it moves on after your pick). Browser mode starts 3 to 7
+seats (the UI has no 2-seat game; see AUDIT.md). `--any`, `--glean`, `--burn` have no UI hooks, so
+browser `pick` refuses them. `--pay` takes one entry per missing good: `buy:<seat>`, `bank`,
+`exchange:<good>` or `auto`.
+
+Tests (`playtest/*.test.ts`, in the gate): text helpers, the text game (a scripted human plays whole
+games at 2, 3 and 7 seats; two humans never see each other's hand or pick) and the shared renderer.
+The browser layer is **not** in the gate (it needs Chrome and a build); it was run by hand, see
+AUDIT.md Q2b.
+
+## Original plan (kept for the online layer, still to do)
 
 ## What Catan has (`/home/blop/projects/catan/scripts/playtest`, ~4000 lines, read-only reference)
 
