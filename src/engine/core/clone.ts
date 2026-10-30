@@ -1,11 +1,28 @@
 import type { DraftState, Json } from './types';
 
+/**
+ * `out[k] = v`, except that a `"__proto__"` key (JSON.parse makes it an own key) stays an own
+ * key instead of setting `out`'s prototype.
+ */
+function setKey(out: Record<string, unknown>, k: string, v: unknown): void {
+  if (k === '__proto__') {
+    Object.defineProperty(out, k, {
+      value: v,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  } else out[k] = v;
+}
+
 /** Deep copy of plain JSON data (a state is JSON by contract). Keeps key order. */
 export function cloneJson<T>(value: T): T {
   if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((v: unknown) => cloneJson(v)) as T;
   const out: Record<string, unknown> = {};
-  for (const k of Object.keys(value)) out[k] = cloneJson((value as Record<string, unknown>)[k]);
+  for (const k of Object.keys(value)) {
+    setKey(out, k, cloneJson((value as Record<string, unknown>)[k]));
+  }
   return out as T;
 }
 
@@ -13,7 +30,7 @@ export function cloneJson<T>(value: T): T {
 export function cloneState<S, T>(s: DraftState<S, T>): DraftState<S, T> {
   const out: Record<string, unknown> = {};
   for (const k of Object.keys(s) as (keyof DraftState<S, T>)[]) {
-    out[k] = k === 'config' ? s.config : cloneJson(s[k]);
+    setKey(out, k, k === 'config' ? s.config : cloneJson(s[k]));
   }
   return out as unknown as DraftState<S, T>;
 }

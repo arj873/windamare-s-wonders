@@ -199,7 +199,7 @@ describe('rounds', () => {
       seat: 0,
       categories: { treasury: 4, stash: 0 },
       total: 4,
-      tiebreak: 14,
+      tiebreak: [14],
     });
     expect(s.result?.ranking).toEqual([[0, 1, 2]]);
     expect(s.result?.winners).toEqual([0, 1, 2]);
@@ -213,9 +213,9 @@ describe('rounds', () => {
     expect(toy.defaultAction(s, 0)).toBeNull();
   });
 
-  it('ranks by total, then tiebreak; equal seats share a place', () => {
+  it('ranks by total, then tiebreaks in order; equal seats share a place', () => {
     const totals = [5, 7, 7, 3];
-    const run = (tiebreaks: number[]) => {
+    const run = (tiebreaks: number[][]) => {
       const e = variant({
         score: (_s, seat) => ({ base: totals[seat]! }),
         tiebreak: (_s, seat) => tiebreaks[seat]!,
@@ -230,9 +230,65 @@ describe('rounds', () => {
       }
       return s.result!;
     };
-    expect(run([0, 1, 1, 0]).ranking).toEqual([[1, 2], [0], [3]]);
-    expect(run([0, 1, 1, 0]).winners).toEqual([1, 2]);
-    expect(run([0, 1, 2, 0]).ranking).toEqual([[2], [1], [0], [3]]);
+    expect(run([[0], [1], [1], [0]]).ranking).toEqual([[1, 2], [0], [3]]);
+    expect(run([[0], [1], [1], [0]]).winners).toEqual([1, 2]);
+    expect(run([[0], [1], [2], [0]]).ranking).toEqual([[2], [1], [0], [3]]);
+    // The second tie-break decides only when the first is equal.
+    expect(
+      run([
+        [0, 9],
+        [1, 0],
+        [1, 5],
+        [0, 0],
+      ]).ranking,
+    ).toEqual([[2], [1], [0], [3]]);
+    expect(
+      run([
+        [0, 0],
+        [2, 0],
+        [1, 9],
+        [0, 0],
+      ]).ranking,
+    ).toEqual([[1], [2], [0], [3]]);
+    expect(
+      run([
+        [0, 0],
+        [1, 3],
+        [1, 3],
+        [0, 0],
+      ]).ranking,
+    ).toEqual([[1, 2], [0], [3]]);
+    // No tiebreak: equal totals share a place.
+    const e = variant({ score: (_s, seat) => ({ base: totals[seat]! }), tiebreak: undefined });
+    let s = e.createGame(toyConfig(4, { rounds: 1 }));
+    while (s.phase.kind !== 'gameOver') {
+      for (const seat of e.waitingOn(s)) {
+        const r = e.applyAction(s, { type: 'pick', seat, pick: sellFirst(s, seat) });
+        if (!r.ok) throw new Error(r.error);
+        s = r.state;
+      }
+    }
+    expect(s.result!.ranking).toEqual([[1, 2], [0], [3]]);
+    expect(s.result!.scores[0]!.tiebreak).toEqual([]);
+  });
+
+  it('calls onRoundStart before each deal, round 0 included', () => {
+    const seen: string[] = [];
+    const e = variant({
+      onRoundStart: (ctx, round) => {
+        seen.push(`${round}:${ctx.state.seats[0]!.hand.length}`);
+      },
+    });
+    let s = e.createGame(toyConfig(2, { rounds: 2 }));
+    expect(seen).toEqual(['0:0']);
+    while (s.round === 0) {
+      for (const seat of e.waitingOn(s)) {
+        const r = e.applyAction(s, { type: 'pick', seat, pick: sellFirst(s, seat) });
+        if (!r.ok) throw new Error(r.error);
+        s = r.state;
+      }
+    }
+    expect(seen).toEqual(['0:0', '1:0']);
   });
 });
 

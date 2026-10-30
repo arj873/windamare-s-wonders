@@ -3,7 +3,7 @@ import { defOf } from './effects';
 import { cardLists, locate } from './invariants';
 import type { Rng } from './rng';
 import { isSeat, leftOf, neighboursOf, rightOf } from './seats';
-import type { Card, Ctx, DraftState, EffectSpec, LogEntry, Ruleset, SeatId } from './types';
+import type { Card, Ctx, DraftState, EffectSpec, Json, LogEntry, Ruleset, SeatId } from './types';
 
 export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng: Rng): Ctx<S, T> {
   const seatOf = (seat: SeatId) => {
@@ -17,11 +17,16 @@ export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng
     if (where !== null) throw new Error(`card ${card.id} is already in ${where}`);
     return card;
   };
-  const trigger = (seat: SeatId, specs: readonly EffectSpec[], source: Card | null) => {
+  const trigger = (
+    seat: SeatId,
+    specs: readonly EffectSpec[],
+    source: Card | null,
+    args?: Json,
+  ) => {
     for (const spec of specs) {
       const handler = rules.effects[spec.type];
       if (!handler) throw new Error(`unknown effect type: ${spec.type}`);
-      handler.onPlay?.(ctx, seat, spec, source);
+      handler.onPlay?.(ctx, seat, spec, source, args);
     }
   };
 
@@ -30,9 +35,9 @@ export function makeCtx<S, T>(rules: Ruleset<S, T>, draft: DraftState<S, T>, rng
     rules,
     rng,
     def: (card) => defOf(rules, typeof card === 'string' ? card : card.def),
-    play(seat, card) {
+    play(seat, card, args) {
       seatOf(seat).tableau.push(loose(card));
-      trigger(seat, defOf(rules, card.def).effects, card);
+      trigger(seat, defOf(rules, card.def).effects, card, args);
     },
     place(seat, zone, card) {
       const cards = seatOf(seat).zones[zone];
