@@ -1,7 +1,7 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-30 01:04 · Progress: **37 / 55 cards done**
+Updated: 2026-10-30 01:18 · Progress: **40 / 55 cards done**
 
 ## In progress (12)
 
@@ -20,14 +20,6 @@ Updated: 2026-10-30 01:04 · Progress: **37 / 55 cards done**
 | R6 | research | P1 | Heuristic UX review of the playable game -> ux-review-1.md |
 | U4 | ui | P0 | Fix 404 asset; tunables-driven price test; Great Work SVG; playtest hooks; home screen |
 
-## In review (3)
-
-| Card | Lane | Pri | Title |
-|---|---|---|---|
-| B3 | bots | P1 | Level-1 heuristic bot + sim report vs balance-targets.md |
-| D8 | design | P1 | Rule fixes: Summer price 2, R6.7 vs R17.9, deck size vs seats, re-tune plan |
-| Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
-
 ## Ready (2)
 
 | Card | Lane | Pri | Title |
@@ -41,7 +33,7 @@ Updated: 2026-10-30 01:04 · Progress: **37 / 55 cards done**
 |---|---|---|---|
 | D7 | design | P2 | First-game option (Honours and upgrades off) after sim numbers |
 
-## Done (37)
+## Done (40)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
@@ -51,6 +43,7 @@ Updated: 2026-10-30 01:04 · Progress: **37 / 55 cards done**
 | A6 | art | P1 | Great Work vignettes on the tier track + title key art refresh |
 | B1 | bots | P1 | Random + heuristic bots, headless sim, balance report |
 | B2 | bots | P1 | 3 difficulty levels plan -> docs/BOTS.md |
+| B3 | bots | P1 | Level-1 heuristic bot + sim report vs balance-targets.md |
 | D2 | design | P0 | Original ruleset with numbered rules -> docs/RULES.md |
 | D2b | design | P0 | Answer lane questions in RULES.md: pick change before reveal, early resolve, timers, resolution order |
 | D2c | design | P0 | Human changes: new goods set, single pick, neighbour trade (own mechanism/numbers) |
@@ -58,6 +51,7 @@ Updated: 2026-10-30 01:04 · Progress: **37 / 55 cards done**
 | D5 | design | P0 | Card data into src/content + content tests (after H1) |
 | D6 | design | P0 | Fix R4 red-team: O5-O16 names/numbers, D1 neighbour share, D2 Watch/Raid bug |
 | D4 | design | P1 | Card catalog draft with counts per player count -> docs/design/CARDS.md |
+| D8 | design | P1 | Rule fixes: Summer price 2, R6.7 vs R17.9, deck size vs seats, re-tune plan |
 | E1 | engine | P0 | Game-agnostic draft core: seats, hidden simultaneous picks, reveal, hand passing, seeded RNG, per-seat views |
 | E2 | engine | P0 | Full rules engine: 3-7 towns, Great Work choice, 2-player variant, Recall |
 | E3 | engine | P0 | Per-turn event log in state + views (for reveal animation + history) |
@@ -75,6 +69,7 @@ Updated: 2026-10-30 01:04 · Progress: **37 / 55 cards done**
 | P9 | platform | P1 | Browser automation dep + pnpm e2e entry |
 | P8 | platform | P2 | pnpm sim script for bots |
 | Q0 | qa | P0 | Red-team audit: hidden info (viewFor), net session cheats, determinism |
+| Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
 | R1 | research | P0 | Genre + rules research: drafting/tableau games, mechanics, balance lessons -> docs/design/RESEARCH.md |
 | R4 | research | P0 | Red-team originality + design-risk review of RULES/CARDS |
 | R2 | research | P1 | Online drafting UX survey (BGA, colonist.io feel, timers, reconnect) -> docs/design/research/online-ux.md |
