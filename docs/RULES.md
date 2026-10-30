@@ -200,7 +200,7 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
 
 - **R8.1** A Great Work has a **Perk**, active from the reveal (R2.5) to the end, and four tiers,
   I to IV. Each tier has a **labour threshold** and a **reward**. Thresholds rise from tier to
-  tier; the standard set is 3, 6, 10, 15† (each Great Work may differ, CARDS.md).
+  tier; the standard set is 4, 9, 15, 22† (each Great Work may differ, CARDS.md; D9 re-tune).
 - **R8.2** Labour comes from Spend bands, `yield` effects and other effects that say labour. It
   only ever goes up.
 - **R8.3** **Great Work check**: while the town's labour is at or above the threshold of its next
@@ -220,7 +220,7 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
   tiers, plus any other effect that adds Guard.
 - **R9.3** At Season end, every town compares its Guard with the Raid's strength, all at once.
 - **R9.4** **Held** (Guard ≥ strength): the town gains a Valour token worth the Season's Valour
-  value: Spring 1†, Summer 2†, Autumn 3†, Winter 4† Renown.
+  value: Spring 2†, Summer 3†, Autumn 4†, Winter 5† Renown (D9 re-tune).
 - **R9.5** **Plundered** (Guard < strength): the town loses 1 coin for each point it falls short,
   or all its coins if it has fewer. It gains no Valour. Goods, labour and cards are never lost.
 - **R9.6** **Bounty**: after all plunder, each town that held takes 1† coin from each neighbour
@@ -403,8 +403,8 @@ These answer the open questions from net (MULTIPLAYER.md §2.1, §6) and researc
 | Exchange rate               | 2 of one good → 1 other                      | R6.3   |
 | Buying limit per neighbour  | 2 goods a turn                               | R6.6b  |
 | Market price by Season      | 1, 3, 4, 5 coins a good                      | R6.6c  |
-| Tier thresholds (standard)  | 3, 6, 10, 15 labour                          | R8.1   |
-| Valour by Season            | 1, 2, 3, 4                                   | R9.4   |
+| Tier thresholds (standard)  | 4, 9, 15, 22 labour                          | R8.1   |
+| Valour by Season            | 2, 3, 4, 5                                   | R9.4   |
 | Plunder                     | 1 coin per point short                       | R9.5   |
 | Bounty                      | 1 coin from each plundered neighbour         | R9.6   |
 | Lore run scores             | 1, 3, 6, 10, 14, 18                          | R10.3  |
@@ -475,6 +475,11 @@ about 3.5 coins, since purchases lean towards the dear late Seasons, research N2
 So about **20-35%** of a winning score now moves with what the neighbours do, plus the
 hate-draft. Bots (B1) should report the real share: Renown-equivalent from sales, purchases,
 bounty, Tolls and `scoreBeat`, over all Renown (research balance target I1: median ≥ 10%).
+
+**Measured (bots B4, 2026-10-30): the net share is only 1.2-2.0%.** Every town both buys and
+sells, so the coins cancel; my estimate above counted gross coins and is withdrawn. Trade gives
+neighbours access to goods, not score swings. Raising I1 needs a new design element (for example
+an Honour or Landmark scored against each neighbour); see CARDS.md §11.
 
 ## Design note: planned tuning (research R4 N1-N4)
 

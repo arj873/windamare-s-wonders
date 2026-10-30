@@ -7,13 +7,13 @@ import type { EffectSpec } from '../../engine';
 
 type Tier = EffectSpec[];
 
-/** Standard thresholds 3, 6, 10, 15 (R8.1) unless given. */
+/** Standard thresholds 4, 9, 15, 22 (R8.1; D9 raised them from 3, 6, 10, 15) unless given. */
 function work(
   id: string,
   name: string,
   perk: EffectSpec[],
   tiers: [Tier, Tier, Tier, Tier],
-  thresholds: [number, number, number, number] = [3, 6, 10, 15],
+  thresholds: [number, number, number, number] = [4, 9, 15, 22],
 ): GreatWorkDef {
   const [t1, t2, t3, t4] = thresholds;
   return {
@@ -52,8 +52,8 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     [
       [fx.renown(2)],
       [fx.renown(2), fx.onBuild('2W')],
-      [fx.renown(5)],
-      [fx.renown(2), fx.scorePerKind('lore', 2)],
+      [fx.renown(6)],
+      [fx.renown(4), fx.scorePerKind('lore', 2)],
     ],
   ),
   work(
@@ -75,15 +75,15 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
       [fx.renown(1), fx.onBuild('2W')],
       [fx.renown(2), fx.yield('1W')],
       [fx.renown(4)],
-      [fx.renown(8)],
+      [fx.renown(6)],
     ],
   ),
   work(
     'the-stonewrights-spire',
     "The Stonewright's Spire",
     [fx.yield('1lab')],
-    [[fx.renown(2)], [fx.renown(4)], [fx.renown(6)], [fx.renown(9)]],
-    [4, 8, 13, 19],
+    [[fx.renown(2)], [fx.renown(4)], [fx.renown(5)], [fx.renown(8)]],
+    [6, 12, 19, 27],
   ),
   work(
     'the-hall-of-echoes',
@@ -93,7 +93,7 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
       [fx.renown(1), fx.onBuild('3c')],
       [fx.renown(2), fx.discount('hall', 1)],
       [fx.renown(4)],
-      [fx.renown(2), fx.scorePerKind('hall', 2)],
+      [fx.renown(4), fx.scorePerKind('hall', 2)],
     ],
   ),
   work(
@@ -103,15 +103,15 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     [
       [fx.renown(1), fx.onBuild('1R 1P')],
       [fx.renown(2), fx.scorePerKind('holding', 1)],
+      [fx.renown(4)],
       [fx.renown(5)],
-      [fx.renown(6)],
     ],
   ),
   work(
     'the-ice-lantern',
     'The Ice Lantern',
     [fx.seasonEnd('1W 1H')],
-    [[fx.renown(2)], [fx.renown(2), fx.scoreGoods(3, 1)], [fx.renown(4)], [fx.renown(8)]],
+    [[fx.renown(2)], [fx.renown(2), fx.scoreGoods(3, 1)], [fx.renown(4)], [fx.renown(6)]],
   ),
   work(
     'the-wolf-gate',
@@ -127,7 +127,7 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
   work(
     'the-tide-mill',
     'The Tide Mill',
-    [fx.exchange('salt')],
+    [fx.exchange('salt'), fx.income(1)],
     [
       [fx.renown(1), fx.yield('1S')],
       [fx.renown(2), fx.exchange('horn')],
@@ -155,7 +155,7 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
   work(
     'the-coinwell',
     'The Coinwell',
-    [fx.spendBonus('market', '2c')],
+    [fx.spendBonus('market', '2c'), fx.income(1)],
     [[fx.renown(2)], [fx.renown(2), fx.income(1)], [fx.renown(4)], [fx.renown(8)]],
   ),
   work(
@@ -165,8 +165,8 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     [
       [fx.renown(1), fx.onBuild('3c')],
       [fx.renown(2)],
-      [fx.renown(5)],
-      [fx.renown(4), fx.scoreSets(1)],
+      [fx.renown(6)],
+      [fx.renown(5), fx.scoreSets(2)],
     ],
   ),
 ];
