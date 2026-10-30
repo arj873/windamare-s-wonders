@@ -728,6 +728,9 @@
 }
 
 /* ---- ruleset extras: banner, store, Spend band, choice rows ------------ */
+.dt-banners {
+  display: contents; /* banners sit in the top bar's row; phones give them their own line */
+}
 .dt-banner {
   font-size: 13px;
   font-weight: 700;
@@ -997,25 +1000,71 @@
       'hand hand'
       'side side';
     grid-template-rows: auto auto auto auto auto;
+    align-content: start; /* R7 #3: rows keep their content height; 100vh no longer stretches them */
     gap: 8px;
     padding: 8px;
   }
+  /*
+   * R7 #3: three short rows instead of ~250 px. Season · pick · arrow, clock, drawer; seat dots
+   * with ✓ and the status; then the Raid and Market facts (a tap explains each).
+   */
   .dt-top {
-    flex-wrap: wrap;
-    gap: 6px 10px;
-    padding-left: 60px;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'round round timer drawer'
+      'chips status status status'
+      'banners banners banners banners';
+    gap: 5px 8px;
+    min-height: 0;
+    padding: 5px 8px 6px 60px;
   }
   .dt-round {
-    font-size: 14px;
+    grid-area: round;
+    font-size: 13px;
     white-space: normal;
   }
-  .dt-status {
-    order: 3;
-    flex-basis: 100%;
+  .dt-pass-words {
+    display: none;
+  }
+  .dt-timer {
+    grid-area: timer;
+    width: 36px;
+    font-size: 11px;
+  }
+  .dt-drawer-btn {
+    grid-area: drawer;
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
   }
   .dt-chips {
-    order: 4;
+    grid-area: chips;
     flex-wrap: wrap;
+    max-width: 62vw; /* 6-7 seats wrap here rather than squeeze the status to nothing */
+    gap: 4px;
+  }
+  .dt-chip {
+    gap: 3px;
+    padding: 2px 6px;
+  }
+  .dt-chip-name {
+    display: none; /* the label says who; neighbours' names are on their panels */
+  }
+  .dt-status {
+    grid-area: status;
+    min-width: 0;
+    font-size: 13px;
+  }
+  .dt-banners {
+    grid-area: banners;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+  }
+  .dt-banner {
+    font-size: 12px;
+    padding: 2px 8px;
   }
   .dt-nb {
     padding: 8px;
@@ -1065,10 +1114,21 @@
     border-radius: 8px;
   }
   .dt-card-art,
-  .dt-card-text,
   .dt-card-kind,
   .dt-card-badge {
     display: none; /* the sheet shows the full text; number keys mean nothing on touch */
+  }
+  /* R7 #2: what the card does decides the Build, so it stays: two lines at most. */
+  .dt-card-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    flex: none;
+    padding: 3px 5px 0;
+    font-size: 11px;
+    line-height: 1.2;
   }
   .dt-monument.is-large .dt-monument-art {
     width: 72px;

@@ -390,14 +390,28 @@ export class DraftTable {
   };
 
   private top(m: TableModel): HTMLElement {
-    const pass = m.pass && ` · hands pass ${m.pass.arrow} to ${m.pass.to}`;
+    // R7 #3: phones keep only the arrow; the words are for wider screens and screen readers.
+    const pass =
+      m.pass &&
+      h(
+        'span',
+        { class: 'dt-pass' },
+        ' · ',
+        h('span', { class: 'dt-pass-words' }, 'hands pass '),
+        m.pass.arrow,
+        h('span', { class: 'dt-pass-words' }, ` to ${m.pass.to}`),
+      );
     return h(
       'header',
       { class: 'dt-top' },
       h('div', { class: 'dt-round' }, m.round, pass),
-      ...m.banner
-        .filter((b) => !b.group)
-        .map((b) => h('div', { class: 'dt-banner', attrs: tutMark(b) }, this.stat(b))),
+      h(
+        'div',
+        { class: 'dt-banners' },
+        ...m.banner
+          .filter((b) => !b.group)
+          .map((b) => h('div', { class: 'dt-banner', attrs: tutMark(b) }, this.stat(b))),
+      ),
       h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
       this.timerEl,
       // R6 #3: on phones the Table list, reveal and log live in a drawer.
@@ -430,7 +444,7 @@ export class DraftTable {
               },
             },
             h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
-            s.you ? 'You' : s.name,
+            h('span', { class: 'dt-chip-name' }, s.you ? 'You' : s.name),
             h(
               'span',
               { class: 'dt-chip-st', attrs: { 'aria-hidden': 'true' } },
