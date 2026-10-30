@@ -1,7 +1,7 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-30 00:03 · Progress: **29 / 44 cards done**
+Updated: 2026-10-30 00:33 · Progress: **31 / 44 cards done**
 
 ## In progress (10)
 
@@ -14,22 +14,15 @@ Updated: 2026-10-30 00:03 · Progress: **29 / 44 cards done**
 | D8 | design | P1 | Rule fixes: Summer price 2, R6.7 vs R17.9, deck size vs seats, re-tune plan |
 | E2 | engine | P0 | Full rules engine: done for 3-7 towns; left: Great Work choice, 2-player, Recall |
 | N1b | net | P0 | Real-engine adapter + real-engine leak test |
-| N2 | net | P0 | Fix qa Q0-N1..N4 (hello rate limit, double hello, host succession, engine throws) |
 | N1 | net | P1 | Online rooms via Cloudflare Durable Objects (port from Catan) |
+| Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
 | U3 | ui | P0 | Playable hotseat vs bots in the browser: setup -> table -> end scoring -> rematch |
 
-## In review (1)
-
-| Card | Lane | Pri | Title |
-|---|---|---|---|
-| Q0 | qa | P0 | Red-team audit: hidden info (viewFor), net session cheats, determinism |
-
-## Ready (3)
+## Ready (2)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | B4 | bots | P0 | First sim report on the real ruleset -> docs/BALANCE.md |
-| Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
 | U2 | ui | P1 | Fix R4 red-team: O4 placeholders + popover, O12 score tally |
 
 ## Backlog (1)
@@ -38,7 +31,7 @@ Updated: 2026-10-30 00:03 · Progress: **29 / 44 cards done**
 |---|---|---|---|
 | D7 | design | P2 | First-game option (Honours and upgrades off) after sim numbers |
 
-## Done (29)
+## Done (31)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
@@ -57,6 +50,7 @@ Updated: 2026-10-30 00:03 · Progress: **29 / 44 cards done**
 | E1b | engine | P1 | Contract changes E2 needs from RULES.md (pair picks, 2p burn, labour track, Raids, Honours) |
 | H1 | human | P0 | Approve the ruleset (D2-D4) before full rules engine (E2) starts |
 | N0 | net | P0 | Multiplayer plan: port Catan rooms, add per-seat hidden-hand redaction -> docs/MULTIPLAYER.md |
+| N2 | net | P0 | Fix qa Q0-N1..N4 (hello rate limit, double hello, host succession, engine throws) |
 | P1 | platform | P0 | Scaffold the Catan stack (pnpm, TS strict, Vite, Vitest, ESLint, Prettier, Pixi v8) + hello screen |
 | P2 | platform | P0 | scripts/gate.sh (typecheck+lint+test, exit code) + GitHub Actions CI |
 | P5 | platform | P0 | Deps for art (fonts, tokens import, art-dev.html under vite) and net (wrangler, workers-types) |
@@ -65,6 +59,7 @@ Updated: 2026-10-30 00:03 · Progress: **29 / 44 cards done**
 | P6 | platform | P1 | Verify ci.yml on GitHub and fix |
 | P7 | platform | P1 | Import chrome.css next to tokens.css |
 | P8 | platform | P2 | pnpm sim script for bots |
+| Q0 | qa | P0 | Red-team audit: hidden info (viewFor), net session cheats, determinism |
 | R1 | research | P0 | Genre + rules research: drafting/tableau games, mechanics, balance lessons -> docs/design/RESEARCH.md |
 | R4 | research | P0 | Red-team originality + design-risk review of RULES/CARDS |
 | R2 | research | P1 | Online drafting UX survey (BGA, colonist.io feel, timers, reconnect) -> docs/design/research/online-ux.md |
