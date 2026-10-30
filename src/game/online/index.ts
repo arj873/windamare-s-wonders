@@ -10,6 +10,7 @@
  *
  * The lower-level `onlineLauncher` (mount anywhere, results as promises) is what dev.ts uses.
  */
+import { sfx } from '../../audio';
 import type { DraftEngine } from '../../engine';
 import { parseRoomCode } from '../../net/transport';
 import { showToast, type ToastKind } from '../../ui';
@@ -20,6 +21,7 @@ import type { RevealHook } from '../fx';
 import type { GameBinding } from '../play';
 import { OnlineApp, type OnlineEnv } from './app';
 import { pickBackend, realClock, tokenStoreFor, type Backend } from './backend';
+import type { SoundSwitch } from './menu';
 
 export { OnlineApp, type OnlineEnv } from './app';
 export { NetPlay, presence, roomLooks } from './netPlay';
@@ -29,6 +31,10 @@ export interface OnlineLaunchOptions<S, T> {
   engine: DraftEngine<S, T>;
   present: Presenter<S, T>;
   fx?: RevealHook<S, T>;
+  /** The binding's help (How to play, All cards, tooltips). */
+  help?: GameBinding<S, T>['help'];
+  /** Sound on/off in the ☰ menu. Default: the page's `sfx`. */
+  sound?: SoundSwitch;
   /** Put the room visit on screen (e.g. `root.replaceChildren(el)`). */
   mount(el: HTMLElement): void;
   /** Leave the room: show the home screen again. */
@@ -50,6 +56,14 @@ export interface OnlineLauncher<S, T> {
   /** Leave the current visit's screens (going home). */
   close(): void;
 }
+
+/** The page's sound engine as the menu's on/off switch. */
+const pageSound: SoundSwitch = {
+  get muted() {
+    return sfx.settings.muted;
+  },
+  setMuted: (muted) => sfx.setMuted(muted),
+};
 
 /** `?room=CODE` (an invite link), or null. */
 export function roomFromUrl(search: string): string | null {
@@ -74,6 +88,8 @@ export function onlineLauncher<S, T>(opts: OnlineLaunchOptions<S, T>): OnlineLau
     engine: opts.engine,
     present: opts.present,
     ...(opts.fx ? { fx: opts.fx } : {}),
+    ...(opts.help ? { help: opts.help } : {}),
+    sound: opts.sound ?? pageSound,
     tokens: tokenStoreFor(b.kind),
     clock: realClock,
     name: () => loadPref(storage, NAME_KEY) ?? '',
@@ -156,6 +172,7 @@ export function bootOnline<S, T>(
     engine: binding.engine,
     present: binding.present,
     ...(binding.fx ? { fx: binding.fx } : {}),
+    ...(binding.help ? { help: binding.help } : {}),
     ...(opts.backend ? { backend: opts.backend } : {}),
     toast,
     mount: (el) => target?.replaceChildren(el),

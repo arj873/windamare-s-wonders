@@ -16,12 +16,20 @@ import { ConnectionBanner } from '../../ui/online/banner';
 import { ChatPanel, ReactionLayer } from '../../ui/online/chat';
 import { JoinCard, noticeScreen } from '../../ui/online/join';
 import { LobbyScreen } from '../../ui/online/lobby';
-import { inviteUrl, seatHex, type SeatRange } from '../../ui/online/lobbyModel';
+import {
+  inviteUrl,
+  seatHex,
+  withConfig,
+  withDefaultLevels,
+  type SeatRange,
+} from '../../ui/online/lobbyModel';
 import { errorText, fatalText } from '../../ui/online/messages';
 import { h } from '../../ui/dom';
 import type { Presenter } from '../../ui/table/present';
 import type { RevealHook } from '../fx';
+import type { GameBinding } from '../play';
 import type { Backend } from './backend';
+import { onlineMenu, type SoundSwitch } from './menu';
 import { NetPlay } from './netPlay';
 
 export interface OnlineEnv<S, T> {
@@ -41,6 +49,10 @@ export interface OnlineEnv<S, T> {
   /** Leave the room: back to the home screen. */
   goHome(): void;
   fx?: RevealHook<S, T>;
+  /** The tutorial lane's help (tooltips, '?' and How to play, All cards): the binding's. */
+  help?: GameBinding<S, T>['help'];
+  /** Sound on/off for the ☰ menu (the page's `sfx`); absent = no Sound item. */
+  sound?: SoundSwitch;
   /** Reconnect jitter (default Math.random); keep-alive ping (default the client's). */
   random?: () => number;
   pingMs?: number;
@@ -64,6 +76,10 @@ export class OnlineApp<S, T> {
   /** Watch with a nickname in the lobby: leave the seat net gives on the first name. */
   private standUpOnce = false;
   private readonly onOnline = () => this.client?.retryNow();
+  /** Tooltips, the '?' key and the rules overlay, for every screen of the visit. */
+  private readonly help: { openRules(): void; destroy(): void } | null;
+  /** Host: fill the bot levels with the online default once (net's own default is Easy). */
+  private levelsFilled = false;
 
   constructor(
     private readonly env: OnlineEnv<S, T>,
@@ -71,6 +87,13 @@ export class OnlineApp<S, T> {
   ) {
     this.screenBox = h('div', { class: 'ol-screens' });
     this.element = h('div', { class: 'ol-app', attrs: { 'data-room': roomId } }, this.screenBox);
+    this.help = env.help?.attach(this.element) ?? null;
+    const help = this.help;
+    const corner = onlineMenu({
+      ...(help ? { openRules: () => help.openRules() } : {}),
+      ...(env.sound ? { sound: env.sound } : {}),
+    });
+    this.element.append(corner.element);
   }
 
   /** Create a room as its host and go straight in. Throws when the server cannot be reached. */
@@ -225,6 +248,7 @@ export class OnlineApp<S, T> {
     this.lobby = null;
     this.banner?.destroy();
     this.reactions?.destroy();
+    this.help?.destroy();
     this.element.remove();
   }
 
@@ -259,6 +283,7 @@ export class OnlineApp<S, T> {
       this.chat?.setEntries(c.chat);
       this.syncChatInput();
       this.maybeStandUp();
+      this.maybeFillLevels();
       return;
     }
     if (c.status === 'reconnecting') {
@@ -342,16 +367,26 @@ export class OnlineApp<S, T> {
       }
       this.lobby.update(room, me);
       this.show(this.lobby.element);
+      this.maybeFillLevels();
       return;
     }
     // playing / over
     if (!this.play) {
+      const help = this.env.help;
       this.play = new NetPlay({
         client: c,
         engine: this.env.engine,
         present: this.env.present,
         ...(this.env.fx ? { fx: this.env.fx } : {}),
         ...(this.env.every ? { every: this.env.every } : {}),
+        ...(help
+          ? {
+              cards: () => {
+                const g = c.game;
+                if (g) help.openCards(g.view);
+              },
+            }
+          : {}),
         onLeave: () => this.leave(),
         onSendFailed: () => this.sendOrWarn(false),
       });
@@ -359,6 +394,20 @@ export class OnlineApp<S, T> {
       this.play.start();
     }
     this.show(this.play.element);
+  }
+
+  /**
+   * Online bots default to Normal, as in hotseat (net's default is Easy): a host whose room has
+   * no levels yet fills them once. Like the stand-up below, this waits until the client is open.
+   */
+  private maybeFillLevels(): void {
+    const c = this.client;
+    const room = c?.room;
+    if (this.levelsFilled || !c?.isHost || room?.phase !== 'lobby' || room.config.botLevels) return;
+    const config = withDefaultLevels(room.config);
+    if (!c.configure(config)) return;
+    this.levelsFilled = true;
+    this.lobby?.update(withConfig(room, config), c.you?.member ?? null);
   }
 
   /**
