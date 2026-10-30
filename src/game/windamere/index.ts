@@ -2,6 +2,12 @@
 import { SEASONS } from '../../content/windamere';
 import { FIRST_GAME_OPTION, type WwSeat, type WwTable } from '../../engine';
 import { attachHelp, openCardList } from '../../ui/help';
+import {
+  defaultTutorialStorage,
+  offerTutorial,
+  TUTORIAL_OPTIONS,
+  TutorialCoach,
+} from '../../ui/tutorial';
 import type { GameBinding } from '../play';
 import { windamere } from './content';
 import { windamereClock } from './clock';
@@ -28,6 +34,23 @@ export function windamereBinding(
     firstGame: {
       options: { [FIRST_GAME_OPTION]: true },
       hint: 'For someone new: no Honours, one Great Work dealt to each town (no choice), no upgrades, and a Relaxed clock.',
+    },
+    // Tutorial lane (src/ui/tutorial): the coach over a seeded First game against 3 Easy bots.
+    tutorial: {
+      options: TUTORIAL_OPTIONS,
+      create: (root, host) => {
+        const store = defaultTutorialStorage();
+        const coach = new TutorialCoach(root, host, store);
+        return {
+          panel: coach.panel,
+          begin: () => coach.begin(),
+          update: () => coach.update(),
+          hide: () => coach.hide(),
+          offer: (parent, returning, onLearn) => {
+            offerTutorial(parent, store, returning, onLearn);
+          },
+        };
+      },
     },
     // Tutorial lane (src/ui/help): tooltips, rules overlay, the card list on the current Season.
     help: {

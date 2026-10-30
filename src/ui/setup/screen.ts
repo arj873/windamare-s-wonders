@@ -181,7 +181,7 @@ export class SetupScreen {
           'button',
           {
             class: 'btn su-learn',
-            title: 'A guided first game against two easy bots',
+            title: 'A guided first game against three Easy bots',
             attrs: { 'data-k': 'learn' },
             on: { click: () => this.opts.onTutorial?.() },
           },

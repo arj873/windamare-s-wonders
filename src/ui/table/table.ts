@@ -77,6 +77,11 @@ export function clockText(ms: number): string {
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 }
 
+/** The tutorial coach's focus mark (tutorial.css) on the Raid banner fact. */
+function tutMark(b: SeatStat): Record<string, string> {
+  return b.term === 'raid' ? { 'data-tut': 'raid' } : {};
+}
+
 export class DraftTable {
   readonly element: HTMLElement;
   /** DOM lookups and an overlay layer for the fx lane's reveal (anchors.ts, UX.md §19). */
@@ -382,7 +387,7 @@ export class DraftTable {
       h('div', { class: 'dt-round' }, m.round, pass),
       ...m.banner
         .filter((b) => !b.group)
-        .map((b) => h('div', { class: 'dt-banner' }, this.stat(b))),
+        .map((b) => h('div', { class: 'dt-banner', attrs: tutMark(b) }, this.stat(b))),
       h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
       this.timerEl,
       // R6 #3: on phones the Table list, reveal and log live in a drawer.
@@ -515,6 +520,7 @@ export class DraftTable {
         attrs: {
           'aria-label': `${side === 'left' ? 'Left' : 'Right'} neighbour: ${s.name}`,
           'data-seat': String(s.seat),
+          'data-tut': 'neighbours',
         },
       },
       h(
@@ -554,7 +560,10 @@ export class DraftTable {
     if (!me) return h('section', { class: 'dt-town' }, h('p', { class: 'muted' }, 'Watching'));
     return h(
       'section',
-      { class: 'dt-town', attrs: { 'aria-label': 'Your town', 'data-seat': String(me.seat) } },
+      {
+        class: 'dt-town',
+        attrs: { 'aria-label': 'Your town', 'data-seat': String(me.seat), 'data-tut': 'town' },
+      },
       h(
         'header',
         { class: 'dt-town-head' },
@@ -795,7 +804,11 @@ export class DraftTable {
       'div',
       {
         class: `dt-monument is-${size}`,
-        attrs: { 'aria-label': `${mo.name}: ${mo.tiers} of ${mo.total} tiers. ${mo.progress}` },
+        attrs: {
+          'aria-label': `${mo.name}: ${mo.tiers} of ${mo.total} tiers. ${mo.progress}`,
+          // The tutorial coach points at your own Great Work (the large one, in your town).
+          ...(size === 'large' ? { 'data-tut': 'monument' } : {}),
+        },
       },
       mo.art && this.art(mo.art, 'dt-monument-art', mo.tiers),
       h(
@@ -839,7 +852,10 @@ export class DraftTable {
     );
     return h(
       'section',
-      { class: `dt-hand${m.staged ? ' is-locked' : ''}`, attrs: { 'aria-label': 'Your hand' } },
+      {
+        class: `dt-hand${m.staged ? ' is-locked' : ''}`,
+        attrs: { 'aria-label': 'Your hand', 'data-tut': 'hand' },
+      },
       head,
       h(
         'div',
@@ -1026,7 +1042,7 @@ export class DraftTable {
     const chosen = p.answers.find((a) => a.chosen);
     return h(
       'section',
-      { class: 'dt-hand dt-prompt', attrs: { 'aria-label': p.title } },
+      { class: 'dt-hand dt-prompt', attrs: { 'aria-label': p.title, 'data-tut': 'hand' } },
       h(
         'header',
         { class: 'dt-hand-head' },
@@ -1138,7 +1154,7 @@ export class DraftTable {
         ),
         ...m.banner
           .filter((b) => b.group === 'side')
-          .map((b) => h('p', { class: 'dt-side-fact' }, this.stat(b))),
+          .map((b) => h('p', { class: 'dt-side-fact', attrs: tutMark(b) }, this.stat(b))),
       ),
       m.reveal &&
         h(

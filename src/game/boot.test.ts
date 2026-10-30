@@ -222,6 +222,51 @@ describe('boot', () => {
     document.querySelectorAll('.ww-scrim').forEach((s) => s.remove());
   });
 
+  it('Learn to play: the coached First game vs 3 Easy bots, paced, kept off other screens', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    // First visit: the one-time card, plus the home button.
+    expect(root.querySelector('[data-k="learn"]')).not.toBeNull();
+    click(root, '[data-k="tut-hint-learn"]');
+    const s = app.play!.game.state;
+    expect(s.config.options).toEqual({ firstGame: true });
+    expect(s.seats.map((x) => x.name)).toEqual(['You', 'Bot 1', 'Bot 2', 'Bot 3']);
+    const panel = root.querySelector<HTMLElement>('.tut-panel')!;
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).not.toBe('');
+    for (const part of ['hand', 'town', 'monument', 'raid'])
+      expect(root.querySelector(`[data-tut="${part}"]`), part).not.toBeNull();
+    expect(root.querySelectorAll('[data-tut="neighbours"]')).toHaveLength(2);
+    // The coach slows bots to TUTORIAL_PACE_MS even at Instant speed.
+    vi.advanceTimersByTime(100);
+    expect(app.play!.game.state.seats[1]!.pick).toBeNull();
+    vi.advanceTimersByTime(5000);
+    expect(app.play!.game.state.seats[1]!.pick).not.toBeNull();
+    // Setup over the game hides the panel; Back brings it back.
+    app.menu.setOpen(true);
+    [...root.querySelectorAll<HTMLElement>('.ww-menu-item')]
+      .find((b) => b.textContent?.startsWith('New game'))!
+      .click();
+    expect(root.querySelector('.setup')).not.toBeNull();
+    expect(panel.hidden).toBe(true);
+    click(root, '[data-k="back"]');
+    expect(panel.isConnected && !panel.hidden).toBe(true);
+    // Any other game ends the run.
+    app.menu.setOpen(true);
+    [...root.querySelectorAll<HTMLElement>('.ww-menu-item')]
+      .find((b) => b.textContent?.startsWith('New game'))!
+      .click();
+    click(root, '[data-k="start"]');
+    expect(panel.hidden).toBe(true);
+    app.play?.dispose();
+    // The card shows once.
+    const again = mount();
+    boot(again, { game: windamereBinding() });
+    expect(again.querySelector('.tut-hint')).toBeNull();
+  });
+
   it('maps setup bot levels onto the bots lane (Normal = level 2, Hard = level 3)', () => {
     expect(BOT_LEVEL).toEqual({ easy: 'easy', normal: 'medium', hard: 'hard' });
   });

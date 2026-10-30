@@ -1,7 +1,7 @@
 /**
  * The home screen (UX.md §4; port of catan's ui/online/home.ts): one card over art's title key
  * art: wordmark, nickname, Play vs bots. Play online, Join with code and Learn to play show only
- * when a handler is given (net's lobby and the tutorial are not wired yet), so no button here
+ * when a handler is given (boot wires the online lane and the tutorial coach), so no button here
  * ever does nothing.
  */
 import { h } from '../dom';
