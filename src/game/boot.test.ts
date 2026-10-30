@@ -184,6 +184,19 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
+  it('shows Play online and Join on the home screen when the online lane plugs in', () => {
+    const root = mount();
+    const create = vi.fn();
+    const join = vi.fn();
+    boot(root, { online: { create, join } });
+    root.querySelector<HTMLInputElement>('[data-k="nickname"]')!.value = 'Ana';
+    click(root, '[data-k="online"]');
+    expect(create).toHaveBeenCalledWith('Ana', root);
+    root.querySelector<HTMLInputElement>('[data-k="code"]')!.value = 'k7qf';
+    click(root, '[data-k="join"]');
+    expect(join).toHaveBeenCalledWith('K7QF', 'Ana', root);
+  });
+
   it('refuses a setup the ruleset cannot seat, with a notice', () => {
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });
