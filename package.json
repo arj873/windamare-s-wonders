@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
+    "sim": "tsx scripts/sim.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
