@@ -15,19 +15,19 @@ room, same project as the static site. **No deploy from this lane** (needs the h
 
 ## 1. What carries over as-is (game-agnostic)
 
-| Piece (Catan path) | Keep | Notes |
-| --- | --- | --- |
-| `net/guard.ts` | yes | tiny validators |
-| `net/transport.ts`, `net/loopback.ts`, `net/testHarness.ts` (`LocalNet`, fake clock) | yes | in-memory transport for tests and for client tests |
-| `net/client.ts` (`RoomClient`: reconnect, token storage, ping) | yes, minus Catan view types | storage key becomes `windamere.mp.token.<room>` |
-| `net/api.ts` (paths, 6-char room codes, alphabet without 0/O/1/I) | yes | |
-| `server/worker.ts`, `router.ts`, `origin.ts`, `limits.ts` | yes | origin check, per-IP caps, per-socket frame caps |
-| `server/room.ts` (`RoomCore`: DO lifecycle, hibernation restore, alarm = `tick`, `reconcile`) | yes | |
-| `server/testRuntime.ts` (`FakeRuntime`) | yes | |
-| `wrangler.jsonc` | yes | new `name`, SQLite DO class `Room`, assets `dist/`, `run_worker_first: ["/api/*","/ws/*"]` |
-| Session shell inside `session.ts`: members, tokens, host + succession, kick, chat, reactions, rate limits, grace/away, idle expiry, `snapshot/restore`, `nextWakeAt`, `isExpired` | yes | roughly 60% of the 1183 lines |
-| Protocol envelope: `{v, type}`, `hello/welcome/room/chat/react/sync/error`, close codes 4000–4004, `ping`→`pong` | yes | |
-| Profile messages (avatar, pieceStyle) | **defer** | cosmetic, not in N1 |
+| Piece (Catan path)                                                                                                                                                                | Keep                        | Notes                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------ |
+| `net/guard.ts`                                                                                                                                                                    | yes                         | tiny validators                                                                            |
+| `net/transport.ts`, `net/loopback.ts`, `net/testHarness.ts` (`LocalNet`, fake clock)                                                                                              | yes                         | in-memory transport for tests and for client tests                                         |
+| `net/client.ts` (`RoomClient`: reconnect, token storage, ping)                                                                                                                    | yes, minus Catan view types | storage key becomes `windamere.mp.token.<room>`                                            |
+| `net/api.ts` (paths, 6-char room codes, alphabet without 0/O/1/I)                                                                                                                 | yes                         |                                                                                            |
+| `server/worker.ts`, `router.ts`, `origin.ts`, `limits.ts`                                                                                                                         | yes                         | origin check, per-IP caps, per-socket frame caps                                           |
+| `server/room.ts` (`RoomCore`: DO lifecycle, hibernation restore, alarm = `tick`, `reconcile`)                                                                                     | yes                         |                                                                                            |
+| `server/testRuntime.ts` (`FakeRuntime`)                                                                                                                                           | yes                         |                                                                                            |
+| `wrangler.jsonc`                                                                                                                                                                  | yes                         | new `name`, SQLite DO class `Room`, assets `dist/`, `run_worker_first: ["/api/*","/ws/*"]` |
+| Session shell inside `session.ts`: members, tokens, host + succession, kick, chat, reactions, rate limits, grace/away, idle expiry, `snapshot/restore`, `nextWakeAt`, `isExpired` | yes                         | roughly 60% of the 1183 lines                                                              |
+| Protocol envelope: `{v, type}`, `hello/welcome/room/chat/react/sync/error`, close codes 4000–4004, `ping`→`pong`                                                                  | yes                         |                                                                                            |
+| Profile messages (avatar, pieceStyle)                                                                                                                                             | **defer**                   | cosmetic, not in N1                                                                        |
 
 Rules that stay: the server is the authority, clients send intents, never see full state, `seq`
 on every intent, no `Date`/`Math.random`/timers inside `src/net` (time enters through `now`),
@@ -41,12 +41,12 @@ Catan is turn-based: one `intent` mutates state, everyone gets a new view. Draft
 simultaneous: every seat picks a card from its hand in the same round, picks are hidden until all
 are in, then revealed together and hands pass.
 
-Server model (ASSUMES the engine splits a round into *submit* and *resolve*; see §6):
+Server model (ASSUMES the engine splits a round into _submit_ and _resolve_; see §6):
 
 1. Round starts. Each seated human (and each bot) owes one **pick**.
-2. A `submit` message is stored by the session as **pending** for that seat. It is *not* applied
+2. A `submit` message is stored by the session as **pending** for that seat. It is _not_ applied
    to the game state yet. The sender gets an `ack`; nobody else learns what was picked, only
-   *that* seat N has submitted (`submitted: boolean[]` in the view).
+   _that_ seat N has submitted (`submitted: boolean[]` in the view).
 3. A seat may **change** its pick until the round resolves (guess: yes, matches colonist-style
    feel; if RULES.md says picks lock, add `locked` and reject with `already_submitted`).
    `withdraw` clears it.
@@ -68,7 +68,7 @@ them) and never appear in any `viewFor` output except the owner's own seat.
   legal pick, which is deterministic). Chat line "Ann ran out of time" once per seat per round.
 - Disconnected (`away`) seats keep their clock but are not waited for: with the timer on they
   auto-pick at expiry like anyone else. **Optional rule to decide** (Needs: design): once all
-  *connected humans* have submitted, resolve immediately instead of waiting for away seats, if
+  _connected humans_ have submitted, resolve immediately instead of waiting for away seats, if
   the away seat has no pick. Without that, one dropped player stalls each round to the full
   clock for up to `graceMs` (60 s), then a bot takes the seat and picks after `botDelayMs`.
   Recommendation: resolve early for away seats with an auto-pick. Cheap, and it keeps the table
@@ -81,7 +81,7 @@ them) and never appear in any `viewFor` output except the owner's own seat.
 
 ### 2.2 Hidden hands — per-seat redaction
 
-Catan's `viewFor` masks resources and dev cards of *other* players. Here the secret is bigger:
+Catan's `viewFor` masks resources and dev cards of _other_ players. Here the secret is bigger:
 the **hand being drafted** (and hands queued behind it), pending picks, decks.
 
 Required from engine (ASSUMES; confirm in `docs/ENGINE.md`):
@@ -92,16 +92,16 @@ viewFor(state: GameState, viewer: SeatId | 'spectator'): GameView
 
 What a view must contain / hide (this is my requirement list; engine decides the shape):
 
-| Secret | Viewer sees | Everyone else sees |
-| --- | --- | --- |
-| current hand of seat S | cards in own hand | `handCount[S]` only |
-| hands of other seats (incl. the one about to be passed to me) | nothing, until it is passed to me | counts |
-| pending (unrevealed) picks | own pick only | `submitted[seat]` flag |
-| deck / age stacks, shuffle seed, RNG | nothing | `deck.length` per stack |
-| previous picks of passed-on hands | revealed picks go to the tableau, public | public |
-| bot internal state | — | — |
+| Secret                                                        | Viewer sees                              | Everyone else sees      |
+| ------------------------------------------------------------- | ---------------------------------------- | ----------------------- |
+| current hand of seat S                                        | cards in own hand                        | `handCount[S]` only     |
+| hands of other seats (incl. the one about to be passed to me) | nothing, until it is passed to me        | counts                  |
+| pending (unrevealed) picks                                    | own pick only                            | `submitted[seat]` flag  |
+| deck / age stacks, shuffle seed, RNG                          | nothing                                  | `deck.length` per stack |
+| previous picks of passed-on hands                             | revealed picks go to the tableau, public | public                  |
+| bot internal state                                            | —                                        | —                       |
 
-Genre note: in a drafting game a card you have *seen* and passed is still information about
+Genre note: in a drafting game a card you have _seen_ and passed is still information about
 what neighbours hold. That is legal under the rules and not a leak. What must not leak is
 anything an opponent could not learn at a real table.
 
@@ -109,12 +109,13 @@ Spectators: masked like an opponent for **every** seat (no hands at all), pendin
 Game over: tableaus public (already); unrevealed hands/decks/seed stay hidden.
 
 Proof requirement (carry over Catan's two tests):
+
 1. unit: `viewFor` output contains no secret field for any viewer;
 2. property: over N simulated bot games, a view does **not change** when only secrets change
    (re-shuffle other hands/decks/seed/pending picks of other seats). This is the test that catches
    the subtle leaks; it lives in `*.audit.test.ts` territory (qa) and `src/net` tests (net).
-Plus a **wire canary test** in `src/net`: serialise every outbound frame of a full bot game to
-each seat and assert none contains a card id that is only in another seat's hand/pending picks.
+   Plus a **wire canary test** in `src/net`: serialise every outbound frame of a full bot game to
+   each seat and assert none contains a card id that is only in another seat's hand/pending picks.
 
 `legal` (the actions the HUD enables) is computed server-side from the full state, filtered to
 the viewer, as in Catan. For drafting: `legal` = the picks and play modes (build / discard for
@@ -131,7 +132,7 @@ Catan reconnect restores a view; here a reconnect can land in the middle of a ro
 - The pending pick stays valid across disconnect. A pick submitted, then socket drop within the
   round, is **kept** (not discarded) and still resolves with the round.
 - Reconnect after the grace period (a bot played for the seat): the bot's pick for rounds that
-  already resolved stands; if the *current* round has a bot-made pending pick, the returning
+  already resolved stands; if the _current_ round has a bot-made pending pick, the returning
   player sees it and may change it (unless picks lock), then continues. The seat flips back to
   `human`. System chat line as in Catan.
 - Replaced tab (`replaced`, 4003), kicked (4002), expired (4004): unchanged.
@@ -145,19 +146,19 @@ Catan reconnect restores a view; here a reconnect can land in the middle of a ro
 
 Client → server, **new or changed**:
 
-| type | fields | who / when | errors |
-| --- | --- | --- | --- |
-| `submit` | `round: number`, `pick: Pick` | seated, playing, round open | wrong_phase, not_seated, stale_round, illegal_action |
-| `withdraw` | `round` | seated, playing | wrong_phase, stale_round, locked (if picks lock) |
-| `intent` | `action: Action`, `seq?` | **non-draft** actions only, if the engine has any (e.g. end-of-age choices, a monument stage with a decision) | as Catan |
+| type       | fields                        | who / when                                                                                                    | errors                                               |
+| ---------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `submit`   | `round: number`, `pick: Pick` | seated, playing, round open                                                                                   | wrong_phase, not_seated, stale_round, illegal_action |
+| `withdraw` | `round`                       | seated, playing                                                                                               | wrong_phase, stale_round, locked (if picks lock)     |
+| `intent`   | `action: Action`, `seq?`      | **non-draft** actions only, if the engine has any (e.g. end-of-age choices, a monument stage with a decision) | as Catan                                             |
 
 Server → client, **new or changed**:
 
-| type | fields | sent |
-| --- | --- | --- |
-| `game` | `seq`, `round`, `view: GameView`, `legal: Pick[]`, `timer: {kind:'round', remainingMs, totalMs}`, `submitted: boolean[]`, `myPick: Pick \| null` | to each member after every visible change, own view only |
-| `reveal` | `round`, `picks: {seat, pick}[]` | optional: lets the UI animate the simultaneous reveal; contents also appear in the next `game` view. Skip in N1 if the log already carries it |
-| `ack` | `ref: 'submit'\|'withdraw'`, `round` | to sender |
+| type     | fields                                                                                                                                           | sent                                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `game`   | `seq`, `round`, `view: GameView`, `legal: Pick[]`, `timer: {kind:'round', remainingMs, totalMs}`, `submitted: boolean[]`, `myPick: Pick \| null` | to each member after every visible change, own view only                                                                                      |
+| `reveal` | `round`, `picks: {seat, pick}[]`                                                                                                                 | optional: lets the UI animate the simultaneous reveal; contents also appear in the next `game` view. Skip in N1 if the log already carries it |
+| `ack`    | `ref: 'submit'\|'withdraw'`, `round`                                                                                                             | to sender                                                                                                                                     |
 
 Unchanged from Catan: `hello welcome room chat reaction error sync`, `setName takeSeat leaveSeat
 setColor setBotLevel configure kick start rematch chat react`, error and close codes (add
@@ -197,22 +198,23 @@ scripts/e2e-server.*        later; the script lives outside my lane (platform ow
 
 Guesses; Catan's M1+M2 are the yardstick. **Untested.**
 
-| Step | Estimate | Blocked by |
-| --- | --- | --- |
-| Copy + rename, get Catan-shaped session compiling with a stub engine | 0.5 day | platform scaffold on main (tsconfig, lint, vitest) |
-| Round model: pending picks, clock, auto-pick, bots (`round.ts` + tests) | 1 day | engine API for submit/resolve, `defaultPick`, bots interface |
-| Protocol + strict parsers for picks | 0.5 day | engine `Pick`/`Action` types |
-| Per-seat view wiring + leak tests (unit, property, wire canary) | 1 day | engine `viewFor` |
-| Reconnect mid-round + restore tests | 0.5 day | — |
-| Server adapter port (`RoomCore`, router, limits) + tests | 0.5 day | — |
-| Docs "as built" | 0.25 day | — |
-| **Total N1** | **≈ 4 days of agent time** | |
+| Step                                                                    | Estimate                   | Blocked by                                                   |
+| ----------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------ |
+| Copy + rename, get Catan-shaped session compiling with a stub engine    | 0.5 day                    | platform scaffold on main (tsconfig, lint, vitest)           |
+| Round model: pending picks, clock, auto-pick, bots (`round.ts` + tests) | 1 day                      | engine API for submit/resolve, `defaultPick`, bots interface |
+| Protocol + strict parsers for picks                                     | 0.5 day                    | engine `Pick`/`Action` types                                 |
+| Per-seat view wiring + leak tests (unit, property, wire canary)         | 1 day                      | engine `viewFor`                                             |
+| Reconnect mid-round + restore tests                                     | 0.5 day                    | —                                                            |
+| Server adapter port (`RoomCore`, router, limits) + tests                | 0.5 day                    | —                                                            |
+| Docs "as built"                                                         | 0.25 day                   | —                                                            |
+| **Total N1**                                                            | **≈ 4 days of agent time** |                                                              |
 
 Client side (RoomClient glue, lobby, "waiting for N players" UI) is **ui lane**, not counted.
 
 ## 6. Requirements on other lanes (copy into `Needs:`)
 
 **Engine** (`docs/ENGINE.md`):
+
 1. `viewFor(state, seat | 'spectator')` per §2.2, with the leak property test.
 2. Simultaneous resolution API, e.g. `submitPick(state, seat, pick) → state'` that stores a hidden
    pending pick, and `resolveRound(state)` that applies all picks, reveals, passes hands. Or one
