@@ -1,0 +1,5 @@
+{
+  "name": "halls-down",
+  "hypothesis": "Level 2 (which reads Renown) makes Halls the winner's largest source in 49-69% of games and Town (R12.2a) in 75-88% (S1 <= 55%). Every Hall -1 Renown (2-9 -> 1-8, 14 cards) cuts Hall's lead and moves level-2 bots toward other kinds. Level 1 ignores Renown, so there it only moves the score sheet.",
+  "cardRenown": { "delta": -1, "kinds": ["hall"] }
+}

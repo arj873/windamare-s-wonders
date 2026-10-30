@@ -8,6 +8,8 @@ import { readFileSync } from 'node:fs';
 interface Doc {
   overlay: string | null;
   name: string;
+  /** Bot level of sections 1-2 (absent = 1, files written before --level). */
+  level?: number;
   games: number;
   seed: number;
   seats: Record<string, Record<string, number | string>>;
@@ -103,7 +105,11 @@ const seatsOf = (d: Doc) => Object.keys(d.seats).sort((a, b) => Number(a) - Numb
 for (const p of expPaths) {
   const exp = load(p);
   const seats = seatsOf(exp).filter((n) => base.seats[n]);
-  console.log(`### ${exp.name} (${exp.overlay ?? 'no overlay'})`);
+  console.log(`### ${exp.name}, level ${exp.level ?? 1} bots (${exp.overlay ?? 'no overlay'})`);
+  if ((exp.level ?? 1) !== (base.level ?? 1))
+    console.log(
+      `\n(warning: baseline is level ${base.level ?? 1}, experiment level ${exp.level ?? 1})`,
+    );
   console.log();
   if (exp.games !== base.games || exp.seed !== base.seed)
     console.log(

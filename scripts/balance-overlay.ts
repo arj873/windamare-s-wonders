@@ -11,6 +11,7 @@
  *   cardSpend: { labourDelta?, refund?, coinsDelta?, kinds?, seasons? } — every matching card's
  *     Spend band with labour gets `labourDelta` labour (floored at 0) and `refund` coins
  *     (default 1) per labour removed; every matching band gets `coinsDelta` coins
+ *   cardRenown: { delta, kinds?, seasons? } — printed `renown` of matching cards + delta (min 1)
  *   raids: { "<id>": { strength } }
  */
 import { readFileSync } from 'node:fs';
@@ -54,6 +55,8 @@ export interface Overlay {
     kinds?: string[];
     seasons?: string[];
   };
+  /** Printed `renown` of every matching card + `delta`, floored at 1 (cards with none untouched). */
+  cardRenown?: { delta: number; kinds?: string[]; seasons?: string[] };
   raids?: Record<string, { strength: number }>;
 }
 
@@ -148,6 +151,17 @@ export function applyOverlay(base: WwContent, ov: Overlay): WwContent {
       if (coins > 0) spend.coins = coins;
       else delete spend.coins;
       out = { ...out, spend };
+    }
+    const cr = ov.cardRenown;
+    if (
+      cr &&
+      (!cr.kinds || cr.kinds.includes(c.kind)) &&
+      (!cr.seasons || cr.seasons.includes(c.season))
+    ) {
+      const effects = out.effects.map((e) =>
+        e.type === 'renown' ? { ...e, amount: Math.max(1, (e.amount as number) + cr.delta) } : e,
+      );
+      out = { ...out, effects };
     }
     return out;
   });

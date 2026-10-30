@@ -62,6 +62,20 @@ describe('balance overlays', () => {
     }
   });
 
+  it('shifts printed Renown on the chosen kinds, never below 1', () => {
+    const c = applyOverlay(base, { cardRenown: { delta: -3, kinds: ['hall'] } });
+    for (const [i, card] of c.cards.entries()) {
+      const was = base.cards[i]?.effects ?? [];
+      if (card.kind !== 'hall') expect(card.effects).toEqual(was);
+      else
+        expect(card.effects).toEqual(
+          was.map((e) =>
+            e.type === 'renown' ? { ...e, amount: Math.max(1, (e.amount as number) - 3) } : e,
+          ),
+        );
+    }
+  });
+
   it('rejects unknown ids', () => {
     expect(() => applyOverlay(base, { greatWorks: { 'no-such-work': {} } })).toThrow(/unknown/);
     expect(() => applyOverlay(base, { cards: { 'no-such-card': {} } })).toThrow(/unknown/);

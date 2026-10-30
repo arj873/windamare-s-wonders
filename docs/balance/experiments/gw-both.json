@@ -1,0 +1,14 @@
+{
+  "name": "gw-both",
+  "hypothesis": "gw-f2b fixed F2 for level 1 but broke it for level 2 (the Spire went 0.82x -> 0.68x): level 1 and level 2 disagree on the Spire (1.67x / 0.82x) and the Tide Mill (1.11x / 1.84x). Move only what is off in the same direction at both levels, or off at one and neutral at the other: up Fourfold Gate (0.63x / 0.40x) 1/2/6/5 -> 2/3/7/6, Hall of Echoes (0.67x / 0.64x) 1/2/4/4 -> 2/3/5/4, Wind Organ (0.80x / 0.59x) 2/2/6/4 -> 2/3/7/4, Mere Bridge (0.64x / 0.84x) 1/2/4/8 -> 2/2/5/8, Ring of Oaths (0.83x / 0.64x) 1/2/4/8 -> 1/3/5/8; down Tide Mill (1.11x / 1.84x) tier IV 8 -> 6, Salt Stair (0.90x / 1.31x) tier IV 6 -> 5, Spire (1.67x / 0.82x) tier IV 8 -> 7 only. Fewer Great Works out of 0.75-1.25x at both levels than either baseline (5 at level 1, 8 at level 2). Confounder: Renown changes greedy's choice rule, so holders shift.",
+  "greatWorks": {
+    "the-fourfold-gate": { "tierRenown": [2, 3, 7, 6] },
+    "the-hall-of-echoes": { "tierRenown": [2, 3, 5, null] },
+    "the-wind-organ": { "tierRenown": [null, 3, 7, null] },
+    "the-mere-bridge": { "tierRenown": [2, null, 5, null] },
+    "the-ring-of-oaths": { "tierRenown": [null, 3, 5, null] },
+    "the-tide-mill": { "tierRenown": [null, null, null, 6] },
+    "the-salt-stair": { "tierRenown": [null, null, null, 5] },
+    "the-stonewrights-spire": { "tierRenown": [null, null, null, 7] }
+  }
+}
