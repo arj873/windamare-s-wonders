@@ -270,6 +270,19 @@
 .ol-spec.is-away {
   opacity: 0.6;
 }
+.ol-spec-kick {
+  margin-left: 2px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-weight: 800;
+  cursor: pointer;
+}
+.ol-spec-kick:hover {
+  color: var(--bad);
+}
 .ol-field {
   display: flex;
   flex-direction: column;
@@ -459,6 +472,13 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+}
+/* Final scores are a scrim (z 30): keep the chat, Leave and the rematch line above it. */
+.ol-play.is-over .ol-dock {
+  z-index: 31;
+}
+.ol-presence-watch {
+  font-weight: 800;
 }
 .ol-dock-panel {
   width: min(320px, calc(100vw - 24px));

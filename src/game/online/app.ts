@@ -61,6 +61,8 @@ export class OnlineApp<S, T> {
   private banner: ConnectionBanner | null = null;
   private welcomed = false;
   private disposed = false;
+  /** Watch with a nickname in the lobby: leave the seat net gives on the first name. */
+  private standUpOnce = false;
   private readonly onOnline = () => this.client?.retryNow();
 
   constructor(
@@ -134,7 +136,12 @@ export class OnlineApp<S, T> {
         this.env.saveName(nick);
         this.connect(nick);
       },
-      onWatch: () => this.connect(null),
+      onWatch: (_room, nick) => {
+        if (nick) this.env.saveName(nick);
+        // Net seats a member on their first nickname in the lobby: a watcher stands up again.
+        this.standUpOnce = nick !== '' && room.phase === 'lobby';
+        this.connect(nick || null);
+      },
       onHome: () => this.env.goHome(),
     });
     this.show(card.element);
@@ -245,6 +252,7 @@ export class OnlineApp<S, T> {
       // Fresh chat history with every welcome (reconnects included).
       this.chat?.setEntries(c.chat);
       this.syncChatInput();
+      this.maybeStandUp();
       return;
     }
     if (c.status === 'reconnecting') {
@@ -297,6 +305,7 @@ export class OnlineApp<S, T> {
     if (!c || !this.chat) return;
     this.syncChatInput();
     const me = c.you?.member ?? null;
+    this.maybeStandUp();
     if (room.phase === 'lobby') {
       if (this.play) {
         // Back in the lobby (rematch): the old table goes.
@@ -319,6 +328,7 @@ export class OnlineApp<S, T> {
             configure: (config) => this.sendOrWarn(c.configure(config)),
             start: () => this.sendOrWarn(c.startGame()),
             leave: () => this.leave(),
+            kick: (member) => this.sendOrWarn(c.kick(member)),
           },
         });
       } else {
@@ -343,6 +353,21 @@ export class OnlineApp<S, T> {
       this.play.start();
     }
     this.show(this.play.element);
+  }
+
+  /**
+   * Watch with a nickname: net seats a member on their first name in the lobby, so stand up
+   * again. The welcome's room arrives before the client is `open` (sends fail then), so this
+   * runs on room updates and on open until it has been sent.
+   */
+  private maybeStandUp(): void {
+    const c = this.client;
+    if (!this.standUpOnce || !c?.me?.name) return;
+    if (c.room?.phase !== 'lobby' || c.me.seat === null) {
+      this.standUpOnce = false;
+      return;
+    }
+    if (c.leaveSeat()) this.standUpOnce = false;
   }
 
   private syncChatInput(): void {

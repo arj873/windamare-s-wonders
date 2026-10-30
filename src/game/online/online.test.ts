@@ -329,6 +329,158 @@ describe('online room visit (O1)', () => {
     expect(view?.seats.every((s) => s.hand.every((c) => c.def === HIDDEN_CARD))).toBe(true);
     expect(view?.seats.every((s) => s.pick === null)).toBe(true);
     expect(q(cy, '.dt [data-act^="select:"]')).toBeNull();
+    expect(k(cy, 'you-watch')?.textContent).toMatch(/You're watching/);
+    expect(k(ann, 'watchers')?.textContent).toBe('1 watching');
+    // An unnamed watcher cannot chat.
+    expect((k(cy, 'chat-input') as HTMLInputElement).disabled).toBe(true);
+  });
+});
+
+/** Ann (host) and Bob in a started game on the Fast clock with one bot (3 towns). */
+async function startedGame() {
+  const t = await lobbyOfTwo();
+  k(t.ann, 'timer-fast')?.click();
+  await t.w.settle();
+  k(t.ann, 'remove-bot')?.click();
+  await t.w.settle();
+  k(t.ann, 'lobby-start')?.click();
+  await t.w.settle();
+  return t;
+}
+
+/** Let the clock run: humans time out (R15.6 timeout pick), the bot plays, until game over. */
+async function playToEnd(w: ReturnType<typeof world>, app: App): Promise<number> {
+  let steps = 0;
+  while (app.roomClient?.game?.view.phase.kind !== 'gameOver' && steps < 400) {
+    await w.settle(30_000);
+    steps++;
+  }
+  return steps;
+}
+
+describe('online room visit (O2)', () => {
+  it('final scores -> host Rematch -> everyone back in the lobby -> a second game', async () => {
+    const { w, ann, bob } = await startedGame();
+    const steps = await playToEnd(w, ann);
+    expect(ann.roomClient?.game?.view.phase.kind).toBe('gameOver');
+    expect(steps).toBeLessThan(400);
+    await w.settle();
+    expect(ann.roomClient?.room?.phase).toBe('over');
+    // Final scores on both tables; only the host can take the room back to the lobby.
+    for (const app of [ann, bob]) {
+      expect(q(app, '.dt-result')).not.toBeNull();
+      expect(k(app, 'online-table')?.classList.contains('is-over')).toBe(true);
+    }
+    expect(k(ann, 'rematch')).not.toBeNull();
+    expect(k(bob, 'rematch')).toBeNull();
+    expect(k(ann, 'waiting-line')?.textContent).toBe(
+      'Game over. Rematch takes everyone back to the lobby.',
+    );
+    expect(k(bob, 'waiting-line')?.textContent).toBe(
+      'Game over. Waiting for Ann to open a rematch.',
+    );
+    // Timed-out humans were told (R15.6, net's "ran out of time" line).
+    expect(w.toasts).toContain('Time’s up: a card was picked for you');
+
+    const firstFx = w.fxs[0]?.onAction.mock.calls.length ?? 0;
+    k(ann, 'rematch')?.click();
+    await w.settle();
+    for (const app of [ann, bob]) {
+      expect(app.roomClient?.room?.phase).toBe('lobby');
+      expect(app.netPlay).toBeNull();
+      expect(k(app, 'online-table')).toBeNull();
+      expect(k(app, 'room-code')).not.toBeNull();
+      // Same seats, same settings, and the chat is back in the lobby column.
+      const names = [...app.element.querySelectorAll('.ol-seat .ol-seat-label')].map(
+        (e) => e.textContent,
+      );
+      expect(names).toEqual(['Ann', 'Bob', 'Bot']);
+      expect(k(app, 'summary')?.textContent).toContain('Fast clock');
+      expect(q(app, '.ol-chat-slot .ol-chat')).not.toBeNull();
+      expect(q(app, '.ol-chat-list')?.textContent).toContain('Back to the lobby');
+    }
+    k(ann, 'lobby-start')?.click();
+    await w.settle();
+    for (const app of [ann, bob]) {
+      expect(k(app, 'online-table')).not.toBeNull();
+      expect(app.roomClient?.game?.view.phase.kind).toBe('prompt');
+      expect(q(app, '.dt-result')).toBeNull();
+    }
+    // A fresh table: its first render is not a reveal.
+    expect(w.fxs[0]?.onAction.mock.calls.length).toBe(firstFx);
+  });
+
+  it('host leaves the lobby: offline note, then Bob becomes host with the controls', async () => {
+    const { w, ann, bob } = await lobbyOfTwo();
+    ann.dispose(); // closes Ann's socket (her token is kept, as after a crash)
+    await w.settle();
+    expect(k(bob, 'config-note')?.textContent).toMatch(/Ann\) is offline/);
+    expect(k(bob, 'lobby-start')).toBeNull();
+    await w.settle(10_000); // graceMs
+    expect(bob.roomClient?.isHost).toBe(true);
+    expect(k(bob, 'lobby-start')).not.toBeNull();
+    expect((k(bob, 'timer-fast') as HTMLButtonElement).disabled).toBe(false);
+    expect(q(bob, '.ol-chat-list')?.textContent).toContain('Bob is now the host');
+    // Ann's seat was freed after the grace period (lobby rule).
+    const names = [...bob.element.querySelectorAll('.ol-seat .ol-seat-label')].map(
+      (e) => e.textContent,
+    );
+    expect(names).toEqual(['Bot', 'Bob', 'Bot', 'Bot']);
+  });
+
+  it('host leaves at final scores: Bob can open the rematch once he becomes host', async () => {
+    const { w, ann, bob } = await startedGame();
+    await playToEnd(w, ann);
+    await w.settle();
+    ann.dispose();
+    await w.settle(10_000);
+    // FINDING (net): nextWakeAt() is null in phase 'over', so the host hand-off waits for the
+    // next message from anyone; a chat line from Bob triggers it.
+    const handedOver = bob.roomClient?.isHost === true;
+    if (!handedOver) {
+      (k(bob, 'chat-input') as HTMLInputElement).value = 'rematch?';
+      k(bob, 'chat-send')?.click();
+      await w.settle();
+    }
+    expect(bob.roomClient?.isHost).toBe(true);
+    // The result dialog re-renders with Bob's Rematch button.
+    expect(k(bob, 'rematch')).not.toBeNull();
+    k(bob, 'rematch')?.click();
+    await w.settle();
+    expect(bob.roomClient?.room?.phase).toBe('lobby');
+    expect(k(bob, 'lobby-start')).not.toBeNull();
+  });
+
+  it('kick: host confirms, the player gets the removed screen, the seat is free', async () => {
+    const { w, ann, bob } = await lobbyOfTwo();
+    k(ann, 'kick-seat-1')?.click();
+    const confirm = document.querySelector<HTMLElement>('.ww-scrim .btn-primary');
+    expect(confirm?.textContent).toBe('Remove');
+    confirm?.click();
+    await w.settle();
+    expect(bob.roomClient?.fatal?.code).toBe('kicked');
+    expect(k(bob, 'notice')?.textContent).toContain('The host removed you from the room.');
+    const names = [...ann.element.querySelectorAll('.ol-seat .ol-seat-label')].map(
+      (e) => e.textContent,
+    );
+    expect(names).toEqual(['Ann', 'Bot', 'Bot', 'Bot']);
+    expect(q(ann, '.ol-chat-list')?.textContent).toContain('Bob was removed');
+  });
+
+  it('watch with a nickname in the lobby: no seat, but can chat', async () => {
+    const { w, ann, code } = await lobbyOfTwo();
+    const cy = w.mount(new OnlineApp(w.env(), code));
+    await cy.run();
+    await w.settle();
+    (k(cy, 'join-name') as HTMLInputElement).value = 'Cy';
+    k(cy, 'join-watch')?.click();
+    await w.settle();
+    expect(cy.roomClient?.mySeat).toBeNull();
+    expect(k(cy, 'watching')?.hidden).toBe(false);
+    expect((k(cy, 'chat-input') as HTMLInputElement).disabled).toBe(false);
+    expect(k(ann, `spec-${cy.roomClient?.you?.member ?? ''}`)?.textContent).toContain('Cy');
+    const seats = ann.roomClient?.room?.seats.map((s) => s.occupant !== null);
+    expect(seats).toEqual([true, true, false, false]);
   });
 });
 
