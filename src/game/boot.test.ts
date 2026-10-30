@@ -158,7 +158,7 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
-  it('hands each resolved action to the fx hook with anchors, instead of its own badges', () => {
+  it('hands each resolved action to the fx hook with anchors and a layer', () => {
     vi.useFakeTimers();
     localStorage.setItem('ww.botSpeed', 'instant');
     const onAction = vi.fn();
@@ -172,13 +172,13 @@ describe('boot', () => {
     click(root, '[data-k="answer-0"]'); // the group completes: Great Works revealed, Spring dealt
     expect(onAction).toHaveBeenCalledTimes(1);
     const moment = onAction.mock.calls[0]![0];
-    expect(moment.key).toBe(moment.model.effectsKey);
+    expect(moment.key).toBe(moment.model.actionKey);
+    expect(moment.anchors.layer.classList.contains('dt-fx-layer')).toBe(true);
     expect(moment.view.view.viewer).toBe(0);
     expect(moment.anchors.town(0)).toBe(root.querySelector('.dt-town'));
     expect(moment.anchors.stat(0, 'coins')).not.toBeNull();
     expect(moment.anchors.town(1)).toBe(root.querySelector('.dt-left'));
     expect(moment.anchors.card(app.play!.game.state.seats[0]!.hand[0]!.id)).not.toBeNull();
-    expect(root.querySelector('.dt-fx')).toBeNull(); // the table's own badges are off
     click(root, '.dt-town');
     expect(skip).toHaveBeenCalled();
     app.play?.dispose();

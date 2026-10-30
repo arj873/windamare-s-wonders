@@ -1013,7 +1013,7 @@ interface RevealHook<S, T> {
 interface RevealMoment<S, T> {
   key: string; // new per action (the last log entry's seq)
   view: DraftView<S, T>; // the viewer's view: E3 events via latestEvents(view)
-  model: TableModel; // reveal lines, effect badges (presenter.effects), seats
+  model: TableModel; // reveal lines, seats (bot / you), viewer
   anchors: TableAnchors; // DOM lookups, below
   reducedMotion: boolean; // prefers-reduced-motion or Animations: off → fades only
 }
@@ -1021,12 +1021,15 @@ interface RevealMoment<S, T> {
 
 - **When:** after the table shows the new state, never for the first render, never while a hotseat
   pass cover is up. Bots' picks that do not resolve anything log nothing, so they call nothing.
-- **Anchors** (`src/ui/table/anchors.ts`, live lookups, null when not on screen): `hand()`,
+- **Anchors** (`src/ui/table/anchors.ts`, live lookups, null when not on screen): `layer` (a
+  fixed overlay, `pointer-events: none`, kept as the table's last child across renders), `hand()`,
   `card(id)` (a hand card), `stage()` (your face-down slot), `town(seat)` (your town, a neighbour
   panel, else the summary row), `stat(seat, id)` (`coins`, `score`, `guard`, `labour`,
   `good-<good>`), `monument(seat)` (Great Work picture), `built(seat, cardId)` (a tableau card).
   fx draws in its own layer over these; it never edits the table's DOM (the next render would
   undo it).
-- **Fallback:** without a hook the table shows its own badges (§8.3, `presenter.effects`). With
-  one, `boot(root, { fx })` turns them off. Wiring: `main.ts` (ui) passes fx's hook once fx ships
-  one.
+- **Wiring (Windamere):** `src/game/windamere/fx.ts` implements the hook with fx's
+  `playRevealWithSound(latestEvents(view), anchors, { isLocal, isBot }, { label, instant,
+cancelled })`; the game binding carries it. `main.ts` calls `sfx.installUnlock(document)` once.
+  Input is never blocked (P1): a click or key cancels the rest of the reveal. The table draws no
+  reveal of its own.

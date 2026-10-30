@@ -1,13 +1,15 @@
 /**
  * Where things are on the draft table, for the fx lane's reveal animation and sound
- * (src/ui/fx): live DOM lookups, so they stay right after every re-render. A lookup returns
- * null when that thing is not on screen (a seat with no panel, a card not in the hand).
+ * (src/ui/fx): an overlay layer to draw in, plus live DOM lookups that stay right after every
+ * re-render. A lookup returns null when that thing is not on screen.
  */
 import type { CardId, SeatId } from '../../engine';
 
 export interface TableAnchors {
   /** The table's root (`.dt`). */
   root: HTMLElement;
+  /** Fixed overlay over the table, pointer-events: none; fx's sprites go here. */
+  layer: HTMLElement;
   /** The hand row. */
   hand(): HTMLElement | null;
   /** A card in the viewer's hand. */
@@ -24,15 +26,16 @@ export interface TableAnchors {
   built(seat: SeatId, id: CardId): HTMLElement | null;
 }
 
-export function tableAnchors(root: HTMLElement): TableAnchors {
-  const q = <E extends Element = HTMLElement>(el: ParentNode | null, sel: string) =>
-    (el?.querySelector(sel) as E | null) ?? null;
+export function tableAnchors(root: HTMLElement, layer: HTMLElement): TableAnchors {
+  const q = (el: ParentNode | null, sel: string) =>
+    (el?.querySelector(sel) as HTMLElement | null) ?? null;
   const town = (seat: SeatId): HTMLElement | null =>
     q(root, `.dt-town[data-seat="${seat}"]`) ??
     q(root, `.dt-nb[data-seat="${seat}"]`) ??
     q(root, `.dt-row[data-seat="${seat}"]`);
   return {
     root,
+    layer,
     hand: () => q(root, '.dt-cards'),
     card: (id) => q(root, `.dt-card[data-card="${id}"]`),
     stage: () => q(root, '.dt-stage .dt-back'),

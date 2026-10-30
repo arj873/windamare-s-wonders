@@ -20,7 +20,6 @@ import {
 import type {
   CardFace,
   ChoiceRow,
-  EffectBadge,
   KindInfo,
   MonumentInfo,
   Presenter,
@@ -170,10 +169,8 @@ export interface TableModel {
   reveal: { title: string; lines: RevealLine[] } | null;
   log: { key: string; text: string }[];
   result: ResultModel | null;
-  /** What the latest action did, per seat (the reveal badges, UX.md §8.3). */
-  effects: EffectBadge[];
-  /** Changes with every action that logged anything: a new key = new badges to show. */
-  effectsKey: string;
+  /** Changes with every action that logged anything: a new key = something for fx to reveal. */
+  actionKey: string;
   /** Table-wide facts for the top bar (Raid, Honours, prices). */
   banner: SeatStat[];
   /**
@@ -326,8 +323,7 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
     log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
     result: resultModel(input, seats),
     banner: present.banner?.(view) ?? [],
-    effects: present.effects?.(view) ?? [],
-    effectsKey: String(view.log.at(-1)?.seq ?? ''),
+    actionKey: String(view.log.at(-1)?.seq ?? ''),
     refine: (pick) => (viewer === null ? null : useOption(input, viewer, pick)),
   };
 }

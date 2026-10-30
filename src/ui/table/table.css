@@ -555,9 +555,6 @@
 .dt-row.is-you {
   background: var(--surface-sunken);
 }
-.dt-row .dt-fx {
-  grid-column: 2 / -1;
-}
 .dt-row .dt-stats {
   grid-column: 2 / -1;
   font-size: 12px;
@@ -901,48 +898,13 @@
   }
 }
 
-/* ---- the reveal (UX.md §8.3): picks flip in, then each town's badges ---- */
-.dt-reveal li {
-  animation: dt-flip 0.35s ease-out both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-}
-.dt-fx {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.dt-fx-badge {
-  padding: 2px 8px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--ink-strong);
-  background: var(--card-paper);
-  border: 1.5px solid var(--card-edge);
-  box-shadow: var(--card-shadow);
-  animation: dt-fx-in 0.3s ease-out both;
-  animation-delay: calc(350ms + var(--i, 0) * 90ms);
-}
-.dt-fx-badge.is-gain {
-  background: var(--good);
-}
-.dt-fx-badge.is-loss {
-  background: var(--bad);
-}
-.dt-fx-badge.is-info {
-  background: var(--accent);
-}
-@keyframes dt-flip {
-  from {
-    opacity: 0;
-    transform: perspective(400px) rotateX(80deg);
-  }
-}
-@keyframes dt-fx-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.9);
-  }
+/* The fx lane's reveal draws here (src/ui/fx; UX.md §19): over the table, never catching input. */
+.dt-fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  overflow: visible;
 }
 
 @keyframes dt-pulse {

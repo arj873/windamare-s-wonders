@@ -34,7 +34,7 @@ export interface BootOptions<S, T> {
   debug?: { seats: number; seed?: string };
   /** Title key art behind the home screen (public/art). */
   homeArt?: string;
-  /** The fx lane's reveal animation and sound (src/game/fx.ts); absent = the table's badges. */
+  /** Overrides the game binding's reveal hook (tests); see src/game/fx.ts. */
   fx?: RevealHook<S, T>;
   /**
    * The online lane's entry points (src/game/online): shows Play online and Join with code on

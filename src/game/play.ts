@@ -19,6 +19,8 @@ export interface GameBinding<S, T> {
   present: Presenter<S, T>;
   /** Ruleset options for every new game. */
   options?: Record<string, Json>;
+  /** The ruleset's reveal animation and sound (fx lane, via src/game/fx.ts). */
+  fx?: RevealHook<S, T>;
 }
 
 export interface PlayHooks<S = unknown, T = unknown> {
@@ -27,7 +29,7 @@ export interface PlayHooks<S = unknown, T = unknown> {
   onRematch(): void;
   /** Hotseat pass covers between humans (default on; the playtest harness turns them off). */
   covers?: boolean;
-  /** The fx lane's reveal animation and sound (src/game/fx.ts); replaces the table's badges. */
+  /** A reveal hook overriding the binding's (tests); see src/game/fx.ts. */
   fx?: RevealHook<S, T>;
 }
 
@@ -80,6 +82,8 @@ export function playLocal<S, T>(
   const bots = cfg.players.flatMap((p, i) => (p.controller === 'bot' ? [i] : []));
   const botSalt = crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
   let locked = false;
+  /** The reveal (fx lane): a caller's hook wins over the ruleset's own. */
+  const fx = hooks.fx ?? binding.fx;
   /** The last action handed to the fx hook (null until the first render). */
   let fxKey: string | null = null;
 
@@ -96,14 +100,12 @@ export function playLocal<S, T>(
     answer: (prompt, answer) => send((seat) => ({ type: 'answer', seat, prompt, answer })),
     newGame: () => hooks.onNewGame(),
     rematch: () => hooks.onRematch(),
-    skip: () => hooks.fx?.skip?.(),
+    skip: () => fx?.skip?.(),
     reveal: () => {
       shownTo = game.viewer;
       syncCover(game);
     },
   });
-  // With the fx lane's hook, fx animates reveals; the table's own badges step aside.
-  table.ownEffects = !hooks.fx;
 
   /**
    * Hotseat (UX.md §9): with 2+ humans the hand on screen belongs to `shownTo`. When the game
@@ -151,16 +153,16 @@ export function playLocal<S, T>(
       const model = tableModel({ view, engine, present, looks });
       table.update(model);
       // The fx lane animates each new action once the table shows it (never the first render).
-      if (fxKey !== null && model.effectsKey !== fxKey && !table.covered) {
-        hooks.fx?.onAction({
-          key: model.effectsKey,
+      if (fxKey !== null && model.actionKey !== fxKey && !table.covered) {
+        fx?.onAction({
+          key: model.actionKey,
           view,
           model,
           anchors: table.anchors,
           reducedMotion: !motionOn(),
         });
       }
-      fxKey = model.effectsKey;
+      fxKey = model.actionKey;
       tick();
     },
     onTimeout: (seat, action) => {
@@ -186,7 +188,7 @@ export function playLocal<S, T>(
     dispose: () => {
       clearInterval(ticker);
       game.dispose();
-      hooks.fx?.dispose?.();
+      fx?.dispose?.();
       table.destroy();
     },
   };
