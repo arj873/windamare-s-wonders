@@ -148,7 +148,7 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
   2. **Exchange**: an uncovered card with an `exchange` effect for good X lets the town pay 2† X
      instead of the missing good. An Exchange may be used any number of times in a turn. X cannot
      be the missing good itself.
-  3. **Bank**: 5† coins.
+  3. **Bank**: 6† coins (always dearer than a neighbour, R6.6c).
 - **R6.4** Paid goods and coins return to the supply, except coins for purchases, which go to the
   seller (R6.6). Store and coins never go below 0. A Build the town cannot pay for is not legal
   (R4.2).
@@ -159,14 +159,18 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
     turn, up to as many as that neighbour held then. Stores are public, so the buyer sees what
     it can buy when it picks.
   - b. **Limit**: at most 2† goods from each neighbour per turn, of any types.
-  - c. **Market price**, per good, by Season: Spring 1†, Summer 2†, Autumn 3†, Winter 4† coins.
-    Goods get dearer as the year runs towards a Winter with no Yield.
+  - c. **Market price**, per good, by Season: Spring 1†, Summer 3†, Autumn 4†, Winter 5† coins.
+    Goods get dearer as the year runs towards a Winter with no Yield. (No Season costs 2:
+    research R4 §5.3 noted that a flat 2 is 7 Wonders' trade price.)
   - d. The good **moves**: it leaves the seller's store and is used at once in the buyer's Build
     (it never enters the buyer's store). The coins go to the seller. The seller cannot refuse.
   - e. Effects never lower the market price. A `sellBonus` (R13) pays the seller extra coins from
     the bank; the buyer pays the same.
 - **R6.7** **Filling purchases** (step 2b). A seller's own Build comes first: purchases are filled
-  from what is left in its store after step 2a. If a seller cannot fill every purchase of a good,
+  from what is left in its store after step 2a, and that includes the seller's step-1 Spend gains
+  of this turn. How many a buyer may buy is still set by the store at the start of the turn
+  (R6.6a), so the seller's Spend can help fill a purchase but never raises the limit (R17.9).
+  If a seller cannot fill every purchase of a good,
   fill them one good at a time, alternating between its buyers, starting with its left
   neighbour. Each good that cannot be filled is bought from the bank instead, **at the same
   market price**, and those coins go to the supply. So a buyer always pays the price it saw, and
@@ -395,10 +399,10 @@ These answer the open questions from net (MULTIPLAYER.md §2.1, §6) and researc
 | Great Works offered         | 2 of 14                                      | R2.4   |
 | Hand size (3-7 seats)       | 6                                            | R3.2   |
 | Turns per Season            | 5                                            | R3.4   |
-| Bank price per missing good | 5 coins                                      | R6.3   |
+| Bank price per missing good | 6 coins                                      | R6.3   |
 | Exchange rate               | 2 of one good → 1 other                      | R6.3   |
 | Buying limit per neighbour  | 2 goods a turn                               | R6.6b  |
-| Market price by Season      | 1, 2, 3, 4 coins a good                      | R6.6c  |
+| Market price by Season      | 1, 3, 4, 5 coins a good                      | R6.6c  |
 | Tier thresholds (standard)  | 3, 6, 10, 15 labour                          | R8.1   |
 | Valour by Season            | 1, 2, 3, 4                                   | R9.4   |
 | Plunder                     | 1 coin per point short                       | R9.5   |
@@ -425,8 +429,11 @@ These answer the open questions from net (MULTIPLAYER.md §2.1, §6) and researc
 - **R17.7** Covered cards still show in the town (public history) but count for nothing (R7.9).
 - **R17.8** Cards count for Honours, Landmarks and `onBuildPerKind` at the moment they are
   checked; Honours and Landmarks are checked only at game end.
-- **R17.9** A purchase is checked against the seller's store at the start of the turn. Goods the
-  seller gains this turn (Spend, Yield) can be bought from the next turn.
+- **R17.9** Two stores matter for a purchase. **What may be bought**: the seller's store at the
+  start of the turn (R6.6a), which the buyer saw when picking. **What fills it**: the seller's
+  store after its own Build is paid (R6.7), which includes its step-1 Spend gains. Goods the
+  seller gains this turn never raise what may be bought; this turn's Yield (step 4) comes too
+  late to fill anything.
 - **R17.10** Both neighbours may buy from the same town in one turn. If its store runs short,
   R6.7 decides which buyer gets each good; the other pays the bank the same price.
 - **R17.11** A bought good is used at once in the Build. A town cannot buy goods to keep or to
@@ -454,17 +461,40 @@ costs need retuning first. Our pick: keep 6 and 5, and measure with bots (B1) an
 Research's review estimated that **under 10%** of a winning score depended on neighbours in the
 draft before D2c. With D2c, our arithmetic (untested; assumes 4-5 towns, a winning score of about
 60-65 Renown, and each town buying and selling about 8 goods a game at an average market price of
-2.5 coins):
+about 3.5 coins, since purchases lean towards the dear late Seasons, research N2):
 
 | Source                                 | Per town per game                   | ≈ Renown  |
 | -------------------------------------- | ----------------------------------- | --------- |
-| Coins from goods sold to neighbours    | about 20 coins (R6.6)               | 5         |
-| Coins saved buying instead of the bank | about 20 coins (5 − 2.5, 8 goods)   | 5         |
+| Coins from goods sold to neighbours    | about 28 coins (R6.6)               | 7         |
+| Coins saved buying instead of the bank | about 20 coins (6 − 3.5, 8 goods)   | 5         |
 | Bounty paid or taken (R9.6)            | 0-8 coins, now moving between towns | 0-2       |
 | Tolls (R13 `toll`), if drafted         | 0-10 coins                          | 0-2       |
 | `scoreBeat` Landmarks and Perks        | 0-6 Renown                          | 0-6       |
-| **Total**                              |                                     | **10-20** |
+| **Total**                              |                                     | **12-22** |
 
-So about **15-30%** of a winning score now moves with what the neighbours do, plus the
+So about **20-35%** of a winning score now moves with what the neighbours do, plus the
 hate-draft. Bots (B1) should report the real share: Renown-equivalent from sales, purchases,
-bounty, Tolls and `scoreBeat`, over all Renown.
+bounty, Tolls and `scoreBeat`, over all Renown (research balance target I1: median ≥ 10%).
+
+## Design note: planned tuning (research R4 N1-N4)
+
+Nothing below is a rule yet. Each item waits on bot numbers (B1) against
+`docs/design/research/balance-targets.md`; a fix becomes a numbered rule or a data change.
+
+- **N1, forced sales drain Winter stock** (R6.6-R6.7). Only this turn's own Build is protected,
+  so goods saved for next turn's Build can be bought out from under you. Intended interaction
+  (D1), but it must not feel like theft. Measure: goods sold per town in Autumn and Winter, and
+  how often a town's best Build next turn became unaffordable after a sale. If too often, the
+  first lever is a **reserve**: neighbours may not buy a town's last 1† of each good. Second
+  lever: limit 1 per neighbour in Winter. UI shows on your store what neighbours can buy.
+- **N2, Spring trade is thin**: stores start empty. Report only; Spring's price of 1 is meant
+  to help late Spring.
+- **N3, plunder plus bounty double-charges** a weak town. Measure the final rank of towns
+  plundered twice or more. Levers: cap plunder plus bounty at 3† coins a Season, or pay the
+  bounty from the bank again (as before D2c, which weakens D1).
+- **N4, costs were tuned for pair picks** (CARDS.md §9). A single pick is a Build or a Spend, so
+  fuel per Build roughly halves. Plan: run the B1 sim with the current data, then re-tune Spend
+  bands and costs Season by Season until (a) every card is built 5-60% of the times it is
+  picked (target S5), (b) Spend picks are at most about a third of picks in Spring to Autumn
+  (target P3, restated for single picks), and (c) most Builds need at most one purchase. Change
+  Spend bands before costs, and Spring before later Seasons.

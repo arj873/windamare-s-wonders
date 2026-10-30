@@ -1,13 +1,16 @@
 # Card catalog (cards D4, D5)
 
-Owner: design lane. Status: **D5, data in `src/content/windamere/`** (2026-10-29), rebuilt for
-D2c (new goods, single pick, neighbour trade) and research's red-team review
-(`docs/design/research/originality-review.md`, R4). Every number here is a first pass:
-**untested**, not simulated. Bots (B1) will tune it.
+Owner: design lane. Status: **D5, data in `src/content/windamere/`** (2026-10-29; D8 price
+change 2026-10-30), rebuilt for D2c (new goods, single pick, neighbour trade) and research's
+red-team review (`docs/design/research/originality-review.md`, R4). Every number here is a first
+pass: **untested**, not simulated. Bots (B1) will tune it; the re-tune plan for single picks is
+§9 item 8.
 
 - **The data is the source of truth**: `src/content/windamere/cards.ts` (cards), `extras.ts`
-  (Great Works, Raids, Honours), `tunables.ts` (RULES.md R16). The tables below were generated
-  from that data on 2026-10-29; if they disagree, the data wins and this file is stale.
+  (Great Works, Raids, Honours), `tunables.ts` (RULES.md R16, keyed like the engine's
+  `WwTunables`). The tables below were generated from that data; regenerated and compared row by
+  row on 2026-10-30 (D8): no difference. If they ever disagree, the data wins. **Older copies of
+  this file (9 cards per seat, goods L/B/W/G/O, `palisade`, `caravan`) are pre-D5: discard them.**
 - Rules: `docs/RULES.md` (R-numbers below). Line: `docs/design/ORIGINALITY.md`.
 - `src/content/windamere/content.test.ts` checks the data (§9).
 
@@ -211,7 +214,7 @@ the Spring Peddlers' Cart reward selling: a full store earns more as neighbours 
 
 Intent: Winter Spend bands are the largest (3 to 4 units, often "any") because nothing yields.
 A town arrives in Winter with its Autumn store and lives on Spends, its glean and purchases at
-the year's dearest price (4 coins). Landmark conditions vary (R4 O13): one per-kind count (Long
+the year's dearest price (5 coins). Landmark conditions vary (R4 O13): one per-kind count (Long
 Table), thresholds, Season spreads, sets, stored goods and a neighbour comparison. No printed 7
 on any card (R4 O15).
 
@@ -304,16 +307,26 @@ Not checked (needs B1 bots and qa playtests):
    Holding-only towns winning; next lever is Spring Holding cost or a store cap (R4 D5).
 2. **Labour supply.** The Summer upgrades give up to 10 labour each. If most towns finish tier IV,
    raise thresholds (R16) or cut the upgrade labour.
-3. **Trade.** Whether the Season price (1-4) and the limit of 2 per neighbour make buying the
-   default; target: most Builds need at most one purchase. Bots should report goods bought per
-   town and the share of score from neighbours (RULES.md design note, R4 D1).
+3. **Trade.** Whether the Season price (1, 3, 4, 5; bank 6) and the limit of 2 per neighbour
+   make buying the default; target: most Builds need at most one purchase. Bots should report
+   goods bought per town and the share of score from neighbours (RULES.md design note, R4 D1).
 4. **Tolls.** `toll 1` (any kind) on Fairground and Merchants' Row pays up to 2 coins a turn; may
    be strong at 7 seats where neighbours always build.
 5. **Lore at 4 seats** is 18 of 96 cards. Check that runs of 5-6 are reachable but not routine.
 6. **Winter goods.** Whether towns can afford Winter cards (5-6 goods) from stores, gleans and
-   purchases at 4 coins; if not, lower costs or raise Root Cellar's payout.
+   purchases at 5 coins; if not, lower costs or raise Root Cellar's payout. Linked to N1: Winter
+   stock can be bought out by neighbours (RULES.md "planned tuning").
 7. **Teach load** (R4 D9): 23 effect types now. A "first game" option that turns off Honours and
-   upgrades is a candidate card for later.
+   upgrades is card D7 (after the first sim numbers).
+8. **Re-tune for single picks** (research N4). Costs and Spend bands here were first sized when
+   each Build had a Spend beside it; now a turn is a Build or a Spend, so fuel per Build roughly
+   halves. D5 only made first moves (Spring Holdings 3c, cheaper Lore, Spend bands of 2-4 units).
+   Plan (also in RULES.md "planned tuning"): run B1 on this data, then adjust **Spend bands
+   first, costs second, Spring first**, until every card is built 5-60% of the times it is
+   picked (balance target S5), Spend picks stay at most about a third of picks in Spring to
+   Autumn (P3, restated for single picks), and most Builds need at most one purchase.
+9. **Forced sales** (research N1): see item 6. First lever if bots show planned Builds broken by
+   sales: neighbours may not buy a town's last 1 of each good.
 
 ## 10. Research R4 findings: what was done
 
@@ -335,7 +348,7 @@ Not checked (needs B1 bots and qa playtests):
 | O14 | Deck curve                                  | **Partly**: Summer Landmarks. **Kept** no Winter Holdings: Winter has no Yield (R3.7), so a Holding there would do nothing.                                         |
 | O15 | Printed 7s                                  | **Fixed** on cards and tiers. **Kept** 7 seats (the player count).                                                                                                  |
 | O16 | Discard last card, alternating passes       | **Kept** passes (genre-common); the last card is now a glean, not a discard.                                                                                        |
-| D1  | Multiplayer solitaire                       | **Fixed (estimate)**: neighbour trade, bounty paid by the plundered town, sale bonuses. RULES.md design note: 15-30% of score (arithmetic, untested). Bots measure. |
+| D1  | Multiplayer solitaire                       | **Fixed (estimate)**: neighbour trade, bounty paid by the plundered town, sale bonuses. RULES.md design note: 20-35% of score (arithmetic, untested). Bots measure. |
 | D2  | One Watch a Season doesn't hold the Raids   | **Fixed**: new strengths (§8), tested.                                                                                                                              |
 | D3  | Pair-pick option count                      | **Obsolete**: single pick (at most 6 cards × 2 roles, plus payment choices).                                                                                        |
 | D4  | Dominated builds (Holdings, weak Lore)      | **Partly**: Spring Holdings 3c, cheaper Autumn/Winter Lore. Lore scores unchanged. Bots measure.                                                                    |
