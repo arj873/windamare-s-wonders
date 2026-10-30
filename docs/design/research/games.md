@@ -24,11 +24,18 @@ numbers from memory or one weak source.
 - **Scoring:** at game end only: military tokens, coins, wonder stages, civic cards, commercial
   cards, guilds, science sets. Science scores super-linearly (per-symbol squares plus a set
   bonus), which makes a pure science player a runaway threat.
-- **Counts and length:** 3-7 (2 with a dummy variant in 1st edition; removed in 2nd edition).
-  ~30 minutes at every count. Card counts per age scale with player count (cards tagged with a
-  minimum player count).
+- **Counts and length:** 3-7 (2 with a dummy variant in 1st edition; one blog says the 2nd
+  edition drops all 2-player variants, _single source_). ~30 minutes at every count. Card counts
+  per age scale with player count (cards tagged with a minimum player count).
+- **2nd edition (2020):** reviewers call it mostly cosmetic: rules rewritten for new players,
+  larger cards and boards, colour-blind support, redrawn wonders; small gameplay tweaks only.
+- **Expansions:** Leaders adds a pre-game mini-draft of 4 leader cards (reviewers: light but
+  "would never play without it"); Cities adds debt and cards that hurt other players, aimed at
+  the thin-interaction complaint.
+- **Typical score:** winning totals ~55-65 points per informal guides (no solid dataset found).
 - **Praise:** scales to 7 with no added length; simultaneous play, no downtime; many viable
-  strategies; quick once known. Kennerspiel des Jahres 2011 _(unverified year/award, check)_.
+  strategies; quick once known. Won the first Kennerspiel des Jahres (2011) plus the Deutscher
+  Spiele Preis and International Gamers Award that year.
 - **Complaints:** icon-heavy, steep first game; final scoring is a long tally and hard to follow
   mid-game; interaction is thin beyond neighbours ("multiplayer solitaire"); the 2-player variant
   is widely disliked; science can run away if neighbours don't block it; at 3 players the seat
@@ -39,9 +46,10 @@ numbers from memory or one weak source.
 
 ## 7 Wonders Duel (Bauza and Bruno Cathala, Repos 2015)
 
-- **Core loop:** two players take turns picking cards from a shared layout. Each age deals its
-  cards into an overlapping pattern with some face-down; you may only take a card that nothing
-  covers, which can uncover cards for your opponent.
+- **Core loop:** two players take turns picking cards from a shared layout. Each age lays 20
+  cards (a few are removed unseen from each age deck first) into overlapping rows that alternate
+  face-up and face-down, in a different shape per age; you may only take a card that nothing
+  covers, which can uncover cards for your opponent. Roughly 10 picks per player per age.
 - **Economy:** missing resources are bought from the bank, and the price goes up with how much of
   that resource your opponent produces. So your production taxes your rival.
 - **Interaction:** a shared military track: shields push a marker toward the opponent's side;
@@ -55,6 +63,9 @@ numbers from memory or one weak source.
 - **Praise:** the strongest 2-player answer in the family; tense, readable interaction;
   three visible ways to win make the leader race public.
 - **Complaints:** swingy instant wins; face-down card reveals add luck; analysis paralysis.
+- **Balance data:** first player wins 53.6% of 457 untied community games (Sevenee) and ~55% per
+  a BGA forum analysis; an AI self-play study (2024) found 66.8% and tested rule tweaks to fix
+  it. One top BGA player's wins split points 35% / science 25% / military 27%.
 - **Takeaway:** for 2 players, drop hand passing and use an open, partly hidden layout. Visible
   tug-of-war beats summed-up military points. Taxing the rival via their own production is
   elegant (its exact formula is Duel's; do not copy).
@@ -100,7 +111,8 @@ numbers from memory or one weak source.
 - **Interaction:** the draft, plus a bonus to whoever produces most of each resource type each
   round. Little else.
 - **Scoring:** card points plus multipliers (per card type, per bonus token).
-- **Counts and length:** 1-5 (solo mode); ~45 min.
+- **Counts and length:** 1-5 (solo mode); ~45 min. 2 players: deal 10, draft until each has 7,
+  leftovers unused, so the card spread stays wide.
 - **Praise:** satisfying engine; no downtime; every card is useful because of the recycle option.
 - **Complaints:** multiplayer solitaire; lots of cube shuffling; table space.
 - **Takeaway:** "build it or burn it for a resource" dual-use makes bad hands still useful. The
@@ -122,8 +134,10 @@ numbers from memory or one weak source.
 ## Among the Stars (Vangelis Bagiartakis, Artipia 2012)
 
 - **Core loop:** draft location cards and place them into a grid-shaped space station.
+- **Turn structure:** four rounds ("years"); each round every player gets fresh credits and a
+  hand of 6, and plays all 6 over six simultaneous turns.
 - **Economy:** credits; new locations need energy from a reactor within range, so layout is
-  constrained. Discarding a card for credits is the fallback _(unverified amount)_.
+  constrained. Fallback: discard the picked card for 3 credits (same amount as 7 Wonders).
 - **Interaction:** low; an optional aggressive mode adds hostile cards.
 - **Scoring:** mostly at placement, from adjacency and card abilities, plus objectives.
 - **Counts and length:** 2-4 (expansions raise it); 30-60 min.
@@ -176,8 +190,51 @@ numbers from memory or one weak source.
 
 ---
 
-## Still to add (deepening pass)
+## Shorter notes
 
-Between Two Cities (shared cities with both neighbours; your score is your lower city),
-Draftosaurus, Res Arcana (opening draft), Blood Rage (draft into area control), Terraforming Mars
-(draft-4 variant), Tides of Time (2-player draft), 7 Wonders expansions (Leaders, Cities, Armada).
+### Between Two Cities (Matthew O'Malley and Ben Rosset, Stonemaier 2015)
+
+- **Loop:** tile draft. In the tile rounds you are dealt 7, keep 2 (one for each city), pass the
+  rest; then you and each neighbour agree where the tiles go. You co-build one city with your
+  left neighbour and one with your right.
+- **Scoring:** your score is the **lower** of your two cities; the higher only breaks ties.
+- **Counts and length:** 3-7 (1-2 with variants); ~25 min. 2p: each player builds two cities
+  and both count, so the lower-city rule is dropped.
+- **Takeaway:** the strongest anti-"multiplayer solitaire" rule in the genre. Shared scoring
+  with each neighbour forces talk and care. Needs table talk, so it is harder to do vs bots.
+
+### Draftosaurus (Antoine Bauza and others, Ankama 2018)
+
+- **Loop:** draft wooden dinosaurs; each turn one player rolls a placement die that restricts
+  where everyone else may place this turn; the roller is exempt. If you can't or won't obey, the
+  dinosaur goes to a low-value fallback area. Two rounds, ~12 placements per player.
+- **Counts and length:** 2-5; ~15 min.
+- **Takeaway:** a rotating "one player sets a constraint for the others" is cheap, visible,
+  non-hostile interaction. Reviewers call the die the star.
+
+### Blood Rage (Eric Lang, CMON 2015)
+
+- **Draft:** each of 3 rounds: deal 8, keep 1 per pass until you have 6; the last 2 are
+  discarded unseen. 2 players keep 2 per pass. One unused card carries into the next round.
+- **Takeaway:** discarding the tail unseen keeps the last picks real and hides information; the
+  carry-over card links rounds without extra rules.
+
+### Tides of Time (Kristian Čurla, Portal 2015)
+
+- **Loop:** 2-player only, 18 cards total. Draft a 5-card hand back and forth, score, keep one
+  card permanently, discard one, refill. Three rounds; ~15 min.
+- **Takeaway:** a tiny known pool makes it a pure denial duel; reviewers note newcomers get
+  crushed by players who know the cards. A browser game can show the full pool to close that gap.
+
+### Res Arcana (Tom Lehmann, Sand Castle 2019)
+
+- **Draft:** optional opening draft of a small personal deck of artifacts before play.
+- **Takeaway:** one critic argues a well-played game is decided once the draft ends; another
+  reviewer says the draft version is the "real game". Front-loaded drafts are a hook but can
+  decide too much too early.
+
+### Terraforming Mars draft variant (Jacob Fryxelius, FryxGames 2016)
+
+- **Draft:** each generation, deal 4, pick-and-pass until each has 4, then pay to keep any.
+- **Takeaway:** players asked the digital port to add it; it adds game time. Picking 2 per pass
+  is a house rule that halves the passes.
