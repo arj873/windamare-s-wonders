@@ -70,18 +70,17 @@ export const EFFECT_PARAMS = {
   scoreBeat: ['measure', 'amount'],
   scoreThreshold: ['measure', 'atLeast', 'amount'],
   scoreSeasons: ['kind', 'amount'],
-} as const satisfies Record<string, readonly string[]>;
-export type EffectType = keyof typeof EFFECT_PARAMS;
-
-/**
- * R13 types that are ruled (R13, marked pending) but not yet in the engine: only PENDING_CARDS
- * (pending.ts) use them. They move into EFFECT_PARAMS when the engine ships their handlers.
- */
-export const PENDING_EFFECT_PARAMS = {
   onBuildNeighbourMin: ['kind', 'gains'],
   scoreNeighbourMin: ['measure', 'amount'],
   scoreSales: ['per', 'amount'],
 } as const satisfies Record<string, readonly string[]>;
+export type EffectType = keyof typeof EFFECT_PARAMS;
+
+/**
+ * R13.5: types that are ruled but not yet in the engine, used only by PENDING_CARDS (pending.ts).
+ * They move into EFFECT_PARAMS when the engine ships their handlers. Empty since D10b.
+ */
+export const PENDING_EFFECT_PARAMS = {} as const satisfies Record<string, readonly string[]>;
 
 /** Copies at 3, 4, 5, 6, 7 seats. 2 seats use the 4-seat count (R14.1). */
 export type Counts = readonly [number, number, number, number, number];

@@ -139,10 +139,10 @@ describe('Season decks (R3.2, R14.1)', () => {
     expect(totals).toEqual({
       holding: 17,
       hall: 21,
-      market: 15,
+      market: 14,
       watch: 15,
       lore: 18,
-      landmark: 10,
+      landmark: 11,
     });
   });
 
@@ -343,7 +343,7 @@ describe('Raids and Honours (R9, R11)', () => {
   });
 });
 
-describe('pending cards (D10b, waiting for engine handlers)', () => {
+describe('pending cards (R13.5 staging, empty since D10b)', () => {
   const vocab = { ...EFFECT_PARAMS, ...PENDING_EFFECT_PARAMS };
 
   it('stay out of CARDS, use only the pending vocabulary, and have new ids', () => {

@@ -112,7 +112,7 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
 - **R4.6** **Pass.** After each of turns 1 to 4, each town passes the rest of its hand in the
   Season's direction and the next turn starts. After the fifth turn the Season ends (R3.6).
 - **R4.7** Steps 1 and 4 read only the town's own pick and state. Step 2 also reads the
-  neighbours' stores (R6.7) and, for the pending `onBuildNeighbourMin` (R13), the neighbours'
+  neighbours' stores (R6.7) and, for `onBuildNeighbourMin` (R13), the neighbours'
   cards; step 3 reads which cards the neighbours Built. A pick that was legal when
   submitted is still legal when it resolves: a purchase always costs the price the buyer saw,
   even when the seller runs short (R6.7), and nothing a neighbour does can take goods or coins
@@ -285,42 +285,40 @@ Cards, Perks and tier rewards use only these effect types. Each is data: `{ type
 chosen by the town). `kind` is one of the six kinds. `measure` is one of R11.5. **When** says
 when the effect acts.
 
-| Type             | Params                         | When                   | Meaning                                                                                       |
-| ---------------- | ------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------- |
-| `yield`          | `gains` (no "any")             | step 4                 | Gain `gains` each Yield. Holdings.                                                            |
-| `income`         | `coins`                        | step 4                 | Gain coins each Yield. Markets.                                                               |
-| `onBuild`        | `gains`                        | step 2, once           | Gain `gains` when this card is built ("any" chosen in the pick).                              |
-| `onBuildPerKind` | `kind`, `gains`                | step 2, once           | Gain `gains` once per uncovered card of `kind` in the town, this card included if it matches. |
-| `renown`         | `amount`                       | end (R12.2a)           | Worth `amount` Renown.                                                                        |
-| `guard`          | `amount`                       | Season end (R9)        | Adds `amount` Guard.                                                                          |
-| `lore`           | `rank` (1-6)                   | end (R10)              | This card's (or tier's) Lore rank.                                                            |
-| `exchange`       | `good`                         | paying (R6.3)          | Pay 2† `good` in place of one missing good of another type.                                   |
-| `discount`       | `kind`, `amount`               | paying (R6.1)          | Cards of `kind` cost `amount` fewer goods (the town picks which goods; default: goods order). |
-| `toll`           | `kind` (optional), `coins`     | step 3                 | Gain `coins` for each neighbour that Built a card (of `kind`, if given) this turn.            |
-| `sellBonus`      | `coins`                        | step 2b                | Gain `coins` from the bank for each good this town sells to a neighbour (R6.6).               |
-| `spendBonus`     | `kind`, `gains`                | step 1                 | When the town Spends a card of `kind` (the glean included), also gain `gains`.                |
-| `buildBonus`     | `kind`, `gains`                | step 2                 | When the town Builds a card of `kind` (not this card itself), also gain `gains`.              |
-| `heldBonus`      | `gains`                        | Season end, after R9.6 | Gain `gains` each time the town holds a Raid.                                                 |
-| `seasonEnd`      | `gains`                        | Season end (R3.6)      | Gain `gains` at the end of each Season, after the Raid.                                       |
-| `scorePerKind`   | `kind`, `amount`               | end (R12.2a-b)         | `amount` Renown per uncovered card of `kind` in the town.                                     |
-| `scorePerTier`   | `amount`                       | end (R12.2a-b)         | `amount` Renown per completed Great Work tier.                                                |
-| `scorePerValour` | `amount`                       | end (R12.2a-b)         | `amount` Renown per Valour token.                                                             |
-| `scoreSets`      | `amount`                       | end (R12.2a-b)         | `amount` Renown per full set of Holding, Hall, Market, Watch and Lore in the town.            |
-| `scoreGoods`     | `per`, `amount`                | end (R12.2a-b)         | `amount` Renown per `per` goods left in the store.                                            |
-| `scoreBeat`      | `measure`, `amount`            | end (R12.2a-b)         | `amount` Renown per neighbour whose `measure` is strictly lower.                              |
-| `scoreThreshold` | `measure`, `atLeast`, `amount` | end (R12.2a-b)         | `amount` Renown if the town's `measure` is at least `atLeast`.                                |
-| `scoreSeasons`   | `kind`, `amount`               | end (R12.2a-b)         | `amount` Renown per Season whose deck gave the town at least one uncovered card of `kind`.    |
+| Type                  | Params                         | When                   | Meaning                                                                                       |
+| --------------------- | ------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------- |
+| `yield`               | `gains` (no "any")             | step 4                 | Gain `gains` each Yield. Holdings.                                                            |
+| `income`              | `coins`                        | step 4                 | Gain coins each Yield. Markets.                                                               |
+| `onBuild`             | `gains`                        | step 2, once           | Gain `gains` when this card is built ("any" chosen in the pick).                              |
+| `onBuildPerKind`      | `kind`, `gains`                | step 2, once           | Gain `gains` once per uncovered card of `kind` in the town, this card included if it matches. |
+| `renown`              | `amount`                       | end (R12.2a)           | Worth `amount` Renown.                                                                        |
+| `guard`               | `amount`                       | Season end (R9)        | Adds `amount` Guard.                                                                          |
+| `lore`                | `rank` (1-6)                   | end (R10)              | This card's (or tier's) Lore rank.                                                            |
+| `exchange`            | `good`                         | paying (R6.3)          | Pay 2† `good` in place of one missing good of another type.                                   |
+| `discount`            | `kind`, `amount`               | paying (R6.1)          | Cards of `kind` cost `amount` fewer goods (the town picks which goods; default: goods order). |
+| `toll`                | `kind` (optional), `coins`     | step 3                 | Gain `coins` for each neighbour that Built a card (of `kind`, if given) this turn.            |
+| `sellBonus`           | `coins`                        | step 2b                | Gain `coins` from the bank for each good this town sells to a neighbour (R6.6).               |
+| `spendBonus`          | `kind`, `gains`                | step 1                 | When the town Spends a card of `kind` (the glean included), also gain `gains`.                |
+| `buildBonus`          | `kind`, `gains`                | step 2                 | When the town Builds a card of `kind` (not this card itself), also gain `gains`.              |
+| `heldBonus`           | `gains`                        | Season end, after R9.6 | Gain `gains` each time the town holds a Raid.                                                 |
+| `seasonEnd`           | `gains`                        | Season end (R3.6)      | Gain `gains` at the end of each Season, after the Raid.                                       |
+| `scorePerKind`        | `kind`, `amount`               | end (R12.2a-b)         | `amount` Renown per uncovered card of `kind` in the town.                                     |
+| `scorePerTier`        | `amount`                       | end (R12.2a-b)         | `amount` Renown per completed Great Work tier.                                                |
+| `scorePerValour`      | `amount`                       | end (R12.2a-b)         | `amount` Renown per Valour token.                                                             |
+| `scoreSets`           | `amount`                       | end (R12.2a-b)         | `amount` Renown per full set of Holding, Hall, Market, Watch and Lore in the town.            |
+| `scoreGoods`          | `per`, `amount`                | end (R12.2a-b)         | `amount` Renown per `per` goods left in the store.                                            |
+| `scoreBeat`           | `measure`, `amount`            | end (R12.2a-b)         | `amount` Renown per neighbour whose `measure` is strictly lower.                              |
+| `scoreThreshold`      | `measure`, `atLeast`, `amount` | end (R12.2a-b)         | `amount` Renown if the town's `measure` is at least `atLeast`.                                |
+| `scoreSeasons`        | `kind`, `amount`               | end (R12.2a-b)         | `amount` Renown per Season whose deck gave the town at least one uncovered card of `kind`.    |
+| `onBuildNeighbourMin` | `kind`, `gains`                | step 2, once           | Gain `gains` once per uncovered card of `kind` in the weaker neighbour for that kind.         |
+| `scoreNeighbourMin`   | `measure`, `amount`            | end (R12.2a)           | `amount` Renown per point of `measure` (R11.5) of the weaker neighbour for that measure.      |
+| `scoreSales`          | `per`, `amount`                | end (R12.2a)           | `amount` Renown per `per` goods this town sold to neighbours over the game (filled, R6.7).    |
 
-**Pending** (ruled in D10, waiting for engine handlers; only the staged cards in
-`src/content/windamere/pending.ts` use them, R13.5). The **weaker neighbour** for a kind or
-measure is the neighbour with less of it (with 2 seats, the one neighbour; a tie counts that
-number). These read neighbours as they stood when the step began (R4.8).
-
-| Type                  | Params              | When         | Meaning                                                                                    |
-| --------------------- | ------------------- | ------------ | ------------------------------------------------------------------------------------------ |
-| `onBuildNeighbourMin` | `kind`, `gains`     | step 2, once | Gain `gains` once per uncovered card of `kind` in the weaker neighbour for that kind.      |
-| `scoreNeighbourMin`   | `measure`, `amount` | end (R12.2a) | `amount` Renown per point of `measure` (R11.5) of the weaker neighbour for that measure.   |
-| `scoreSales`          | `per`, `amount`     | end (R12.2a) | `amount` Renown per `per` goods this town sold to neighbours over the game (filled, R6.7). |
+The **weaker neighbour** for a kind or measure is the neighbour with less of it (with 2 seats, the
+one neighbour; a tie counts that number). `onBuildNeighbourMin` reads the neighbours as they stood
+when the Build step began (R4.8): a neighbour's own Build this turn does not count yet, and a card
+that Build covers still does. A tier reward using it would read them the same way, as of the
+turn's Build step. (Ruled in D10; shipped in D10b.)
 
 Rules for effects:
 
@@ -332,8 +330,9 @@ Rules for effects:
 - **R13.4** "any" appears only in Spend bands and in a card's own `onBuild`, where the pick names
   the good (R4.3). Effects that act outside a pick (`yield`, `toll`, `heldBonus`, `seasonEnd`,
   tier rewards) never use it. So resolution never stops to ask a town a question (R15.10).
-- **R13.5** A pending type is not used by any shipped card. When the engine lands its handler, the
-  staged cards join the decks with the copy swaps listed in `pending.ts` (decks stay 6 per seat).
+- **R13.5** A type that is ruled here but has no engine handler yet is "pending": no shipped card
+  uses it, and its cards wait in `pending.ts`. When the engine lands the handler, the staged cards
+  join the decks with the copy swaps listed there (decks stay 6 per seat). None is pending now.
 
 ## R14. Two-player variant
 
