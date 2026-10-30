@@ -16,6 +16,8 @@
     "format": "prettier --write .",
     "sim": "tsx scripts/sim.ts",
     "e2e": "echo 'e2e: no scripts yet (qa/net fill this in)'",
+    "pt": "tsx playtest/cli.ts",
+    "pt:serve": "tsx playtest/serve.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
