@@ -11,6 +11,8 @@
 import {
   activeEffects,
   guardOf,
+  loreRanks,
+  loreRuns,
   marketPrice,
   scoreTown,
   type EffectSpec,
@@ -39,10 +41,38 @@ export interface Intent {
   glean?: WwCardDef | null;
 }
 
+/**
+ * Lore Renown as it will probably end: each rank the town lacks is added with chance `q` (the
+ * ranks come in the hands still to be drawn), and the run scores of every outcome are averaged.
+ */
+function expectedLore(rules: WwRules, state: WwState, seat: SeatId, q: number): number {
+  const table = rules.tunables.loreRunScores;
+  const have = loreRanks(rules, state, seat);
+  const score = (ranks: number[]) => loreRuns(ranks).reduce((a, n) => a + (table[n - 1] ?? 0), 0);
+  if (q <= 0) return score(have);
+  const missing: number[] = [];
+  for (let r = 1; r <= table.length; r++) if (!have.includes(r)) missing.push(r);
+  let total = 0;
+  for (let mask = 0; mask < 1 << missing.length; mask++) {
+    let p = 1;
+    const ranks = [...have];
+    missing.forEach((r, i) => {
+      if (mask & (1 << i)) {
+        p *= q;
+        ranks.push(r);
+      } else p *= 1 - q;
+    });
+    ranks.sort((a, b) => a - b);
+    total += p * score(ranks);
+  }
+  return total;
+}
+
 /** Renown without the purse (coins are priced separately, smoothly). */
-function endRenown(rules: WwRules, state: WwState, seat: SeatId): number {
+function endRenown(rules: WwRules, state: WwState, seat: SeatId, tune: EvalTune): number {
   const s = scoreTown(rules, state, seat);
-  return s.town + s.greatWork + s.raids + s.lore + s.honours;
+  const q = Math.min(0.5, (turnsLeft(state) / 40) * tune.loreProject);
+  return s.town + s.greatWork + s.raids + expectedLore(rules, state, seat, q) + s.honours;
 }
 
 /** Turns on which a Yield still happens: this one counts (R17.3), Winter has none (R3.7). */
@@ -163,8 +193,26 @@ function econValue(
   }
 }
 
+/** Evaluator knobs that sims compare (the defaults are what the shipped bots use). */
+export interface EvalTune {
+  /** 0 = Guard counts only when it reaches a Raid's strength; 1 = progress towards it counts too. */
+  guardSmooth: number;
+  /** Scale of the chance that a missing Lore rank turns up later (0 = Lore counts as it stands). */
+  loreProject: number;
+}
+export const DEFAULT_TUNE: EvalTune = { guardSmooth: 0, loreProject: 0 };
+
+/** Chance a Guard of `g` holds against strength `x` in a later Season (Guard grows by then). */
+const soft = (g: number, x: number) => 1 / (1 + Math.exp(-(g - x + 0.5) / 1.5));
+
 /** Expected Guard value: Valour and avoided plunder over the Seasons left. */
-function guardValue(rules: WwRules, state: WwState, g0: number, g1: number): number {
+function guardValue(
+  rules: WwRules,
+  state: WwState,
+  g0: number,
+  g1: number,
+  tune: EvalTune,
+): number {
   if (g1 === g0) return 0;
   const t = rules.tunables;
   let v = 0;
@@ -177,8 +225,19 @@ function guardValue(rules: WwRules, state: WwState, g0: number, g1: number): num
       known?.revealed === true ? [rules.raid(known.id).strength] : raids.map((r) => r.strength);
     if (strengths.length === 0) continue;
     const per = (t.valourBySeason[s] ?? 0) + 1.0;
-    const held = (g: number) => strengths.filter((x) => g >= x).length / strengths.length;
-    v += (held(g1) - held(g0)) * per * (s === state.round ? 1 : 0.8);
+    const sm = tune.guardSmooth;
+    const now = s === state.round;
+    const held = (g: number) =>
+      strengths.reduce((a, x) => {
+        const hard = g >= x ? 1 : 0;
+        // Between Seasons the town can add Guard, so progress is worth a share of the Valour.
+        return (
+          a +
+          (1 - sm) * hard +
+          sm * (now && known?.revealed === true ? 0.5 * hard + 0.5 * soft(g, x) : soft(g, x))
+        );
+      }, 0) / strengths.length;
+    v += (held(g1) - held(g0)) * per * (now ? 1 : 0.8);
   }
   return v;
 }
@@ -187,7 +246,13 @@ function guardValue(rules: WwRules, state: WwState, g0: number, g1: number): num
  * The value of an intent for `seat` in `state` (a view is fine). Returns null if a Build cannot
  * be paid for with the town's goods and coins at the current market price (neighbour intents).
  */
-export function valueOf(rules: WwRules, state: WwState, seat: SeatId, it: Intent): number | null {
+export function valueOf(
+  rules: WwRules,
+  state: WwState,
+  seat: SeatId,
+  it: Intent,
+  tune: EvalTune = DEFAULT_TUNE,
+): number | null {
   const base = state.seats[seat];
   if (!base) throw new Error(`no seat ${seat}`);
   const hyp = copySeat(state, seat);
@@ -198,7 +263,7 @@ export function valueOf(rules: WwRules, state: WwState, seat: SeatId, it: Intent
   const neighbours = hyp.seats.length === 2 ? 1 : 2;
   const lp = labourPrice(rules, state, seat);
   const gf = goodsFactor(state);
-  const beforeScore = endRenown(rules, state, seat);
+  const beforeScore = endRenown(rules, state, seat, tune);
   const beforeGuard = guardOf(rules, state, seat);
   let econ = 0;
 
@@ -273,28 +338,39 @@ export function valueOf(rules: WwRules, state: WwState, seat: SeatId, it: Intent
     }
   }
 
-  const dRenown = endRenown(rules, hyp, seat) - beforeScore;
+  const dRenown = endRenown(rules, hyp, seat, tune) - beforeScore;
   let res = (data.coins - before.coins) * COIN;
   for (const g of rules.goods) res += ((data.store[g] ?? 0) - (before.store[g] ?? 0)) * GOOD * gf;
   // Labour that did not complete a tier is progress, priced at half (the tier itself is in dRenown).
   res += (data.labour - before.labour) * lp * 0.5;
-  const guard = guardValue(rules, state, beforeGuard, guardOf(rules, hyp, seat));
+  const guard = guardValue(rules, state, beforeGuard, guardOf(rules, hyp, seat), tune);
   return dRenown + res + econ + guard;
 }
 
 /** Best of Build and Spend for a card on a town (neighbour valuation); 0 if nothing helps. */
-export function bestUse(rules: WwRules, state: WwState, seat: SeatId, def: WwCardDef): number {
-  let best = valueOf(rules, state, seat, { def, role: 'spend' }) ?? 0;
-  const build = valueOf(rules, state, seat, { def, role: 'build' });
+export function bestUse(
+  rules: WwRules,
+  state: WwState,
+  seat: SeatId,
+  def: WwCardDef,
+  tune: EvalTune = DEFAULT_TUNE,
+): number {
+  let best = valueOf(rules, state, seat, { def, role: 'spend' }, tune) ?? 0;
+  const build = valueOf(rules, state, seat, { def, role: 'build' }, tune);
   if (build !== null && build > best) best = build;
   return best;
 }
 
 /** A full state's worth of one town: end Renown plus its coins and goods at the fixed prices. */
-export function townValue(rules: WwRules, state: WwState, seat: SeatId): number {
+export function townValue(
+  rules: WwRules,
+  state: WwState,
+  seat: SeatId,
+  tune: EvalTune = DEFAULT_TUNE,
+): number {
   const d = state.seats[seat]?.data;
   if (!d) throw new Error(`no seat ${seat}`);
-  let v = endRenown(rules, state, seat) + d.coins * COIN;
+  let v = endRenown(rules, state, seat, tune) + d.coins * COIN;
   for (const g of rules.goods) v += (d.store[g] ?? 0) * GOOD * goodsFactor(state);
   return v;
 }

@@ -291,3 +291,28 @@ level 2). Likely reasons: the play-out sees only Season-end Renown, coins and go
 future income of cards built (the one-ply score has that), and the other seats' one-ply picker is
 the same policy, so the search learns little. Untried: valuing econ in the leaf, playing to the
 game end in Winter, Lore-run and Honour planning (the other half of B6).
+
+## 11. Guard 0 and Lore planning (B6 part 2, negative results)
+
+**Guard distribution** (level 2, 4 seats, 100 games): 32% of towns end with Guard 5 or less (13% with
+Guard 0) and 18% never hold a Raid in 4 Seasons; 34% hold all 4. Level 3: the same within noise.
+Greedy level 1: 88 of 400 towns without Valour (22%). The towns with no Valour have no Watch at all,
+even with 39 coins and 12 reed in store. Mean one-ply build value by kind over 30 games (all
+builds the town could pay): Watch 2.7, 3.2, 1.9, 0.6 by Season, against Hall 3.8, 2.9, 2.6, 3.1 and
+Market 3.7, 3.4, 0.9, 0.4. So Watch is not far below the others in Spring to Autumn; it falls in
+Winter because Winter Raids (strength 6-8) are out of reach for one Watch.
+
+Two evaluator changes were tried, each as an `EvalTune` knob (`windamereEval.ts`), 2 bots with
+the change vs 2 without, 4 seats, level 2, 400-500 games (fair share 25%, SE about 2 points):
+
+| change                                                                         | with  | without |
+| ------------------------------------------------------------------------------ | ----- | ------- |
+| `guardSmooth` 1: partial credit for Guard that does not yet reach a Raid       | 24.3% | 25.8%   |
+| `loreProject` 1: expected Lore run score with missing ranks arriving by chance | 23.5% | 26.5%   |
+| `loreProject` 2.5 (higher chance)                                              | 23.6% | 26.4%   |
+
+Neither helps, and Guard distribution did not move (valour-0 towns 18% to 22%), so both defaults
+are 0 and the shipped bots are unchanged. Reading: the missing Valour is not a pricing problem of
+the first Guard point. More likely the bot lacks the goods for a Watch when one is in hand (hands
+pass, so a Watch seen now is not there next turn), which needs a plan for goods across turns, not
+a better price per pick. Honour planning: not done. Untried.
