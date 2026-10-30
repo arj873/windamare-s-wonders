@@ -4,7 +4,7 @@ import { act, newToyGame, toy } from '../../engine/core/testing/helpers';
 import type { ToyState } from '../../engine/core/testing/toy';
 import type { Viewer } from '../../engine';
 import { tableModel } from './model';
-import { clockText, DraftTable, FX_MS, type DraftTableHandlers } from './table';
+import { clockText, DraftTable, SEASON_CARD_MS, type DraftTableHandlers } from './table';
 import { toyPresenter } from './testing/toy';
 
 const looks = [
@@ -170,31 +170,61 @@ describe('DraftTable', () => {
     expect(el.querySelectorAll('.dt-card')).toHaveLength(4);
   });
 
-  it('shows reveal badges for a new action, never on the first render, and skips on click', () => {
+  it('keeps an fx layer across renders and resolves anchors for every seat', () => {
+    const state = newToyGame(3);
+    const { el, table, handlers } = mount(state, { skip: vi.fn() });
+    const layer = table.anchors.layer;
+    layer.append(document.createElement('i')); // fx's sprite
+    table.update(model(state));
+    expect(el.lastElementChild).toBe(layer);
+    expect(layer.childElementCount).toBe(1); // a render never wipes fx's layer
+    const a = table.anchors;
+    expect(a.town(0)).toBe($(el, '.dt-town'));
+    expect(a.town(1)).toBe($(el, '.dt-left'));
+    expect(a.town(2)).toBe($(el, '.dt-right'));
+    expect(a.stat(0, 'coins')).toBe($(el, '.dt-town .dt-stat.is-coins'));
+    expect(a.card(state.seats[0]!.hand[0]!.id)).not.toBeNull();
+    expect(a.stage()).not.toBeNull();
+    el.querySelector<HTMLElement>('.dt-town')!.click();
+    expect(handlers.skip).toHaveBeenCalled();
+  });
+
+  it('shows the Season-end card once per Season end; Continue or time closes it', () => {
     vi.useFakeTimers();
     const state = newToyGame(3);
     const { el, table } = mount(state);
     const base = model(state);
-    table.update({ ...base, effects: [{ seat: 0, text: '+2 coins', tone: 'gain' }] });
-    expect($(el, '.dt-fx')).toBeNull(); // same action as the first render: no replay
-    table.update({
-      ...base,
-      effectsKey: 'next',
-      effects: [
-        { seat: 0, text: '+2 coins', tone: 'gain' },
-        { seat: 1, text: '−1 coin', tone: 'loss' },
-      ],
-    });
-    expect($(el, '.dt-town .dt-fx-badge.is-gain')?.textContent).toBe('+2 coins');
-    expect($(el, '.dt-left .dt-fx-badge.is-loss')?.textContent).toBe('−1 coin');
-    expect(el.querySelectorAll('.dt-row .dt-fx')).toHaveLength(2);
-    el.querySelector<HTMLElement>('.dt-town')!.click();
-    expect($(el, '.dt-fx')).toBeNull();
-    table.update({ ...base, effectsKey: 'again', effects: [{ seat: 2, text: 'x', tone: 'info' }] });
-    expect($(el, '.dt-fx')).not.toBeNull();
-    vi.advanceTimersByTime(FX_MS);
-    expect($(el, '.dt-fx')).toBeNull();
+    const seasonEnd = {
+      title: 'End of Spring · Wolf Pack, strength 2',
+      lines: [{ seat: 0, text: 'P0 held the Raid', tone: 'gain' as const }],
+      next: 'Next: Summer · hands pass ▶ right',
+    };
+    table.update({ ...base, actionKey: 'end-1', seasonEnd });
+    expect($(el, '#dt-season-title')?.textContent).toBe(seasonEnd.title);
+    expect($(el, '.dt-season-next')?.textContent).toBe(seasonEnd.next);
+    $(el, '[data-k="season-ok"]')!.click();
+    expect($(el, '.dt-season')).toBeNull();
+    table.update({ ...base, actionKey: 'end-1', seasonEnd }); // same action: stays closed
+    expect($(el, '.dt-season')).toBeNull();
+    table.update({ ...base, actionKey: 'end-2', seasonEnd });
+    expect($(el, '.dt-season')).not.toBeNull();
+    vi.advanceTimersByTime(SEASON_CARD_MS);
+    expect($(el, '.dt-season')).toBeNull();
     vi.useRealTimers();
+  });
+
+  it('opens the card list and Recall from the hand header', () => {
+    const state = newToyGame(3);
+    const { el, table } = mount(state);
+    expect($(el, '[data-k="recall"]')).toBeNull(); // nothing passed yet
+    $(el, '[data-k="catalog"]')!.click();
+    expect(document.querySelector('.ww-dialog h2')?.textContent).toBe('All cards');
+    document.querySelector<HTMLElement>('.ww-dialog-actions .btn')!.click();
+    const recall = [{ title: 'Pick 1: passed to P1', cards: [] }];
+    table.update({ ...model(state), recall });
+    $(el, '[data-k="recall"]')!.click();
+    expect(document.querySelector('.ww-dialog h2')?.textContent).toBe('Seen this Season');
+    expect(document.querySelector('.dt-recall h3')?.textContent).toBe('Pick 1: passed to P1');
   });
 
   it('stops listening to keys once destroyed', () => {

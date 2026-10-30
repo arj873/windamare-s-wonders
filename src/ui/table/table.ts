@@ -7,21 +7,24 @@
  * delegated from the root through `data-act`, so re-renders can patch the DOM in place
  * (patchChildren) without stale listeners. Card faces are text placeholders until art A3.
  */
-import type { CardId, Json, Pick, SeatId } from '../../engine';
+import type { CardId, Json, Pick } from '../../engine';
+import { openDialog } from '../dialog';
+import { showToast } from '../toast';
 import { h, patchChildren, type Child } from '../dom';
-import type {
-  HandCard,
-  PromptModel,
-  ResultModel,
-  SeatModel,
-  SeatStatus,
-  TableModel,
-  TableauCard,
-  UseOption,
+import {
+  primaryOption,
+  type HandCard,
+  type PromptModel,
+  type ResultModel,
+  type SeatModel,
+  type SeatStatus,
+  type TableModel,
+  type TableauCard,
+  type UseOption,
 } from './model';
 import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
-import type { EffectBadge, KindInfo, MonumentInfo, SeatStat } from './present';
+import type { FacePart, KindInfo, MonumentInfo, SeasonEndInfo, SeatStat } from './present';
 import '../shell.css';
 import './table.css';
 
@@ -56,8 +59,8 @@ export interface TimerState {
 export const TIMER_WARN_SEC = 10;
 /** Matches `.dt-pop` width in table.css (used before the popover has a layout). */
 const POPOVER_W = 300;
-/** How long the reveal badges stay (UX.md §8.3: the reveal reads in ≤ 1.2 s, then lingers). */
-export const FX_MS = 2200;
+/** The Season-end card closes by itself after this long (UX.md §10.1). */
+export const SEASON_CARD_MS = 8000;
 
 const STATUS_MARK: Record<SeatStatus, string> = { picked: '✓', thinking: '⋯', idle: '' };
 const STATUS_TEXT: Record<SeatStatus, string> = {
@@ -73,13 +76,8 @@ export function clockText(ms: number): string {
 
 export class DraftTable {
   readonly element: HTMLElement;
-  /** DOM lookups for the fx lane (hand, towns, coins, ...); see anchors.ts. */
+  /** DOM lookups and an overlay layer for the fx lane's reveal (anchors.ts, UX.md §19). */
   readonly anchors: TableAnchors;
-  /**
-   * The table's own reveal badges (a fallback). Off once the fx lane's hook animates reveals
-   * (play.ts turns it off when a hook is given).
-   */
-  ownEffects = true;
   private model: TableModel | null = null;
   private selected: CardId | null = null;
   private readonly timerEl: HTMLElement;
@@ -89,10 +87,14 @@ export class DraftTable {
   private overridesFor = '';
   /** Hotseat pass cover (UX.md §9): while set, no hand is in the DOM at all. */
   private cover: CoverInfo | null = null;
-  /** The reveal badges on show (UX.md §8.3), the action they belong to, and their timer. */
-  private fx: EffectBadge[] = [];
-  private fxKey: string | null = null;
-  private fxTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Phones: the sidebar drawer is open (R6 #3). */
+  private drawerOpen = false;
+  /** fx draws its reveal here: kept as the root's last child across renders. */
+  private readonly fxLayer: HTMLElement;
+  /** The Season-end card (UX.md §10.1): the action it was closed for, and its auto-close. */
+  private seasonSeen: string | null = null;
+  private seasonTimerFor: string | null = null;
+  private seasonTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly handlers: DraftTableHandlers) {
     this.timerEl = h('div', {
@@ -105,7 +107,8 @@ export class DraftTable {
       attrs: { role: 'main', 'aria-label': 'Draft table' },
       on: { click: (e) => this.onClick(e), dblclick: (e) => this.onDoubleClick(e) },
     });
-    this.anchors = tableAnchors(this.element);
+    this.fxLayer = h('div', { class: 'dt-fx-layer', attrs: { 'aria-hidden': 'true' } });
+    this.anchors = tableAnchors(this.element, this.fxLayer);
     document.addEventListener('keydown', this.onKey);
     window.addEventListener('resize', this.placePopover);
   }
@@ -114,7 +117,7 @@ export class DraftTable {
   destroy(): void {
     document.removeEventListener('keydown', this.onKey);
     window.removeEventListener('resize', this.placePopover);
-    if (this.fxTimer !== null) clearTimeout(this.fxTimer);
+    if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
     this.element.remove();
   }
 
@@ -127,34 +130,12 @@ export class DraftTable {
     if (this.selected !== null && !model.hand.some((c) => c.id === this.selected)) {
       this.selected = null;
     }
-    // A new action with effects: show its badges for a moment (never on the first render).
-    if (
-      this.ownEffects &&
-      this.fxKey !== null &&
-      model.effectsKey !== this.fxKey &&
-      model.effects.length > 0
-    ) {
-      this.fx = model.effects;
-      if (this.fxTimer !== null) clearTimeout(this.fxTimer);
-      this.fxTimer = setTimeout(() => this.skipEffects(), FX_MS);
-    }
-    this.fxKey = model.effectsKey;
     this.render();
   }
 
-  /** The reveal badges on show, for tests. */
-  get effects(): readonly EffectBadge[] {
-    return this.fx;
-  }
-
-  /** Any click or key skips the reveal (UX.md §8.3: skippable): fx's and the table's own. */
+  /** Any click or key skips the reveal animation (UX.md §8.3: skippable; fx plays it). */
   private skipEffects(): void {
     this.handlers.skip?.();
-    if (this.fxTimer !== null) clearTimeout(this.fxTimer);
-    this.fxTimer = null;
-    if (this.fx.length === 0) return;
-    this.fx = [];
-    this.render();
   }
 
   /** A use as the player set it up in the popover: their changed pick, re-checked, else the default. */
@@ -210,18 +191,19 @@ export class DraftTable {
     this.skipEffects();
     const el = (e.target as Element | null)?.closest<HTMLElement>('[data-act]');
     if (!el || (el instanceof HTMLButtonElement && el.disabled)) return;
-    this.run(el.dataset.act ?? '');
+    this.run(el.dataset.act ?? '', el);
   }
 
-  /** Double-click a hand card = its first legal use (UX.md §8.1 fast path). */
+  /** Double-click a hand card = its primary use (UX.md §8.1 fast path; never a bank-only Build). */
   private onDoubleClick(e: MouseEvent): void {
     const el = (e.target as Element | null)?.closest<HTMLElement>('[data-act^="select:"]');
     const card = this.model?.hand.find((c) => `select:${c.id}` === el?.dataset.act);
-    const first = card?.options.find((o) => o.pick);
+    const first =
+      card && primaryOption(card.options.map((o) => this.optionFor(card, o.use.id) ?? o));
     if (card && first) this.pickUse(card.id, first.use.id);
   }
 
-  private run(act: string): void {
+  private run(act: string, el?: HTMLElement): void {
     const [verb, a = '', b = '', c = '', d = ''] = act.split(':');
     const m = this.model;
     switch (verb) {
@@ -258,6 +240,25 @@ export class DraftTable {
       case 'reveal':
         this.handlers.reveal?.();
         break;
+      case 'season-ok':
+        this.closeSeasonCard();
+        break;
+      case 'recall':
+        if (m) this.openRecall(m);
+        break;
+      case 'catalog':
+        if (m) this.openCatalog(m);
+        break;
+      case 'drawer':
+        this.drawerOpen = !this.drawerOpen;
+        this.render();
+        break;
+      case 'explain': {
+        // R6 #7: a tap says what a number is (touch has no hover).
+        const text = el?.dataset.explain;
+        if (text) showToast(text, 'info', 2500);
+        break;
+      }
       case 'rematch':
         this.handlers.rematch?.();
         break;
@@ -338,10 +339,20 @@ export class DraftTable {
       this.neighbour(m.right, 'right', m),
       this.cover ? this.hiddenHand() : this.hand(m),
       this.side(m),
-      ...(m.result ? [this.result(m.result)] : this.cover ? [this.coverScreen(this.cover)] : []),
+      ...(m.result
+        ? [this.result(m.result)]
+        : this.cover
+          ? [this.coverScreen(this.cover)]
+          : m.seasonEnd && m.actionKey !== this.seasonSeen
+            ? [this.seasonCard(m.seasonEnd)]
+            : []),
+      this.fxLayer,
     ]);
     if (focused && !this.element.contains(document.activeElement)) this.focusKey(focused);
     this.placePopover();
+    // R6 #10: the newest log line is always in view.
+    const log = this.element.querySelector('.dt-log ol');
+    if (log) log.scrollTop = log.scrollHeight;
   }
 
   /**
@@ -371,6 +382,20 @@ export class DraftTable {
         .map((b) => h('div', { class: 'dt-banner' }, this.stat(b))),
       h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
       this.timerEl,
+      // R6 #3: on phones the Table list, reveal and log live in a drawer.
+      h(
+        'button',
+        {
+          class: 'btn btn-sm dt-drawer-btn',
+          attrs: {
+            'data-act': 'drawer',
+            'data-k': 'drawer',
+            'aria-expanded': String(this.drawerOpen),
+            'aria-controls': 'dt-side',
+          },
+        },
+        'Table & log',
+      ),
       h(
         'ol',
         { class: 'dt-chips', attrs: { 'aria-label': 'Pick status' } },
@@ -399,26 +424,40 @@ export class DraftTable {
     );
   }
 
-  private stat(st: SeatStat): HTMLElement {
+  /** One number with its icon. A tap explains it (R6 #7: touch has no hover titles). */
+  private stat(st: SeatStat, labelled = false): HTMLElement {
     return h(
       'span',
       {
         class: `dt-stat is-${st.id}${st.dim ? ' is-dim' : ''}`,
         title: st.label,
-        attrs: { 'aria-label': `${st.label}: ${st.value}` },
+        attrs: {
+          'aria-label': `${st.label}: ${st.value}`,
+          'data-act': 'explain',
+          'data-explain': `${st.label}: ${st.value}`,
+        },
       },
       st.icon &&
         h('img', { class: 'dt-icon', attrs: { src: st.icon, alt: '', 'aria-hidden': 'true' } }),
+      labelled && st.short && h('span', { class: 'dt-stat-label' }, st.short),
       st.value,
     );
   }
 
-  private stats(s: SeatModel): HTMLElement {
+  /**
+   * A seat's numbers. 'labelled' (your town) shows the short labels; 'compact' (you and your
+   * neighbours in the Table list, whose panels show everything) keeps only the first number.
+   */
+  private stats(s: SeatModel, mode: 'full' | 'labelled' | 'compact' = 'full'): HTMLElement {
+    if (mode === 'compact') {
+      const first = s.stats.find((st) => st.id === 'score') ?? s.stats[0];
+      return h('div', { class: 'dt-stats' }, first && this.stat(first));
+    }
     const store = s.stats.filter((st) => st.group === 'store');
     return h(
       'div',
       { class: 'dt-stats' },
-      ...s.stats.filter((st) => !st.group).map((st) => this.stat(st)),
+      ...s.stats.filter((st) => !st.group).map((st) => this.stat(st, mode === 'labelled')),
       store.length > 0 &&
         h(
           'div',
@@ -495,7 +534,6 @@ export class DraftTable {
         ),
       ),
       this.stats(s),
-      this.fxFor(s.seat),
       this.monument(s.monument, 'small'),
       h(
         'ul',
@@ -518,9 +556,8 @@ export class DraftTable {
         { class: 'dt-town-head' },
         h('h2', {}, 'Your town'),
         h('span', { class: 'dt-town-name' }, me.name),
-        this.stats(me),
+        this.stats(me, 'labelled'),
       ),
-      this.fxFor(me.seat),
       this.monument(me.monument, 'large'),
       me.columns.length
         ? h(
@@ -558,6 +595,114 @@ export class DraftTable {
   }
 
   /** UX.md §9: "Pass to Ana", then Ana shows her own hand. Port of catan's coverScreen. */
+  /** UX.md §10.1: each town's Raid result and bounties, then the next Season's pass direction. */
+  private seasonCard(s: SeasonEndInfo): HTMLElement {
+    const key = this.model?.actionKey ?? '';
+    if (this.seasonTimerFor !== key) {
+      this.seasonTimerFor = key;
+      if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
+      this.seasonTimer = setTimeout(() => this.closeSeasonCard(), SEASON_CARD_MS);
+      queueMicrotask(() => this.focusKey('season-ok'));
+    }
+    return h(
+      'div',
+      { class: 'ww-scrim dt-season-scrim' },
+      h(
+        'div',
+        {
+          class: 'ww-dialog dt-season',
+          attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dt-season-title' },
+        },
+        h('h2', { id: 'dt-season-title' }, s.title),
+        h(
+          'ul',
+          { class: 'dt-season-lines' },
+          ...s.lines.map((l) =>
+            h(
+              'li',
+              {
+                class: `is-${l.tone}`,
+                attrs: l.seat === null ? {} : { 'data-seat': String(l.seat) },
+              },
+              l.text,
+            ),
+          ),
+        ),
+        s.next && h('p', { class: 'dt-season-next' }, s.next),
+        h(
+          'div',
+          { class: 'ww-dialog-actions' },
+          h(
+            'button',
+            { class: 'btn btn-primary', attrs: { 'data-act': 'season-ok', 'data-k': 'season-ok' } },
+            'Continue',
+          ),
+        ),
+      ),
+    );
+  }
+
+  /** R15.8: the cards the viewer saw in each hand it passed this Season. */
+  private openRecall(m: TableModel): void {
+    openDialog({
+      title: 'Seen this Season',
+      className: 'is-wide dt-list-dialog',
+      body: [
+        h('p', { class: 'muted' }, 'The hands you passed on, as you last saw them.'),
+        ...m.recall.map((r) =>
+          h(
+            'section',
+            { class: 'dt-recall' },
+            h('h3', {}, r.title),
+            h('div', { class: 'dt-recall-cards' }, ...r.cards.map((c) => this.mini(c))),
+          ),
+        ),
+      ],
+      actions: [{ label: 'Close', primary: true }],
+    });
+  }
+
+  /** R6 #8: every card by round with its copies at this table size, faces as on the cards. */
+  private openCatalog(m: TableModel): void {
+    const sections = m.catalog();
+    openDialog({
+      title: 'All cards',
+      className: 'is-wide dt-list-dialog',
+      body: [
+        sections.length === 0 && h('p', { class: 'muted' }, 'No card list for this game.'),
+        ...sections.map((s) =>
+          h(
+            'section',
+            { class: 'dt-catalog' },
+            h('h3', {}, s.title),
+            h(
+              'ul',
+              {},
+              ...s.cards.map((c) =>
+                h(
+                  'li',
+                  { attrs: { 'data-def': c.def } },
+                  h('span', { class: 'dt-catalog-copies' }, `${c.copies}×`),
+                  h('b', {}, c.face.name),
+                  ` · ${c.face.cost || 'free'} · ${c.face.text}`,
+                  c.face.alt && h('span', { class: 'muted' }, ` · ${c.face.alt}`),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+      actions: [{ label: 'Close', primary: true }],
+    });
+  }
+
+  private closeSeasonCard(): void {
+    if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
+    this.seasonTimer = null;
+    this.seasonSeen = this.model?.actionKey ?? null;
+    this.render();
+  }
+
   private coverScreen(c: CoverInfo): HTMLElement {
     return h(
       'div',
@@ -637,15 +782,15 @@ export class DraftTable {
     );
   }
 
-  /** This seat's reveal badges while they show (UX.md §8.3), else nothing. */
-  private fxFor(seat: SeatId): Child {
-    const mine = this.fx.filter((b) => b.seat === seat);
-    if (mine.length === 0) return null;
-    return h(
-      'div',
-      { class: 'dt-fx', attrs: { 'aria-hidden': 'true', 'data-fx': this.fxKey ?? '' } },
-      ...mine.map((b, i) =>
-        h('span', { class: `dt-fx-badge is-${b.tone}`, style: { '--i': String(i) } }, b.text),
+  /** Amounts as icon + number (R6 #5); each carries its words for hover and screen readers. */
+  private parts(parts: readonly FacePart[]): HTMLElement[] {
+    return parts.map((p) =>
+      h(
+        'span',
+        { class: 'dt-part', title: p.label },
+        p.icon &&
+          h('img', { class: 'dt-icon', attrs: { src: p.icon, alt: '', 'aria-hidden': 'true' } }),
+        p.text,
       ),
     );
   }
@@ -696,6 +841,22 @@ export class DraftTable {
       h('h2', {}, `Your hand · ${m.hand.length} card${m.hand.length === 1 ? '' : 's'}`),
       m.hand.length > 0 &&
         h('span', { class: 'muted dt-keys' }, 'Keys: 1–9 select · letter = use · Esc'),
+      h(
+        'span',
+        { class: 'dt-hand-tools' },
+        // R15.8 Recall and R6 #8 the card list: one click away, never hover-only.
+        m.recall.length > 0 &&
+          h(
+            'button',
+            { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'recall', 'data-k': 'recall' } },
+            `Seen this Season (${m.recall.length})`,
+          ),
+        h(
+          'button',
+          { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'catalog', 'data-k': 'catalog' } },
+          'All cards',
+        ),
+      ),
     );
     return h(
       'section',
@@ -728,7 +889,8 @@ export class DraftTable {
             'data-playable': String(c.playable),
             'aria-pressed': String(open),
             'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
-            'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.face.alt ? `. ${c.face.alt}` : ''}${c.staged ? '. Your locked pick' : ''}`,
+            'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.face.alt ? `. ${c.face.alt}` : ''}${c.badge ? `. ${c.badge.text}` : ''}${c.staged ? '. Your locked pick' : ''}`,
+            'data-afford': c.badge?.tone ?? '',
           },
         },
         h(
@@ -737,14 +899,36 @@ export class DraftTable {
           this.kindMark(c.kind),
           h('span', { class: 'dt-card-name' }, c.face.name),
         ),
-        c.face.cost && h('span', { class: 'dt-card-cost' }, c.face.cost),
+        c.face.art &&
+          h('img', {
+            class: 'dt-card-art',
+            attrs: { src: c.face.art, alt: '', 'aria-hidden': 'true', loading: 'lazy' },
+          }),
+        c.face.costParts?.length
+          ? h('span', { class: 'dt-card-cost' }, ...this.parts(c.face.costParts))
+          : c.face.cost && h('span', { class: 'dt-card-cost' }, c.face.cost),
         h('span', { class: 'dt-card-text' }, c.face.text),
-        c.face.alt && h('span', { class: 'dt-card-alt' }, c.face.alt),
+        c.face.altParts?.length
+          ? h(
+              'span',
+              { class: 'dt-card-alt' },
+              h('span', { class: 'dt-card-alt-label' }, 'Spend'),
+              ...this.parts(c.face.altParts),
+            )
+          : c.face.alt && h('span', { class: 'dt-card-alt' }, c.face.alt),
+        // R6 #1: can I build this, and what does it cost? Before the tap.
+        c.badge &&
+          !c.staged &&
+          h(
+            'span',
+            { class: `dt-card-afford is-${c.badge.tone}`, attrs: { 'aria-hidden': 'true' } },
+            c.badge.text,
+          ),
         h('span', { class: 'dt-card-kind' }, c.kind.label),
         h(
           'span',
           { class: 'dt-card-badge', attrs: { 'aria-hidden': 'true' } },
-          c.staged ? '✓ locked' : c.playable ? `${i + 1}` : '✗',
+          c.staged ? '✓ locked' : i < 9 ? `${i + 1}` : '',
         ),
       ),
       open && this.popover(c),
@@ -757,7 +941,8 @@ export class DraftTable {
    */
   private popover(c: HandCard): HTMLElement {
     const options = c.options.map((o) => this.optionFor(c, o.use.id) ?? o);
-    const primary = options.findIndex((x) => x.pick);
+    const best = primaryOption(options);
+    const primary = best ? options.indexOf(best) : -1;
     return h(
       'div',
       { class: 'dt-pop', attrs: { role: 'group', 'aria-label': `${c.face.name}: choose a use` } },
@@ -785,6 +970,13 @@ export class DraftTable {
                   { class: 'dt-use-main' },
                   h('span', { class: 'dt-use-label' }, o.use.label),
                   o.detail && h('span', { class: 'dt-use-detail' }, o.detail),
+                  o.purse &&
+                    h(
+                      'span',
+                      { class: `dt-use-purse${o.purse.warn ? ' is-warn' : ''}` },
+                      `Coins ${o.purse.before} → ${o.purse.after}`,
+                      o.purse.warn ? ' · bank' : '',
+                    ),
                 ),
                 h('kbd', {}, o.use.key.toUpperCase()),
               ),
@@ -828,7 +1020,7 @@ export class DraftTable {
           h(
             'button',
             {
-              class: `seg-btn${opt.selected ? ' is-on' : ''}`,
+              class: `seg-btn${opt.selected ? ' is-on' : ''}${opt.warn ? ' is-warn' : ''}`,
               disabled: opt.why !== null,
               title: opt.why ?? '',
               attrs: {
@@ -901,9 +1093,21 @@ export class DraftTable {
   private side(m: TableModel): HTMLElement {
     const neighbour = (s: SeatModel) =>
       s.seat === m.left?.seat ? '◀' : s.seat === m.right?.seat ? '▶' : '';
+    const shownElsewhere = (s: SeatModel) =>
+      s.you || s.seat === m.left?.seat || s.seat === m.right?.seat;
     return h(
       'aside',
-      { class: 'dt-side' },
+      { class: `dt-side${this.drawerOpen ? ' is-open' : ''}`, id: 'dt-side' },
+      // Phones only (CSS): the drawer closes from inside itself.
+      h(
+        'div',
+        { class: 'dt-drawer-head' },
+        h(
+          'button',
+          { class: 'btn btn-sm', attrs: { 'data-act': 'drawer', 'data-k': 'drawer-close' } },
+          'Close',
+        ),
+      ),
       h(
         'section',
         { class: 'dt-sum', attrs: { 'aria-label': 'Table' } },
@@ -940,9 +1144,10 @@ export class DraftTable {
                 },
                 STATUS_MARK[s.status],
               ),
-              this.stats(s),
-              this.fxFor(s.seat),
+              // R6 #7: your town and your neighbours' panels already show every number.
+              this.stats(s, shownElsewhere(s) ? 'compact' : 'full'),
               s.monument &&
+                !shownElsewhere(s) &&
                 h(
                   'span',
                   { class: 'dt-row-work', title: s.monument.name },
@@ -960,17 +1165,16 @@ export class DraftTable {
           'section',
           {
             class: 'dt-reveal',
-            // A new key per reveal makes a new element, so the flip-in plays again.
-            attrs: { 'aria-label': 'Last reveal', 'data-reveal': m.effectsKey },
+            attrs: { 'aria-label': 'Last reveal' },
           },
           h('h2', {}, m.reveal.title),
           h(
             'ul',
             {},
-            ...m.reveal.lines.map((l, i) =>
+            ...m.reveal.lines.map((l) =>
               h(
                 'li',
-                { style: { '--i': String(i) } },
+                { attrs: { 'data-seat': String(l.seat) } },
                 h('b', {}, l.you ? 'You' : l.name),
                 ` ${l.verb} `,
                 this.kindMark(l.kind),
@@ -978,6 +1182,9 @@ export class DraftTable {
               ),
             ),
           ),
+          // R6 #4: the interaction (purchases, tolls, Raids, bounties), not just the cards.
+          m.reveal.happenings.length > 0 &&
+            h('ul', { class: 'dt-happenings' }, ...m.reveal.happenings.map((t) => h('li', {}, t))),
         ),
       h(
         'section',

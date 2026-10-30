@@ -47,6 +47,18 @@ export interface CardFace {
   text: string;
   /** What the card gives when used another way (Windamere's Spend band), '' = nothing. */
   alt?: string;
+  /** The cost and the Spend band as icon + number parts (R6 #5: icons, not spelled-out goods). */
+  costParts?: FacePart[];
+  altParts?: FacePart[];
+  /** The card's illustration (art window), a public/art URL. */
+  art?: string;
+}
+
+/** One amount on a card face: an icon and a number; `label` is the words for it ("2 Reed"). */
+export interface FacePart {
+  icon?: string;
+  text: string;
+  label: string;
 }
 
 /** A public number for a seat: coins, score estimate, ... The first one is shown everywhere. */
@@ -54,6 +66,8 @@ export interface SeatStat {
   id: string;
   label: string;
   value: string;
+  /** A visible one-word label where there is room (your own town): "Score", "Guard". */
+  short?: string;
   /** Stats of one group render on their own line ('store': a town's goods). */
   group?: string;
   /** Nothing there (0 of a good): drawn faded. */
@@ -72,6 +86,38 @@ export interface ChoiceOption {
   selected: boolean;
   /** Why this alternative is not possible, or null. */
   why: string | null;
+  /** A costly way to pay (the bank): drawn in a warning colour. */
+  warn?: boolean;
+}
+
+export interface CatalogSection {
+  /** "Spring". */
+  title: string;
+  cards: { def: CardDefId; face: CardFace; copies: number }[];
+}
+
+export interface SeasonEndInfo {
+  /** "End of Spring · Wolf Pack, strength 3". */
+  title: string;
+  /** One line per town (Raid held or plundered, bounties), then table-wide lines. */
+  lines: { seat: SeatId | null; text: string; tone: 'gain' | 'loss' | 'info' }[];
+  /** "Next: Summer · hands pass ▶ right", or null after the last Season. */
+  next: string | null;
+}
+
+/** A hand card's affordability at a glance: "✓ Build", "Build: buy 2 · 4g", "✗ Spend only". */
+export interface HandBadge {
+  text: string;
+  /** ok = from your own store; buy = needs purchases; warn = needs the bank; no = not possible. */
+  tone: 'ok' | 'buy' | 'warn' | 'no';
+}
+
+/** What a pick does to the player's coins (R6 #2: never spend the purse unawares). */
+export interface PurseInfo {
+  before: number;
+  after: number;
+  /** Paid at the bank (dear): warning colour, and the pick is not the highlighted default. */
+  warn: boolean;
 }
 
 export interface ChoiceRow {
@@ -109,22 +155,26 @@ export interface Presenter<S = unknown, T = unknown> {
   banner?(view: DraftView<S, T>): SeatStat[];
   /** The seat's monument (Great Work), or null when it has none yet. */
   monument?(view: DraftView<S, T>, seat: SeatId): MonumentInfo | null;
-  /**
-   * What the latest action did to each seat, for the reveal animation (UX.md §8.3): short
-   * badges ("+2 Reed", "−3 coins", "Great Work tier II"). Empty = nothing to show.
-   */
-  effects?(view: DraftView<S, T>): EffectBadge[];
   /** One line on what a legal pick costs or gives ("pay 2 Reed · buy 1 Salt from Ana, 2g"). */
   describe?(view: DraftView<S, T>, seat: SeatId, pick: Pick): string;
   /** The choices inside a legal pick the player may change (sellers, upgrade or not). */
   choices?(view: DraftView<S, T>, seat: SeatId, pick: Pick): ChoiceRow[];
+  /** Coins before → after a legal pick, and whether it pays the bank. */
+  purse?(view: DraftView<S, T>, seat: SeatId, pick: Pick): PurseInfo | null;
+  /**
+   * The badge on a hand card (R6 #1: affordability before the tap), from its primary use's
+   * legal pick (null when that use is not possible).
+   */
+  badge?(view: DraftView<S, T>, seat: SeatId, pick: Pick | null): HandBadge;
+  /**
+   * R6 #4: what else the latest action did, for the Revealed panel: purchases, sales, tolls,
+   * tiers, Raids, bounties ("Ana bought Peat from Bo (3g)"). Plain sentences, in order.
+   */
+  happenings?(view: DraftView<S, T>): string[];
+  /** UX.md §10.1: the Season-end summary when the latest action ended a Season, else null. */
+  seasonEnd?(view: DraftView<S, T>): SeasonEndInfo | null;
+  /** R6 #8: every card in the game by round (Season), with copies at this table size. */
+  catalog?(seats: number): CatalogSection[];
   /** A player-facing reason for the engine's refusal `error` of `pick`. */
   whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
-}
-
-/** One reveal badge over a seat (UX.md §8.3). */
-export interface EffectBadge {
-  seat: SeatId;
-  text: string;
-  tone: 'gain' | 'loss' | 'info';
 }

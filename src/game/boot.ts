@@ -34,8 +34,16 @@ export interface BootOptions<S, T> {
   debug?: { seats: number; seed?: string };
   /** Title key art behind the home screen (public/art). */
   homeArt?: string;
-  /** The fx lane's reveal animation and sound (src/game/fx.ts); absent = the table's badges. */
+  /** Overrides the game binding's reveal hook (tests); see src/game/fx.ts. */
   fx?: RevealHook<S, T>;
+  /**
+   * The online lane's entry points (src/game/online): shows Play online and Join with code on
+   * the home screen. `root` is where online screens go; boot steps aside while they show.
+   */
+  online?: {
+    create(name: string, root: HTMLElement): void;
+    join(code: string, name: string, root: HTMLElement): void;
+  };
 }
 
 /** The all-human game `?debug=1` starts. */
@@ -48,7 +56,7 @@ export function debugConfig(seats: number, seed?: string): NewGameConfig {
       color: SEAT_COLORS[i % SEAT_COLORS.length]?.color ?? '#888888',
       controller: 'human',
     })),
-    pickTimerSec: null,
+    clock: 'off',
     ...(seed ? { seed } : {}),
   };
 }
@@ -118,6 +126,12 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
         showSetup();
       },
       ...(opts.homeArt ? { art: opts.homeArt } : {}),
+      ...(opts.online
+        ? {
+            onOnline: (name: string) => opts.online?.create(name, root),
+            onJoin: (code: string, name: string) => opts.online?.join(code, name, root),
+          }
+        : {}),
     });
     menu.setItems(prefs);
     root.replaceChildren(home.element, corner);
@@ -130,6 +144,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
       onStart: start,
       ...(play ? { onBack: showPlay } : { onBack: showHome, backLabel: 'Back' }),
       ...(nickname ? { playerName: nickname } : {}),
+      ...(opts.game?.clock ? { clockHint: opts.game.clock.hint } : {}),
     });
     menu.setItems(prefs);
     root.replaceChildren(setup.element, corner);
@@ -151,9 +166,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     if (opts.onStart) return opts.onStart(cfg);
     if (!opts.game) {
       showToast(
-        `No game yet (the ruleset is not in): ${cfg.players.length} players, ${
-          cfg.pickTimerSec ? `${cfg.pickTimerSec} s picks` : 'no timer'
-        }`,
+        `No game yet (the ruleset is not in): ${cfg.players.length} players, clock ${cfg.clock}`,
       );
       return;
     }

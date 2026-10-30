@@ -36,14 +36,18 @@ import {
 } from '../../engine';
 import type {
   CardFace,
+  CatalogSection,
+  FacePart,
   ChoiceOption,
   ChoiceRow,
-  EffectBadge,
+  HandBadge,
   MonumentInfo,
   Presenter,
+  PurseInfo,
+  SeasonEndInfo,
   SeatStat,
 } from '../../ui/table/present';
-import { effectsText, gainsText, goodName, KIND_LABELS, signedItems } from './text';
+import { effectsText, gainsText, goodName, KIND_LABELS } from './text';
 
 type View = DraftView<WwSeat, WwTable>;
 
@@ -74,6 +78,55 @@ const icon = (name: string): string => `${import.meta.env.BASE_URL}art/goods/${n
 /** Any file under public/art (kinds/<kind>, great-works/<content id>: art A6). */
 const art = (path: string): string => `${import.meta.env.BASE_URL}art/${path}.svg`;
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+/** A Raid's Season as a round index (Raids are drawn per Season, R2.6). */
+const raidSeason = (season: string): number =>
+  Math.max(0, (SEASONS as readonly string[]).indexOf(season));
+
+/**
+ * Art A7's card illustrations: three per kind, a placeholder pool (ART.md). A card whose name
+ * matches a picture's subject gets it; any other card gets a stable pick from its kind's three.
+ */
+const ILLUSTRATIONS: Record<string, readonly [string, RegExp][]> = {
+  holding: [
+    ['reeds', /reed/i],
+    ['peat', /peat/i],
+    ['hives', /hive|honey|wax/i],
+  ],
+  hall: [
+    ['moot', /moot/i],
+    ['hearth', /hearth/i],
+    ['bell', /bell/i],
+  ],
+  market: [
+    ['stall', /stall|cart|row/i],
+    ['bridge', /bridge|toll/i],
+    ['fair', /fair|cross|inn/i],
+  ],
+  watch: [
+    ['beacon', /beacon/i],
+    ['fence', /fence|ditch/i],
+    ['gatehouse', /gate|tower|moat/i],
+  ],
+  lore: [
+    ['almanac', /almanac|archive|chronicle/i],
+    ['stars', /star|sky/i],
+    ['rune', /rune|tally/i],
+  ],
+  landmark: [
+    ['barrow', /barrow|stone/i],
+    ['highhall', /high hall|hall/i],
+    ['orrery', /orrery|wheel/i],
+  ],
+};
+
+export function illustration(id: string, name: string, kind: string): string | undefined {
+  const pool = ILLUSTRATIONS[kind];
+  if (!pool) return undefined;
+  let hash = 0;
+  for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const pick = pool.find(([, re]) => re.test(name)) ?? pool[hash % pool.length];
+  return pick ? art(`cards/${kind}-${pick[0]}`) : undefined;
+}
 const argsOf = (pick: Pick): WwPickArgs => (pick.args ?? {}) as WwPickArgs;
 const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
@@ -108,7 +161,32 @@ export function windamerePresenter(
       cost: costShort(rules, d.cost),
       text: effectsText(rules, d.effects) + upgrade,
       alt: `Spend: +${gainsText(rules, d.spend)}`,
+      costParts: parts(d.cost),
+      altParts: parts(d.spend),
+      art: illustration(d.id, d.name, d.kind),
     };
+  }
+
+  /** Gains or a cost as icon + number parts (R6 #5), in goods order, then coins, labour, any. */
+  function parts(gains: Gains): FacePart[] {
+    const out: FacePart[] = [];
+    for (const g of rules.goods) {
+      const n = gains[g];
+      if (n) out.push({ icon: icon(g), text: String(n), label: `${n} ${goodName(rules, g)}` });
+    }
+    const add = (key: string, iconName: string | null, word: string) => {
+      const n = gains[key];
+      if (!n) return;
+      out.push({
+        ...(iconName ? { icon: icon(iconName) } : {}),
+        text: iconName ? String(n) : `${n} ${word}`,
+        label: `${n} ${word}`,
+      });
+    };
+    add('coins', 'coin', 'coins');
+    add('labour', 'labour', 'labour');
+    add('any', null, 'any');
+    return out;
   }
 
   function paymentText(view: View, p: Payment): string {
@@ -179,85 +257,6 @@ export function windamerePresenter(
       }
     }
     return capitalize(msg.replace(/ \(R[\d.a-z]+\)$/, ''));
-  }
-
-  /**
-   * The reveal badges (UX.md §8.3) from E3's latest events: each town's net change in goods,
-   * coins and labour, plus notes for Great Work tiers, Raids, bounties and Honour leads.
-   */
-  function effects(view: View): EffectBadge[] {
-    const net = new Map<SeatId, Gains>();
-    const notes: EffectBadge[] = [];
-    const add = (seat: SeatId, change: Gains, sign = 1) => {
-      const g = net.get(seat) ?? {};
-      for (const [k, v] of Object.entries(change)) g[k] = (g[k] ?? 0) + sign * v;
-      net.set(seat, g);
-    };
-    const rate = rules.tunables.exchangeRate;
-    for (const { event: e } of latestEvents(view)) {
-      switch (e.type) {
-        case 'spend':
-        case 'glean':
-        case 'build':
-        case 'yield':
-        case 'heldBonus':
-        case 'seasonEnd':
-          add(e.seat, e.gains);
-          break;
-        case 'pay':
-          add(e.seat, e.goods, -1);
-          add(e.seat, { coins: -e.coins });
-          for (const x of e.exchanges) add(e.seat, { [x.give]: -rate });
-          break;
-        case 'trade':
-          if (e.filled) add(e.seller, { coins: e.price + e.bonus, [e.good]: -1 });
-          break;
-        case 'tier':
-          add(e.seat, e.gains);
-          notes.push({
-            seat: e.seat,
-            text: `Great Work tier ${ROMAN[e.tier - 1] ?? e.tier}`,
-            tone: 'info',
-          });
-          break;
-        case 'toll':
-          add(e.seat, { coins: e.coins });
-          break;
-        case 'raid':
-          if (e.outcome === 'held') {
-            notes.push({ seat: e.seat, text: `Held the Raid: +${e.valour} Valour`, tone: 'gain' });
-          } else {
-            add(e.seat, { coins: -e.lost });
-            notes.push({
-              seat: e.seat,
-              text: `Plundered (Guard ${e.guard} of ${e.strength})`,
-              tone: 'loss',
-            });
-          }
-          break;
-        case 'bounty':
-          add(e.from, { coins: -e.coins });
-          add(e.to, { coins: e.coins });
-          break;
-        case 'greatWork':
-          notes.push({ seat: e.seat, text: rules.greatWork(e.greatWork).name, tone: 'info' });
-          break;
-        case 'honour':
-          for (const s of e.leaders.filter((l) => !e.was.includes(l))) {
-            notes.push({ seat: s, text: `Leads ${rules.honour(e.honour).name}`, tone: 'gain' });
-          }
-          break;
-        default:
-          break;
-      }
-    }
-    const out: EffectBadge[] = [];
-    for (const [seat, change] of net) {
-      const { gains, losses } = signedItems(rules, change);
-      if (gains.length) out.push({ seat, text: gains.join(', '), tone: 'gain' });
-      if (losses.length) out.push({ seat, text: losses.join(', '), tone: 'loss' });
-    }
-    return [...out, ...notes];
   }
 
   function option(
@@ -331,8 +330,8 @@ export function windamerePresenter(
       rows.push({
         key: `pay-${i}-${p.good}`,
         label: `Get ${goodName(rules, p.good)}`,
-        options: alternatives.map((a) =>
-          option(
+        options: alternatives.map((a) => ({
+          ...option(
             view,
             seat,
             a.key,
@@ -343,10 +342,174 @@ export function windamerePresenter(
             },
             sameJson(a.pay, p),
           ),
-        ),
+          // R6 #2: the bank charges far more than a neighbour.
+          warn: a.pay.via === 'bank',
+        })),
       });
     });
     return rows;
+  }
+
+  /** R6 #4: the latest action's interaction in plain sentences, with names and prices. */
+  function happenings(view: View): string[] {
+    const name = (s: SeatId) => nameOf(view, s);
+    const good = (g: string) => goodName(rules, g);
+    const out: string[] = [];
+    for (const { event: e } of latestEvents(view)) {
+      switch (e.type) {
+        case 'pay':
+          for (const g of e.bank) {
+            out.push(
+              `${name(e.seat)} bought ${good(g)} from the bank (${rules.tunables.bankPrice}g)`,
+            );
+          }
+          for (const x of e.exchanges) {
+            out.push(
+              `${name(e.seat)} exchanged ${rules.tunables.exchangeRate} ${good(x.give)} for ${good(x.for)}`,
+            );
+          }
+          break;
+        case 'trade':
+          out.push(
+            e.filled
+              ? `${name(e.buyer)} bought ${good(e.good)} from ${name(e.seller)} (${e.price}g)`
+              : `${name(e.buyer)} bought ${good(e.good)} from the bank: ${name(e.seller)} ran short`,
+          );
+          break;
+        case 'toll':
+          out.push(`${name(e.seat)} collected ${e.coins} coin${e.coins === 1 ? '' : 's'} in tolls`);
+          break;
+        case 'tier':
+          out.push(
+            `${name(e.seat)} completed ${rules.greatWork(e.greatWork).name} tier ${ROMAN[e.tier - 1] ?? e.tier}`,
+          );
+          break;
+        case 'raid':
+          out.push(raidLine(view, e));
+          break;
+        case 'bounty':
+          out.push(`${name(e.to)} took a ${e.coins}-coin bounty from ${name(e.from)}`);
+          break;
+        case 'honour': {
+          const h = rules.honour(e.honour).name;
+          out.push(
+            e.leaders.length
+              ? `${e.leaders.map(name).join(' and ')} now lead${e.leaders.length === 1 ? 's' : ''} ${h}`
+              : `Nobody leads ${h} now`,
+          );
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    return out;
+  }
+
+  function raidLine(
+    view: View,
+    e: {
+      seat: SeatId;
+      outcome: string;
+      guard: number;
+      strength: number;
+      valour: number;
+      lost: number;
+    },
+  ): string {
+    const who = nameOf(view, e.seat);
+    return e.outcome === 'held'
+      ? `${who} held the Raid (Guard ${e.guard} vs ${e.strength}): +${e.valour} Valour`
+      : `${who} was plundered (Guard ${e.guard} vs ${e.strength}): −${e.lost} coin${e.lost === 1 ? '' : 's'}`;
+  }
+
+  /** UX.md §10.1: the Season-end card, when the latest action resolved a Raid. */
+  function seasonEnd(view: View): SeasonEndInfo | null {
+    const events = latestEvents(view).map((x) => x.event);
+    const raids = events.flatMap((e) => (e.type === 'raid' ? [e] : []));
+    const first = raids[0];
+    if (!first) return null;
+    const raid = rules.raid(first.raid);
+    const season = (r: number) => capitalize(SEASONS[r] ?? `Season ${r + 1}`);
+    const lines: SeasonEndInfo['lines'] = raids.map((e) => ({
+      seat: e.seat,
+      text: raidLine(view, e),
+      tone: e.outcome === 'held' ? 'gain' : 'loss',
+    }));
+    for (const e of events) {
+      if (e.type === 'bounty') {
+        lines.push({
+          seat: e.to,
+          text: `${nameOf(view, e.to)} took a ${e.coins}-coin bounty from ${nameOf(view, e.from)}`,
+          tone: 'info',
+        });
+      }
+    }
+    // The next Season is already dealt (round + 1) when this action ended the last one.
+    const next = view.round > raidSeason(raid.season) ? view.round : null;
+    const dir = view.passDirection === 'left' ? '◀ left' : '▶ right';
+    return {
+      title: `End of ${season(raidSeason(raid.season))} · ${raid.name}, strength ${raid.strength}`,
+      lines,
+      next: next === null ? null : `Next: ${season(next)} · hands pass ${dir}`,
+    };
+  }
+
+  /** R6 #8: the catalog by Season with copies at this seat count (2 seats use the 3-seat column). */
+  function catalog(seats: number): CatalogSection[] {
+    const col = Math.max(0, Math.min(4, seats - 3));
+    return SEASONS.map((season) => ({
+      title: capitalize(season),
+      cards: rules.content.cards
+        .filter((c) => c.season === season)
+        .map((c) => ({ def: c.id, face: card(c.id), copies: c.counts[col] ?? 0 }))
+        .filter((c) => c.copies > 0),
+    }));
+  }
+
+  /** R6 #1: a hand card's Build at a glance, from its default legal Build (null = illegal). */
+  function badge(view: View, seat: SeatId, pick: Pick | null): HandBadge {
+    if (!pick) return { text: '✗ Spend only', tone: 'no' };
+    const p = purse(view, seat, pick);
+    const spent = p ? p.before - p.after : 0;
+    const coins = spent > 0 ? ` · ${spent}g` : '';
+    const pay = argsOf(pick).pay ?? [];
+    if (pay.some((x) => x.via === 'bank')) return { text: `Build: bank${coins}`, tone: 'warn' };
+    if (pay.length > 0) return { text: `Build: buy ${pay.length}${coins}`, tone: 'buy' };
+    return { text: `✓ Build${coins}`, tone: 'ok' };
+  }
+
+  /** R6 #2: coins before → after a pick; a Build that pays the bank is flagged. */
+  function purse(view: View, seat: SeatId, pick: Pick): PurseInfo | null {
+    const s = view.seats[seat];
+    const c = s?.hand.find((x) => x.id === pick.card);
+    if (!s || !c) return null;
+    const def = rules.card(c.def);
+    const args = argsOf(pick);
+    const before = s.data.coins;
+    if (pick.use === SPEND) {
+      const coins = spendGains(rules, view, seat, def, args.any ?? []).coins ?? 0;
+      return { before, after: before + coins, warn: false };
+    }
+    const cost = buildCostAfterDiscount(
+      rules,
+      view,
+      seat,
+      def,
+      args.cover ?? null,
+      args.discount ?? [],
+    );
+    if (typeof cost === 'string') return null;
+    const t = rules.tunables;
+    const pay = args.pay ?? [];
+    const spent =
+      (cost.coins ?? 0) +
+      pay.reduce(
+        (n, p) =>
+          n + (p.via === 'buy' ? marketPrice(rules, view) : p.via === 'bank' ? t.bankPrice : 0),
+        0,
+      );
+    return { before, after: before - spent, warn: pay.some((p) => p.via === 'bank') };
   }
 
   return {
@@ -384,15 +547,28 @@ export function windamerePresenter(
       const d = s.data;
       const renown = Object.values(scoreTown(rules, view, seat)).reduce((a, b) => a + b, 0);
       return [
-        { id: 'coins', label: 'Coins', value: `${d.coins}`, icon: icon('coin') },
-        { id: 'score', label: 'Renown estimate', value: `~${renown}`, icon: icon('renown') },
+        { id: 'coins', label: 'Coins', short: 'Coins', value: `${d.coins}`, icon: icon('coin') },
+        {
+          id: 'score',
+          label: 'Score (Renown estimate)',
+          short: 'Score',
+          value: `~${renown}`,
+          icon: icon('renown'),
+        },
         {
           id: 'guard',
-          label: 'Guard',
+          label: 'Guard (against the Raid)',
+          short: 'Guard',
           value: `${guardOf(rules, view, seat)}`,
           icon: icon('guard'),
         },
-        { id: 'labour', label: 'Labour', value: `${d.labour}`, icon: icon('labour') },
+        {
+          id: 'labour',
+          label: 'Labour (raises your Great Work)',
+          short: 'Labour',
+          value: `${d.labour}`,
+          icon: icon('labour'),
+        },
         ...rules.goods.map((g) => ({
           id: `good-${g}`,
           label: goodName(rules, g),
@@ -458,6 +634,10 @@ export function windamerePresenter(
     describe,
     choices,
     whyNot,
-    effects,
+    purse,
+    badge,
+    happenings,
+    seasonEnd,
+    catalog,
   };
 }

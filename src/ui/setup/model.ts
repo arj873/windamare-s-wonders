@@ -17,8 +17,20 @@ export const DEFAULT_PLAYERS = 4;
 export const NAME_MAX = 16;
 export const SEED_MAX = 32;
 
-/** Pick timer steps in seconds (null = off). UX.md §5; the default is a design call (§16). */
-export const TIMER_STEPS: readonly (number | null)[] = [null, 30, 45, 60, 90];
+/**
+ * RULES.md R15.3 turn clock options. The game gives the Normal lengths (Windamere: 45, 40, 35,
+ * 30, 25 s by turn of the Season, 60 s for the Great Work choice); the others scale them,
+ * rounded up. Default Off in hotseat (R15.3).
+ */
+export type ClockId = 'off' | 'relaxed' | 'normal' | 'fast';
+export const CLOCKS: readonly { id: ClockId; label: string; scale: number }[] = [
+  { id: 'off', label: 'Off', scale: 0 },
+  { id: 'relaxed', label: 'Relaxed', scale: 1.5 },
+  { id: 'normal', label: 'Normal', scale: 1 },
+  { id: 'fast', label: 'Fast', scale: 0.5 },
+];
+export const DEFAULT_CLOCK: ClockId = 'off';
+export const clockScale = (id: ClockId): number => CLOCKS.find((c) => c.id === id)?.scale ?? 0;
 
 export type Controller = 'human' | 'bot';
 export type BotLevel = 'easy' | 'normal' | 'hard';
@@ -69,8 +81,8 @@ export interface SetupDraft {
   mode: string;
   /** Table order: seat i sits between seats i-1 and i+1 (wrapping). */
   seats: SeatDraft[];
-  /** Index into TIMER_STEPS. */
-  timerIdx: number;
+  /** R15.3 turn clock. */
+  clock: ClockId;
   seed: string;
 }
 
@@ -85,8 +97,8 @@ export interface SeatConfig {
 export interface NewGameConfig {
   mode: string;
   players: SeatConfig[];
-  /** Seconds per pick, null = no timer. */
-  pickTimerSec: number | null;
+  /** R15.3 turn clock; the game turns it into seconds per turn. */
+  clock: ClockId;
   seed?: string;
 }
 
@@ -107,7 +119,7 @@ function newSeat(index: number, taken: ReadonlySet<string>): SeatDraft {
 export function defaultSetup(players = DEFAULT_PLAYERS): SetupDraft {
   const seats: SeatDraft[] = [];
   for (let i = 0; i < players; i++) seats.push(newSeat(i, new Set(seats.map((s) => s.color))));
-  return { mode: STANDARD.id, seats, timerIdx: 0, seed: '' };
+  return { mode: STANDARD.id, seats, clock: DEFAULT_CLOCK, seed: '' };
 }
 
 function withSeat(draft: SetupDraft, index: number, patch: Partial<SeatDraft>): SetupDraft {
@@ -205,8 +217,8 @@ export function pickSeatColor(draft: SetupDraft, index: number, color: string): 
   return { ...draft, seats };
 }
 
-export function setTimerIdx(draft: SetupDraft, idx: number): SetupDraft {
-  return { ...draft, timerIdx: clamp(Math.round(idx), 0, TIMER_STEPS.length - 1) };
+export function setClock(draft: SetupDraft, clock: ClockId): SetupDraft {
+  return CLOCKS.some((c) => c.id === clock) ? { ...draft, clock } : draft;
 }
 
 export function setMode(draft: SetupDraft, id: string): SetupDraft {
@@ -221,23 +233,21 @@ export function humanCount(draft: SetupDraft): number {
   return draft.seats.filter((s) => s.controller === 'human').length;
 }
 
-export function timerLabel(idx: number): string {
-  const s = TIMER_STEPS[idx];
-  if (s === null || s === undefined) return 'Off';
-  return s >= 60 && s % 60 === 0 ? `${s / 60} min` : `${s} s`;
+export function clockLabel(id: ClockId): string {
+  return CLOCKS.find((c) => c.id === id)?.label ?? 'Off';
 }
 
 export function modeOf(draft: Pick<SetupDraft, 'mode'>): ModeInfo {
   return MODES.find((m) => m.id === draft.mode) ?? STANDARD;
 }
 
-/** Footer line (UX.md §5): "Standard · 4 players (3 bots) · 45 s picks". */
+/** Footer line (UX.md §5): "Standard · 4 players (3 bots) · Normal clock". */
 export function summaryLine(draft: SetupDraft): string {
   const n = draft.seats.length;
   const bots = n - humanCount(draft);
   const who = bots === 0 ? `${n} players` : `${n} players (${bots} bot${bots === 1 ? '' : 's'})`;
-  const timer = TIMER_STEPS[draft.timerIdx] ? ` · ${timerLabel(draft.timerIdx)} picks` : '';
-  return `${modeOf(draft).name} · ${who}${timer}`;
+  const clock = draft.clock === 'off' ? '' : ` · ${clockLabel(draft.clock)} clock`;
+  return `${modeOf(draft).name} · ${who}${clock}`;
 }
 
 /** Why Start is off, or null. */
@@ -268,11 +278,7 @@ export function buildConfig(draft: SetupDraft): NewGameConfig {
       ...(s.controller === 'bot' ? { botLevel: s.botLevel ?? DEFAULT_BOT_LEVEL } : {}),
     };
   });
-  const cfg: NewGameConfig = {
-    mode: draft.mode,
-    players,
-    pickTimerSec: TIMER_STEPS[draft.timerIdx] ?? null,
-  };
+  const cfg: NewGameConfig = { mode: draft.mode, players, clock: draft.clock };
   const seed = draft.seed.trim();
   if (seed) cfg.seed = seed;
   return cfg;
@@ -325,15 +331,14 @@ export function sanitizeSetup(raw: unknown): SetupDraft {
   });
   while (seats.length < MIN_PLAYERS)
     seats.push(newSeat(seats.length, new Set(seats.map((s) => s.color))));
-  const timerIdx =
-    typeof raw['timerIdx'] === 'number' && Number.isFinite(raw['timerIdx'])
-      ? clamp(Math.round(raw['timerIdx']), 0, TIMER_STEPS.length - 1)
-      : base.timerIdx;
+  // Setups saved before R15.3 had a timer index: any timer becomes Normal.
+  const legacy = typeof raw['timerIdx'] === 'number' && raw['timerIdx'] > 0 ? 'normal' : 'off';
+  const clock = CLOCKS.find((c) => c.id === raw['clock'])?.id ?? legacy;
   const mode =
     typeof raw['mode'] === 'string' && MODES.some((m) => m.id === raw['mode'])
       ? raw['mode']
       : base.mode;
-  return { mode, seats, timerIdx, seed: '' };
+  return { mode, seats, clock, seed: '' };
 }
 
 export function loadSetup(storage: SetupStorage | null): SetupDraft {

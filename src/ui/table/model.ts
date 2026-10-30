@@ -20,9 +20,12 @@ import {
 import type {
   CardFace,
   ChoiceRow,
-  EffectBadge,
   KindInfo,
+  HandBadge,
   MonumentInfo,
+  PurseInfo,
+  SeasonEndInfo,
+  CatalogSection,
   Presenter,
   SeatStat,
   UseInfo,
@@ -88,6 +91,8 @@ export interface UseOption {
   detail: string;
   /** Choices inside the pick the player may change (sellers, upgrade or not). */
   choices: ChoiceRow[];
+  /** Coins before → after (R6 #2), or null when the presenter does not say. */
+  purse: PurseInfo | null;
 }
 
 export interface HandCard {
@@ -101,6 +106,8 @@ export interface HandCard {
   playable: boolean;
   /** This is the viewer's submitted pick (it stays in the hand until the reveal). */
   staged: boolean;
+  /** Affordability before the tap (R6 #1), or null when the presenter gives none. */
+  badge: HandBadge | null;
 }
 
 export interface RevealLine {
@@ -167,13 +174,21 @@ export interface TableModel {
   canUnpick: boolean;
   /** The open prompt, when it is the viewer's. */
   prompt: PromptModel | null;
-  reveal: { title: string; lines: RevealLine[] } | null;
+  /** The latest reveal: who did what with which card, then what else happened (R6 #4). */
+  reveal: { title: string; lines: RevealLine[]; happenings: string[] } | null;
+  /** UX.md §10.1: the latest action ended a Season (not the game): its summary card. */
+  seasonEnd: SeasonEndInfo | null;
+  /**
+   * R15.8 Recall: the hands the viewer passed on this round, newest last (owner-only in the
+   * view, cleared at round end).
+   */
+  recall: { title: string; cards: TableauCard[] }[];
+  /** R6 #8: every card by round, with copies at this table size (computed when opened). */
+  catalog(): CatalogSection[];
   log: { key: string; text: string }[];
   result: ResultModel | null;
-  /** What the latest action did, per seat (the reveal badges, UX.md §8.3). */
-  effects: EffectBadge[];
-  /** Changes with every action that logged anything: a new key = new badges to show. */
-  effectsKey: string;
+  /** Changes with every action that logged anything: a new key = something for fx to reveal. */
+  actionKey: string;
   /** Table-wide facts for the top bar (Raid, Honours, prices). */
   banner: SeatStat[];
   /**
@@ -322,12 +337,21 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
           verb: useOf(p.use)?.verb ?? p.use,
         };
       }),
+      happenings: present.happenings?.(view) ?? [],
     },
+    seasonEnd: phase === 'gameOver' ? null : (present.seasonEnd?.(view) ?? null),
+    recall:
+      viewer === null
+        ? []
+        : (view.seats[viewer]?.recall ?? []).map((r) => ({
+            title: `Pick ${r.turn + 1}: passed to ${nameOf(r.to)}`,
+            cards: r.cards.map((c) => ({ ...tableauCard(c), fresh: false })),
+          })),
+    catalog: () => present.catalog?.(view.seats.length) ?? [],
     log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
     result: resultModel(input, seats),
     banner: present.banner?.(view) ?? [],
-    effects: present.effects?.(view) ?? [],
-    effectsKey: String(view.log.at(-1)?.seq ?? ''),
+    actionKey: String(view.log.at(-1)?.seq ?? ''),
     refine: (pick) => (viewer === null ? null : useOption(input, viewer, pick)),
   };
 }
@@ -337,21 +361,27 @@ function useOption<S, T>(input: TableInput<S, T>, viewer: SeatId, raw: Pick): Us
   const { view, engine, present } = input;
   const use = present.uses.find((u) => u.id === raw.use);
   if (!use) return null;
-  if (view.phase.kind !== 'pick')
-    return { use, pick: null, why: 'Not the pick phase', detail: '', choices: [] };
+  const none = { use, pick: null, detail: '', choices: [], purse: null };
+  if (view.phase.kind !== 'pick') return { ...none, why: 'Not the pick phase' };
   const pick = engine.ruleset.normalizePick?.(view, viewer, raw) ?? raw;
   const err = engine.ruleset.validatePick(view, viewer, pick);
-  if (err) {
-    const why = present.whyNot?.(view, viewer, pick, err) ?? capitalize(err);
-    return { use, pick: null, why, detail: '', choices: [] };
-  }
+  if (err) return { ...none, why: present.whyNot?.(view, viewer, pick, err) ?? capitalize(err) };
   return {
     use,
     pick,
     why: null,
     detail: present.describe?.(view, viewer, pick) ?? '',
     choices: present.choices?.(view, viewer, pick) ?? [],
+    purse: present.purse?.(view, viewer, pick) ?? null,
   };
+}
+
+/**
+ * The option a quick action (double-click, Enter) and the highlight should take: the first
+ * legal use that does not pay the bank, else the first legal use (R6 #2).
+ */
+export function primaryOption(options: readonly UseOption[]): UseOption | undefined {
+  return options.find((o) => o.pick && !o.purse?.warn) ?? options.find((o) => o.pick);
 }
 
 function handCards<S, T>(
@@ -367,7 +397,7 @@ function handCards<S, T>(
   return seat.hand.map((c) => {
     const face = present.card(c.def);
     const options = present.uses.map((use): UseOption => {
-      const none = { use, pick: null, detail: '', choices: [] };
+      const none = { use, pick: null, detail: '', choices: [], purse: null };
       if (!picking) return { ...none, why: 'Not the pick phase' };
       const pick = legal.find((p) => p.card === c.id && p.use === use.id);
       const option = useOption(input, viewer, pick ?? { card: c.id, use: use.id });
@@ -383,6 +413,7 @@ function handCards<S, T>(
       options,
       playable: options.some((o) => o.pick !== null),
       staged: seat.pick?.card === c.id,
+      badge: picking ? (present.badge?.(view, viewer, options[0]?.pick ?? null) ?? null) : null,
     };
   });
 }

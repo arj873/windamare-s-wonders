@@ -3,8 +3,12 @@ import '@fontsource-variable/nunito';
 import '@fontsource/marcellus';
 import './ui/theme/tokens.css';
 import './ui/theme/chrome.css';
+import { sfx } from './audio';
 import { boot } from './game/boot';
 import { windamereBinding } from './game/windamere';
+
+// The fx lane's sound engine starts silent; the first click, key or touch unlocks it.
+sfx.installUnlock(document);
 
 // index.html names no icon, so browsers asked for /favicon.ico (404). Point them at art's
 // Renown mark until platform or art ship a favicon of its own.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WwState } from '../../engine';
-import { tableModel } from '../../ui/table/model';
+import { primaryOption, tableModel } from '../../ui/table/model';
 import { windamere } from './content';
 import { windamerePresenter } from './present';
 
@@ -166,27 +166,88 @@ describe('windamerePresenter', () => {
     const refined = m.refine(bank.pick)!;
     expect(refined.pick).not.toBeNull();
     expect(refined.detail).toBe(`${pay}Reed from the bank (${bankPrice}g)`);
+    // R6 #2: coins before → after, and the bank flagged.
+    expect(build.purse).toEqual({ before: 20, after: 20 - coins - spring, warn: false });
+    expect(refined.purse).toEqual({ before: 20, after: 20 - coins - bankPrice, warn: true });
+    expect(bank.warn).toBe(true);
+    expect(row.options[0]!.warn).toBe(false);
   });
 
-  it('turns the latest events into reveal badges per town', () => {
-    // After the Great Work choice: each town's Great Work is announced.
-    const start = model(newGame());
-    expect(start.effects.filter((b) => b.tone === 'info')).toHaveLength(4);
-    expect(start.effectsKey).not.toBe('');
-    // Everyone Spends their first card: every town gains something from its Spend band.
-    let s = newGame();
+  it('badges each hand card with its Build before the tap (R6 #1)', () => {
+    const spring = rules.tunables.marketPrice[0]!;
+    const coins = rules.card(ONE_REED.id).cost.coins ?? 0;
+    expect(model(pastureState(20, 2, 0)).hand[0]!.badge).toEqual({
+      text: `Build: buy 1 · ${coins + spring}g`,
+      tone: 'buy',
+    });
+    expect(model(pastureState(20, 0, 0)).hand[0]!.badge).toEqual({
+      text: `Build: bank · ${coins + rules.tunables.bankPrice}g`,
+      tone: 'warn',
+    });
+    expect(model(pastureState(0, 0, 0)).hand[0]!.badge).toEqual({
+      text: '✗ Spend only',
+      tone: 'no',
+    });
+    const own = structuredClone(pastureState(20, 0, 0));
+    own.seats[0]!.data.store.reed = 1; // pays from its own store
+    expect(model(own).hand[0]!.badge?.tone).toBe('ok');
+  });
+
+  it('names trades in the Revealed panel and sums up the Season end (R6 #4)', () => {
+    const m = model(pastureState(20, 2, 0));
+    let s = structuredClone(pastureState(20, 2, 0));
+    // Seat 0 builds by buying Reed from Bo; everyone else Spends.
+    const build = m.hand[0]!.options.find((o) => o.use.id === 'build')!.pick!;
     for (const seat of engine.waitingOn(s)) {
-      const card = s.seats[seat]!.hand[0]!.id;
-      const r = engine.applyAction(s, { type: 'pick', seat, pick: { card, use: 'spend' } });
+      const pick = seat === 0 ? build : { card: s.seats[seat]!.hand[0]!.id, use: 'spend' };
+      const r = engine.applyAction(s, { type: 'pick', seat, pick });
       if (!r.ok) throw new Error(r.error);
       s = r.state;
     }
-    const m = model(s);
-    expect(m.effectsKey).not.toBe(start.effectsKey);
-    for (const seat of [0, 1, 2, 3]) {
-      const gain = m.effects.find((b) => b.seat === seat && b.tone === 'gain');
-      expect(gain?.text).toMatch(/^\+\d+ /);
+    const spring = rules.tunables.marketPrice[0]!;
+    expect(model(s).reveal?.happenings).toContain(`Ana bought Reed from Bo (${spring}g)`);
+    expect(model(s).seasonEnd).toBeNull();
+
+    // Play out Spring: the action that ends it carries the Raid summary.
+    const summer = advance(s, (x) => x.round === 1);
+    const end = model(summer).seasonEnd!;
+    expect(end.title).toMatch(/^End of Spring · .+, strength \d+$/);
+    expect(end.lines.filter((l) => l.seat !== null && /Raid|plundered/.test(l.text))).toHaveLength(
+      4,
+    );
+    expect(end.next).toMatch(/^Next: Summer · hands pass ▶ right$/);
+    expect(
+      model(summer).reveal?.happenings.some((t) => /held the Raid|was plundered/.test(t)),
+    ).toBe(true);
+  });
+
+  it('lists every card by Season and keeps Recall of passed hands (R6 #8, R15.8)', () => {
+    const sections = present.catalog!(4);
+    expect(sections.map((x) => x.title)).toEqual(['Spring', 'Summer', 'Autumn', 'Winter']);
+    const all = sections.flatMap((x) => x.cards);
+    expect(all.every((c) => c.copies > 0 && c.face.name.length > 0)).toBe(true);
+    // Each Season deals 6 cards to each of 4 towns (R3.2): the copies add up to the deck.
+    for (const sec of sections) {
+      expect(sec.cards.reduce((n, c) => n + c.copies, 0)).toBe(rules.tunables.handSize * 4);
     }
+    expect(model(newGame()).recall).toEqual([]);
+    const s = advance(newGame(), (x) => x.turn === 2);
+    const recall = model(s, 0).recall;
+    expect(recall).toHaveLength(2);
+    expect(recall[0]!.title).toBe('Pick 1: passed to Bo');
+    expect(recall[0]!.cards).toHaveLength(5); // 6 dealt, 1 taken
+  });
+
+  it('never highlights a Build that can only pay the bank (R6 #2)', () => {
+    const m = model(pastureState(20, 0, 0)); // nobody sells Reed: the bank is the only way
+    const card = m.hand[0]!;
+    const build = card.options.find((o) => o.use.id === 'build')!;
+    expect(build.pick).not.toBeNull();
+    expect(build.purse?.warn).toBe(true);
+    expect(primaryOption(card.options)?.use.id).toBe('spend');
+    const spend = card.options.find((o) => o.use.id === 'spend')!;
+    expect(spend.purse?.warn).toBe(false);
+    expect(spend.purse!.after).toBeGreaterThanOrEqual(20);
   });
 
   it('explains a Build nobody can pay for', () => {
