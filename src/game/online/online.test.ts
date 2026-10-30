@@ -224,6 +224,8 @@ describe('online room visit (O1)', () => {
     await w.settle(200);
     expect(k(ann, 'waiting-line')?.textContent).toBe('Waiting on 1 town: Bob');
     const turn = ann.roomClient?.game?.view.turn;
+    const ring = () => q(ann, '.dt-timer');
+    expect(ring()?.classList.contains('is-locked')).toBe(false);
     pickFirst(ann);
     await w.settle();
     const annGame = ann.roomClient?.game;
@@ -232,7 +234,10 @@ describe('online room visit (O1)', () => {
     const annPick = annGame?.view.seats[0]?.pick;
     expect(annPick).toEqual(expect.objectContaining({ card: expect.any(Number) }));
     expect(ann.netPlay?.current?.staged?.card.id).toBe(annPick?.card);
-    expect(q(ann, '.dt-timer')?.textContent).toBe('✓');
+    // The ring shows Ann's pick is locked. Checked by state, not text: ui's R8 #5 ring keeps the
+    // seconds beside a ✓ badge ("Pick locked; 0:43 left for the table"), today's shows ✓ only.
+    expect(ring()?.classList.contains('is-locked')).toBe(true);
+    expect(ring()?.getAttribute('aria-label')).toMatch(/^Pick locked/);
     // Bob sees that Ann is done, never what she picked.
     const bobView = bob.roomClient?.game?.view;
     expect(bobView?.view.submitted[0]).toBe(true);
