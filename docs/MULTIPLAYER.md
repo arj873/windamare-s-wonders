@@ -340,7 +340,7 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
 
 ## 11. N4: bot level, seat colour, First game, clock check
 
-- `RoomConfig.botLevels?: ('easy'|'medium'|'hard')[]` (by seat index, default easy) and
+- `RoomConfig.botLevels?: ('easy'|'medium'|'hard')[]` (by seat index, default medium) and
   `colours?: number[]` (slots 0..7, by seat index, must differ). Both are at most `seatCount`
   long. `SeatInfo` in the `room` message now always carries `botLevel` and `colour`; seats with no
   chosen colour take the lowest unused slots. A bot playing a seat (empty seat, or grace over)
@@ -351,7 +351,7 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
 - `src/server/clock.test.ts` asserts the server clock equals `windamereClock.seconds` for every
   preset and turn, so hotseat and online cannot drift.
 - **Backward compatible:** `SeatInfo.botLevel` / `colour` are optional on the wire type (absent =
-  easy / seat index); the server always sends them.
+  medium / seat index); the server always sends them.
 - **First game** is tested on the real engine (`windamere.test.ts`): `options.firstGame` starts in
   the `pick` phase, no Honours, every town holds a Great Work; a misspelt option key refuses to
   start. The full game then plays to `over`.
@@ -382,10 +382,7 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
 - `src/server/measure.test.ts` fails if any save of a 3- or 7-town game passes 512 KB (a quarter of
   the limit). If the log keeps growing, split state and log into two keys then.
 - Not measured: Durable Object write volume per game (each state change rewrites the value).
-- Default bot level stays **easy**: online's O3 test asserts it (`src/game/online/online.test.ts`),
-  and I may not edit that. To get Normal like hotseat, the lobby can send `botLevels` of `medium`
-  (online), or online changes the test and net flips `botLevel()`'s default (one line, session.ts).
-  Timeout picks stay Easy (R15.6).
+- Default bot level is **medium** (Normal, like hotseat; N8). Timeout picks stay Easy (R15.6).
 
 ## 14. N7: Durable Object write volume per game (measured, nothing changed)
 

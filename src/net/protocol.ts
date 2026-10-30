@@ -78,7 +78,7 @@ export interface RoomConfig {
   timer: TimerPreset;
   /** Ruleset options (variants); the engine's `validateConfig` judges them at start. */
   options?: Record<string, Json>;
-  /** Bot level by seat index (default easy); used when a bot plays that seat. */
+  /** Bot level by seat index (default medium, like hotseat); used when a bot plays that seat. */
   botLevels?: BotLevel[];
   /** Colour slot (0..7) by seat index; default is the seat index. Entries must differ. */
   colours?: number[];
@@ -89,7 +89,7 @@ export interface SeatInfo {
   /** Member id of the owner (kept while a bot plays for them), or null for an open seat. */
   occupant: string | null;
   status: SeatStatus;
-  /** What a bot playing this seat would use. Absent = easy. */
+  /** What a bot playing this seat would use. Absent = medium. */
   botLevel?: BotLevel;
   /** Palette slot. Absent = table order (the seat index). */
   colour?: number;
