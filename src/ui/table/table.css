@@ -1,0 +1,711 @@
+/*
+ * Draft table layout (UX.md §7, §12). Colours, fonts and panel looks come from ww-art's tokens
+ * and chrome.css (.table, .seat, .round-badge); this file is layout plus the placeholder card
+ * faces (text only until art A3). Breakpoints follow catan's hud.css: > 1279, 721–1279, ≤ 720.
+ */
+@import '../theme/chrome.css';
+
+.dt {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(190px, 250px) minmax(0, 1fr) minmax(190px, 250px) 340px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'top top top top'
+    'left town right side'
+    'hand hand hand side';
+  gap: 10px;
+  padding: 10px;
+  overflow: hidden;
+}
+.dt h2 {
+  font-size: 15px;
+}
+.dt kbd {
+  font: 700 11px/1 var(--font-ui);
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  opacity: 0.7;
+}
+.dt-mark {
+  display: inline-block;
+  width: 1.1em;
+  text-align: center;
+}
+.dt-tag {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface-sunken);
+  color: var(--ink-dim);
+}
+.dt-empty {
+  margin: 8px 0;
+  font-size: 13px;
+}
+.dt-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--seat, var(--accent));
+  border: 1.5px solid var(--card-edge);
+  flex: none;
+}
+
+/* ---- top bar (A) -------------------------------------------------------- */
+.dt-top {
+  grid-area: top;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-height: 52px;
+  padding: 4px 12px 4px 64px; /* the ☰ menu sits top-left */
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+}
+.dt-round {
+  font-family: var(--font-display);
+  letter-spacing: var(--display-tracking);
+  font-size: 16px;
+  white-space: nowrap;
+}
+.dt-status {
+  flex: 1;
+  min-width: 160px;
+  font-weight: 700;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dt-timer {
+  width: 46px;
+  border-width: 3px;
+  font-size: 12px;
+  flex: none;
+}
+.dt-timer[hidden] {
+  display: none; /* .round-badge sets display: grid */
+}
+.dt-timer.is-locked {
+  opacity: 0.55;
+}
+.dt-timer.timer-low {
+  animation: dt-pulse 1s ease-in-out infinite;
+}
+.dt-chips {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dt-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--surface-sunken);
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+}
+.dt-chip.is-you {
+  border-color: var(--accent);
+}
+.dt-chip-st {
+  min-width: 1em;
+  text-align: center;
+  font-weight: 800;
+}
+.dt-chip-st.is-picked,
+.dt-chip.is-picked .dt-chip-st {
+  color: var(--good);
+}
+.dt-chip-st.is-thinking,
+.dt-chip.is-thinking .dt-chip-st {
+  color: var(--ink-dim);
+}
+
+/* ---- stats and mini cards ---------------------------------------------- */
+.dt-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.dt-stat.is-coins {
+  color: var(--accent);
+}
+.dt-count {
+  color: var(--ink-dim);
+}
+.dt-mini {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  background: var(--card-paper);
+  border: 1.5px solid var(--card-edge);
+}
+.dt-mini-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dt-mini.is-fresh {
+  box-shadow: 0 0 0 2px var(--accent);
+  animation: dt-fresh 0.6s ease-out;
+}
+.dt-zones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+.dt-zone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.dt-zone-label {
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+/* ---- neighbours (B, right of centre) ----------------------------------- */
+.dt-nb {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+}
+.dt-left {
+  grid-area: left;
+}
+.dt-right {
+  grid-area: right;
+}
+.dt-nb.is-empty {
+  visibility: hidden;
+}
+.dt-nb-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.dt-right .dt-nb-head {
+  flex-direction: row-reverse;
+}
+.dt-nb-head .seat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dt-arrow {
+  opacity: 0.45;
+}
+.dt-arrow.is-pass {
+  opacity: 1;
+  color: var(--accent);
+}
+.dt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---- your town (centre) ------------------------------------------------ */
+.dt-town {
+  grid-area: town;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+  border: 2px solid var(--line);
+}
+.dt-town-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.dt-town-name {
+  color: var(--ink-dim);
+}
+.dt-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+.dt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 130px;
+  max-width: 180px;
+}
+.dt-col-head {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+.dt-stage {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 84px;
+}
+.dt-back {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 78px;
+  flex: none;
+  border-radius: 6px;
+  font-size: 22px;
+  color: var(--accent);
+  background: repeating-linear-gradient(45deg, var(--cobalt) 0 6px, #18408a 6px 12px);
+  border: 2px solid var(--card-edge);
+  box-shadow: var(--card-shadow);
+  animation: dt-stage-in 0.2s ease-out;
+}
+.dt-back.is-empty {
+  background: transparent;
+  border: 2px dashed var(--line);
+  box-shadow: none;
+  animation: none;
+}
+.dt-stage-text {
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+/* ---- hand (C) ----------------------------------------------------------- */
+.dt-hand {
+  grid-area: hand;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+}
+.dt-hand-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.dt-keys {
+  margin-left: auto;
+  font-size: 12px;
+}
+.dt-cards {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-top: 14px; /* room for the lifted card */
+  margin-top: -10px;
+  min-height: 180px;
+}
+.dt-slot {
+  position: relative;
+  flex: none;
+}
+.dt-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 118px;
+  height: 165px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink-dark);
+  background: linear-gradient(180deg, var(--card-paper), var(--card-paper-2));
+  border: 2px solid var(--card-edge);
+  border-radius: calc(118px * var(--card-radius));
+  box-shadow: var(--card-shadow);
+  transition:
+    transform 0.12s ease,
+    opacity 0.18s ease;
+}
+.dt-card:hover {
+  transform: translateY(-4px);
+}
+.dt-slot.is-open .dt-card {
+  transform: translateY(-10px);
+  box-shadow:
+    var(--card-shadow),
+    0 0 0 3px var(--accent);
+}
+.dt-card:focus-visible {
+  outline: 3px solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+.dt-card-band {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.1;
+  color: var(--ink);
+  background: var(--cobalt);
+}
+.dt-card-cost {
+  align-self: flex-start;
+  margin: 4px 6px 0;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--coin);
+}
+.dt-card-text {
+  flex: 1;
+  padding: 6px 7px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+.dt-card-kind {
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-top: 1px solid rgba(58, 26, 12, 0.25);
+}
+.dt-card-badge {
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.dt-card.is-unplayable {
+  opacity: 0.75;
+}
+.dt-card.is-staged {
+  box-shadow:
+    var(--card-shadow),
+    0 0 0 3px var(--good);
+}
+.dt-hand.is-locked .dt-card:not(.is-staged) {
+  opacity: 0.6;
+}
+
+/*
+ * The action popover opens above the lifted card (UX.md §8.1). Fixed, so the sideways-scrolling
+ * hand row does not clip it; table.ts sets --pop-x / --pop-y from the card's position.
+ */
+.dt-pop {
+  position: fixed;
+  left: var(--pop-x, 8px);
+  bottom: var(--pop-y, 220px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 240px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow:
+    var(--panel-shadow),
+    0 16px 40px rgba(0, 0, 0, 0.45);
+  animation: ww-drop 0.14s ease;
+}
+.dt-pop-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+.dt-pop-text {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+.dt-use {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+}
+.dt-use-no {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dt-use-no .why {
+  font-size: 12px;
+  color: var(--bad);
+}
+.dt-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 60px;
+  align-items: center;
+}
+.dt-answers .btn {
+  min-height: 44px;
+}
+
+/* ---- sidebar: table summary (D), reveal, log (E) ----------------------- */
+.dt-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+.dt-side > section {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--edge);
+  box-shadow: var(--panel-shadow);
+}
+.dt-side h2 {
+  margin-bottom: 6px;
+}
+.dt-rows,
+.dt-reveal ul,
+.dt-log ol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dt-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+.dt-row.is-you {
+  background: var(--surface-sunken);
+}
+.dt-row .dt-stats {
+  grid-column: 2 / -1;
+  font-size: 12px;
+}
+.dt-row-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dt-reveal li {
+  font-size: 13px;
+}
+.dt-log {
+  flex: 1;
+  min-height: 120px;
+}
+.dt-log li {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+
+/* ---- final scores (UX.md §10.2) ---------------------------------------- */
+.dt-score {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.dt-score th,
+.dt-score td {
+  padding: 5px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+.dt-score tbody th {
+  text-align: left;
+  font-weight: 600;
+}
+.dt-score thead th {
+  white-space: nowrap;
+}
+.dt-score thead .dt-dot {
+  margin-right: 5px;
+}
+.dt-score .dt-total {
+  font-weight: 800;
+}
+.dt-score .is-winner {
+  color: var(--accent);
+}
+.dt-headline {
+  margin: 14px 0 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
+/* ---- tablet / small laptop -------------------------------------------- */
+@media (max-width: 1279px) {
+  .dt {
+    grid-template-columns: minmax(160px, 210px) minmax(0, 1fr) minmax(160px, 210px) 280px;
+  }
+  .dt-chip {
+    padding: 3px 7px;
+  }
+}
+@media (max-width: 1100px) {
+  .dt {
+    grid-template-columns: minmax(150px, 1fr) minmax(0, 2fr) minmax(150px, 1fr);
+    grid-template-areas:
+      'top top top'
+      'left town right'
+      'hand hand hand'
+      'side side side';
+    grid-template-rows: auto minmax(220px, 1fr) auto auto;
+    position: static;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .dt-side {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .dt-side > section {
+    flex: 1 1 260px;
+  }
+  .dt-keys {
+    display: none;
+  }
+}
+
+/* ---- phone (≤ 720 px, UX.md §12.1) ------------------------------------- */
+@media (max-width: 720px) {
+  .dt {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'top top'
+      'left right'
+      'town town'
+      'hand hand'
+      'side side';
+    grid-template-rows: auto auto auto auto auto;
+    gap: 8px;
+    padding: 8px;
+  }
+  .dt-top {
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding-left: 60px;
+  }
+  .dt-round {
+    font-size: 14px;
+    white-space: normal;
+  }
+  .dt-status {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .dt-chips {
+    order: 4;
+    flex-wrap: wrap;
+  }
+  .dt-nb {
+    padding: 8px;
+    max-height: 150px;
+  }
+  .dt-nb .dt-list {
+    display: none;
+  }
+  .dt-hand {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+  }
+  .dt-cards {
+    scroll-snap-type: x mandatory;
+    min-height: 140px;
+  }
+  .dt-slot {
+    scroll-snap-align: start;
+  }
+  .dt-card {
+    width: 96px;
+    height: 134px;
+    border-radius: calc(96px * var(--card-radius));
+  }
+  .dt-card-text {
+    font-size: 11px;
+  }
+  /* The popover becomes a sheet at the bottom of the screen. */
+  .dt-pop {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+  }
+  .dt-nb .dt-tag {
+    display: none;
+  }
+  .dt-use {
+    min-height: 48px;
+  }
+}
+
+@keyframes dt-pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}
+@keyframes dt-fresh {
+  from {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 5px var(--accent);
+  }
+}
+@keyframes dt-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) rotateY(90deg);
+  }
+}
