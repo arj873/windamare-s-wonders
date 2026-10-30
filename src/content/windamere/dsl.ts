@@ -85,7 +85,6 @@ export const fx = {
     kind,
     amount,
   }),
-  // Pending engine support (PENDING_EFFECT_PARAMS); used only by pending.ts.
   onBuildNeighbourMin: (kind: Kind, gains: string): EffectSpec => ({
     type: 'onBuildNeighbourMin',
     kind,

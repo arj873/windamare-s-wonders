@@ -15,7 +15,7 @@ export const TUNABLES = {
   bankPrice: 6, // R6.3, coins per missing good
   exchangeRate: 2, // R6.3, goods of one type for 1 missing good
   buyLimitPerNeighbour: 2, // R6.6b, goods per neighbour per turn
-  marketPrice: { spring: 1, summer: 3, autumn: 4, winter: 5 }, // R6.6c, coins per good
+  marketPrice: { spring: 1, summer: 1, autumn: 1, winter: 3 }, // R6.6c, coins per good; never 2
   tierThresholds: [4, 9, 15, 22], // R8.1, the standard set (each Great Work carries its own)
   valour: { spring: 2, summer: 3, autumn: 4, winter: 5 }, // R9.4
   plunderPerPoint: 1, // R9.5

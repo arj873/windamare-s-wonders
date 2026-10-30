@@ -139,10 +139,10 @@ describe('Season decks (R3.2, R14.1)', () => {
     expect(totals).toEqual({
       holding: 17,
       hall: 21,
-      market: 15,
+      market: 14,
       watch: 15,
       lore: 18,
-      landmark: 10,
+      landmark: 11,
     });
   });
 
@@ -155,9 +155,10 @@ describe('Season decks (R3.2, R14.1)', () => {
 });
 
 describe('prices (R6.3, R6.6c)', () => {
-  it('market price rises every Season, never costs 2, and stays below the bank', () => {
+  it('market price: never falls, Winter above Spring, never 2, below the bank', () => {
     const p = SEASONS.map((s) => TUNABLES.marketPrice[s]);
-    for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThan(p[i - 1]!);
+    for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThanOrEqual(p[i - 1]!);
+    expect(p[p.length - 1]!).toBeGreaterThan(p[0]!);
     expect(p).not.toContain(2);
     expect(Math.max(...p)).toBeLessThan(TUNABLES.bankPrice);
   });
@@ -255,6 +256,17 @@ describe('cards (R1.6, R7, R13)', () => {
       expect(rank, c.id).toBeLessThanOrEqual(hi);
     }
   });
+
+  it('no card effect prints a 7 (research R4 O15)', () => {
+    for (const c of [...CARDS, ...PENDING_CARDS]) {
+      const numbers = c.effects.flatMap((e) =>
+        Object.values(e).flatMap((v) =>
+          typeof v === 'number' ? [v] : typeof v === 'object' && v ? Object.values(v) : [],
+        ),
+      );
+      expect(numbers, c.id).not.toContain(7);
+    }
+  });
 });
 
 describe('Great Works (R8, research R4 O7)', () => {
@@ -335,7 +347,7 @@ describe('Raids and Honours (R9, R11)', () => {
   });
 });
 
-describe('pending cards (D10b, waiting for engine handlers)', () => {
+describe('pending cards (R13.5 staging, empty since D10b)', () => {
   const vocab = { ...EFFECT_PARAMS, ...PENDING_EFFECT_PARAMS };
 
   it('stay out of CARDS, use only the pending vocabulary, and have new ids', () => {
