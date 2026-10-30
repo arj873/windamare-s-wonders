@@ -372,9 +372,10 @@ async function playToEnd(w: ReturnType<typeof world>, app: App): Promise<number>
 describe('online room visit (O3)', () => {
   it('host sets a bot level and seat colours; the guest and the table follow', async () => {
     const { w, ann, bob } = await lobbyOfTwo();
-    // Online bots default to Normal like hotseat's (net's own default is Easy): the host's
-    // client fills the levels once, and the real session takes them.
-    expect(ann.roomClient?.room?.config.botLevels).toEqual([
+    // Online bots play at Normal like hotseat's, whatever net's own default is (Easy today, maybe
+    // medium later): the host's client fills the levels when the room has none. Asserted on what
+    // the server reports per seat, so it holds with either server default.
+    expect(bob.roomClient?.room?.seats.map((s) => s.botLevel)).toEqual([
       'medium',
       'medium',
       'medium',

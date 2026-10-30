@@ -141,6 +141,7 @@ export class NetPlay<S, T> {
   private readonly dock: HTMLElement;
   private readonly dockPanel: HTMLElement;
   private readonly dockToggle: HTMLButtonElement;
+  private readonly barSize: ResizeObserver | null;
   private unsub: (() => void) | null = null;
   private stopTick: (() => void) | null = null;
   private model: TableModel | null = null;
@@ -170,7 +171,10 @@ export class NetPlay<S, T> {
       class: 'ol-presence',
       attrs: { role: 'status', 'aria-live': 'polite', 'data-k': 'presence' },
     });
-    this.dockPanel = h('div', { class: 'ol-dock-panel', attrs: { 'data-k': 'chat-dock' } });
+    this.dockPanel = h('div', {
+      class: 'ww-shell ol-dock-panel',
+      attrs: { 'data-k': 'chat-dock' },
+    });
     this.dockPanel.hidden = true;
     this.dockToggle = h(
       'button',
@@ -202,11 +206,11 @@ export class NetPlay<S, T> {
       },
       'Leave',
     );
-    // Bottom right, over the log column: never over the hand or the towns.
+    // Bottom right, over the log column (a bar along the bottom on phones): never over the hand
+    // or the towns. The chat opens above it as its own panel.
     this.dock = h(
       'div',
       { class: 'ww-shell ol-dock' },
-      this.dockPanel,
       this.presenceEl,
       h('div', { class: 'ol-row' }, leave, this.dockToggle),
     );
@@ -214,8 +218,19 @@ export class NetPlay<S, T> {
       'div',
       { class: 'ol-play', attrs: { 'data-k': 'online-table' } },
       this.table.element,
+      this.dockPanel,
       this.dock,
     );
+    // The bar's height changes with the waiting line (1 to 4 lines): the chat panel and, on
+    // phones, the table's pinned hand (--dt-bottom-inset) sit right above whatever it is now.
+    this.barSize =
+      typeof ResizeObserver === 'function' ? new ResizeObserver(() => this.measureBar()) : null;
+    this.barSize?.observe(this.dock);
+  }
+
+  private measureBar(): void {
+    const px = Math.ceil(this.dock.getBoundingClientRect().height);
+    if (px > 0) this.element.style.setProperty('--ol-bar-h', `${px}px`);
   }
 
   /** Follow the client: render now and on every game / room change; tick the clock. */
@@ -237,6 +252,7 @@ export class NetPlay<S, T> {
 
   dispose(): void {
     this.stop();
+    this.barSize?.disconnect();
     this.opts.fx?.dispose?.();
     this.table.destroy();
     this.element.remove();
@@ -246,6 +262,7 @@ export class NetPlay<S, T> {
   setChat(chat: HTMLElement | null): void {
     this.dockPanel.replaceChildren(...(chat ? [chat] : []));
     this.dock.hidden = chat === null;
+    if (chat === null) this.dockPanel.hidden = true;
   }
 
   /** A chat line from someone else while the dock is closed: unread dot. */
