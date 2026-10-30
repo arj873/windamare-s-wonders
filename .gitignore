@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.vite/
+*.log
+sim-failures/
+.DS_Store
+.claude/settings.local.json
+playtest/shots/
+playtest/session.json
+.wrangler/
+.dev.vars
+# orchestrator state and per-lane scratch: never committed
+.orchestra/
+.scratch/
