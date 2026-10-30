@@ -5,6 +5,7 @@
     <title>Windamere's Wonders: art preview</title>
     <link rel="stylesheet" href="/src/ui/theme/tokens.css" />
     <link rel="stylesheet" href="/src/ui/theme/chrome.css" />
+    <link rel="stylesheet" href="/src/ui/theme/kinds.css" />
     <style>
       body {
         margin: 0;
@@ -115,6 +116,10 @@
       <div class="row" id="kinds"></div>
     </section>
     <section>
+      <h2>Live kind headers and badges (kinds.css) at 14px and 28px</h2>
+      <div class="row" id="live"></div>
+    </section>
+    <section>
       <h2>Goods, coin, labour, Guard, Valour, Renown</h2>
       <div class="row" id="goods"></div>
     </section>
@@ -199,6 +204,10 @@
       $('kinds').innerHTML = KINDS.map(
         (k) =>
           `<div class="cell"><div class="sw" style="background:var(--kind-${k})"></div>${cell(`/art/kinds/${k}.svg`, k)}</div>`,
+      ).join('');
+      $('live').innerHTML = KINDS.map(
+        (k) =>
+          `<div class="cell"><div class="kind-head" data-kind="${k}" style="padding:4px 8px;border-radius:6px;font-family:var(--font-display)">${k} <span class="kind-badge" data-kind="${k}" style="font-size:14px;background:#fff"></span></div><span class="kind-badge" data-kind="${k}" style="font-size:14px"></span> <span class="kind-badge" data-kind="${k}" style="font-size:28px"></span></div>`,
       ).join('');
       $('goods').innerHTML = GOODS.map((i) => cell(`/art/goods/${i}.svg`, i)).join('');
       $('ranks').innerHTML = [1, 2, 3, 4, 5, 6]
