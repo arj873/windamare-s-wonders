@@ -107,13 +107,14 @@ export function observeWindamere(rules: WwRules, state: WwState): Record<string,
     let tolls = 0;
     for (const e of log) {
       const d = (e.data ?? {}) as Record<string, Json>;
-      if (e.kind === 'sale' && d.filled === true) {
-        if (e.seat === id) received += (d.price as number) + ((d.bonus as number | undefined) ?? 0);
+      if (e.kind === 'trade' && d.filled === true) {
+        if (d.seller === id)
+          received += (d.price as number) + ((d.bonus as number | undefined) ?? 0);
         if (d.buyer === id) paid += d.price as number;
-      } else if (e.kind === 'toll' && e.seat === id) tolls += d.coins as number;
+      } else if (e.kind === 'toll' && d.seat === id) tolls += d.coins as number;
       else if (e.kind === 'bounty') {
-        if (e.seat === id) received += d.bounty as number;
-        if (d.from === id) paid += d.bounty as number;
+        if (d.to === id) received += d.coins as number;
+        if (d.from === id) paid += d.coins as number;
       }
     }
     let beat = 0;
@@ -152,11 +153,12 @@ export function observeWindamere(rules: WwRules, state: WwState): Record<string,
     const season = SEASON_NAMES[e.round] ?? '?';
     if (e.kind === 'build') {
       add(`build.${season}`, 1);
-      const def = rules.card((e.data as { card: string }).card);
+      const def = rules.card((e.data as unknown as { card: { def: string } }).card.def);
       builds[def.kind] = (builds[def.kind] ?? 0) + 1;
     } else if (e.kind === 'spend') add(`spend.${season}`, 1);
-    else if (e.kind === 'sale') add('sale', 1);
-    else if (e.kind === 'saleShort') add('saleShort', 1);
+    else if (e.kind === 'trade') {
+      add(`${(e.data as { filled?: boolean } | null)?.filled === true ? 'sale' : 'saleShort'}`, 1);
+    }
   }
   for (const k of KINDS) add(`builtKind.${k}`, (builds[k] ?? 0) / n);
   add('builtPerTown', Object.values(builds).reduce((a, b) => a + b, 0) / n);
