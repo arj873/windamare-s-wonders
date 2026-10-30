@@ -10,6 +10,10 @@ Summer/Autumn cards) on top of D9 (Great Work thresholds 4/9/15/22, Valour 2/3/4
 1000 seeded games per row, seeds 1-1000, 2-7 seats. Standard error of a win share: about 1.6
 points (2 seats) to 1.1 (7 seats).
 
+**Bases.** Sections 0-5 are on main `4fb5baf` (the L2 work). Section 6 reruns the baselines and
+the hand-off package on main `9c09f9e` (design D10a: 4 rivalry cards; bots B5b: the Wolf Gate is
+rated), the base for design's D9c.
+
 ## 0. Read this first
 
 - **Every number is bot play, not human play, and every number says its bot level.**
@@ -102,7 +106,7 @@ Level 1 rows compare with the level-1 baseline, level 2 rows with the level-2 ba
 
 | Experiment        | Change                                                                                                  | Level 1                                                                                                                                                                                                                                                      | Level 2                                                                                                                                                                                                                                                                           | Verdict                                      |
 | ----------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| market-cheaper-2  | neighbour price 1/3/4/5 -> **1/2/2/3**                                                                  | **P3 passes at 3-7 seats** (Summer 12-24%, Autumn 11-22%; 2 seats Summer 27%); blowouts 57/39/28/23/20/17 -> 57/33/23/22/16/13%; +0.3-0.6 Builds per town                                                                                                    | **blowouts 43/25/17/14/10/9 -> 38/14/10/7/5/5% (R3 passes at 4-7 seats)**; margin median 7.6-18.5%; Summer/Autumn Spends -3..-9 pts (still 31-47%); F2 8 -> 5 out; Hall/Town top +2..+5 pts                                                                                       | **win at both levels** (R3, P3)              |
+| market-cheaper-2  | neighbour price 1/3/4/5 -> **1/2/2/3**                                                                  | **P3 passes at 3-7 seats** (Summer 12-24%, Autumn 11-22%; 2 seats Summer 27%); blowouts 57/39/28/23/20/17 -> 57/33/23/22/16/13%; +0.3-0.6 Builds per town                                                                                                    | **blowouts 43/25/17/14/10/9 -> 38/14/10/7/5/5% (passes at 5-7 seats; 4 seats 10.1%)**; margin median 7.6-18.5%; Summer/Autumn Spends -3..-9 pts (still 31-47%); F2 8 -> 5 out; Hall/Town top +2..+5 pts                                                                           | **win at both levels** (R3, P3)              |
 | halls-down        | every Hall -1 printed Renown (14 cards, 2-9 -> 1-8)                                                     | winner's top R12.2 group 36-56% (Town) -> 37-45% (Town, or Great Work at 2/4/7 seats): S1 by group passes; by 8 sources Great Work 37-51%                                                                                                                    | **Hall top 49-69% -> 29-42% (S1 by 8 sources passes)**; Town 76-88% -> 59-75% (still fails); tier IV +4-5 pts; Autumn Spends +3-4 pts; winning score -4                                                                                                                           | **strong partial** (S1)                      |
 | lore-cheaper      | the 5 Lore cuts D9b did not make (Rune Stone, Almanac House, Ferryman's Charts, Sealed Archive, Orrery) | **Lore run >= 3 23-28% -> 28-34% (S3 passes)**, >= 5 -> 3-6%; tier IV at 3 seats 23% -> 19%                                                                                                                                                                  | Lore run >= 3 4-8% -> 6-11%; nothing else moves                                                                                                                                                                                                                                   | win at level 1, small at level 2             |
 | lore-runs-steeper | Lore run scores 1/3/6/10/14/18 -> 1/3/7/11/16/20 (design's D9 try)                                      | -                                                                                                                                                                                                                                                            | Lore run >= 3 4-8% -> 7-10%                                                                                                                                                                                                                                                       | fail                                         |
@@ -180,5 +184,50 @@ on blowouts), Spire-only cuts.
 4. **Summer/Autumn Spends at level 2** stay at 34-51%. Level 2 Spends on purpose; whether P3
    should apply to deliberate Spends is a question for research.
 5. **2-3 seat blowouts** stay at 15-56% at both levels.
-6. **I1 neighbour share** ~1-2% at both levels: structural, a question for the human.
+6. **I1 neighbour share** ~1-2% at both levels: structural, a question for the human. (D10a's
+   rivalry cards then moved it: section 6.)
 7. **K2**: level 3 over level 2 is 1.00-1.23x; denial adds little (bots).
+
+## 6. Recheck on main `9c09f9e` (D10a rivalry cards, B5b Wolf Gate rating): base for D9c
+
+Same seeds and script. Tables: `docs/balance/baseline/9c09f9e-level1.md` and `-level2.md`.
+
+### 6.1 What D10a and B5b changed (baseline `4fb5baf` -> `9c09f9e`)
+
+| Target                                | Level 1                                                                                              | Level 2                                                        |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| I1 net neighbour share median (>=10%) | 1.4-2.0% -> **6-12%** (3 seats passes)                                                               | 0.6-1.9% -> **4-12%** (3 seats passes)                         |
+| S1 Town as winner's top group         | 36-56% -> **44-73%** (fails at 3-7 seats)                                                            | 76-88% -> **88-92%**                                           |
+| S1 top of 8 sources                   | Great Work 30-45%                                                                                    | Hall 43-68% (2 seats 68%, 4 seats 55%)                         |
+| S4 tier IV (20-50%)                   | 23-34%, unchanged                                                                                    | 56-71% -> 50-66%                                               |
+| S3 Lore run >= 3 (>=25%)              | 23-27%                                                                                               | 6-10%                                                          |
+| R3 blowouts (<=10%)                   | 16-58%                                                                                               | 9-42% (passes at 6-7 seats)                                    |
+| P3 Summer / Autumn Spends (<=25%)     | 18-30% / 18-27%                                                                                      | 33-43% / 45-53%                                                |
+| F2 (each 0.75-1.25x)                  | 3 of 13 out: Spire 1.53x, Fourfold Gate 0.67x, Mere Bridge 0.72x                                     | 7 of 13 out, 0.42-1.89x (Tide Mill 1.89x, Fourfold Gate 0.42x) |
+| K1 vs random                          | 1.91x at 3 seats, 1.86x at 5                                                                         | 99.5% at 3 seats, 4.88x at 5 (pass)                            |
+| S2 level-1 specialists (0.6-1.5x)     | all lower: Holding 0.63-1.04x, Hall 0.67-0.99x, Watch 0.61-1.20x, Market 0.47-0.83x, Lore 0.09-0.44x | -                                                              |
+
+The rivalry cards did what D10a aimed at: interaction is now 4-12% of Renown (it was 1-2%). Their
+`scoreBeat` Renown counts as card Renown, so it lands in the Town group, and Town as the winner's
+top group rose at both levels. B5b's rating now picks the Wolf Gate (2586 towns; 0.76x at level
+1, 0.67x at level 2); the Hall of Echoes is now never picked by the rule.
+
+### 6.2 The hand-off package (l2-final-2) on `9c09f9e`
+
+| Target                      | Level 1: baseline -> package                                                        | Level 2: baseline -> package                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| S1 winner's top R12.2 group | Town 44-73% -> **top group 40-63%** (Town 63/57/59% at 3/4/5 seats, still over 55%) | Town 88-92% -> **74-84%** (still fails)                                       |
+| S1 top of 8 sources         | Great Work 30-45% -> 37-52% (Valour top at 3 seats)                                 | **Hall 43-68% -> Great Work 37-45%** (pass)                                   |
+| R3 blowouts                 | 58/39/31/26/20/16% -> 54/34/29/23/20/18%                                            | **42/24/14/11/9/10% -> 34/16/10/7/5/5%** (passes at 5-7 seats; 4 seats 10.3%) |
+| R3 margin median            | 10.9-27.3% -> 10.9-25.5%                                                            | 8.6-20.0% -> **7.1-17.4%** (passes at 4-7 seats)                              |
+| S3 Lore run >= 3            | **23-27% -> 28-33%** (pass)                                                         | 6-10% -> 8-13%                                                                |
+| P3 Summer / Autumn Spends   | **passes at 3-6 seats** (2 seats 31/25%, 7 seats 27/22%)                            | 33-43% / 45-53% -> 31-40% / 42-49%                                            |
+| S4 tier IV                  | 23-34% -> 16-29% (**3 seats 16%**)                                                  | 50-66% -> 54-71%                                                              |
+| F2                          | 3 of 13 -> 2 of 14 out (Spire 1.58x; Harvest Wheel 1.55x at n=113)                  | 7 of 13 -> 5 of 14 out, 0.74-1.42x                                            |
+| I1                          | 6-12%, unchanged (13% at 3 seats)                                                   | 4-12%, unchanged                                                              |
+
+**The package still does what it did on `4fb5baf`** at both levels, and nothing in D10a/B5b
+undoes it. Two things changed: Town is now over 55% at level 1 too (3-5 seats, after the
+package), so the Hall cut is no longer enough on its own; and the S4 conflict (level 1 at 3
+seats 16%, level 2 54-71%) is unchanged. A next experiment would aim at the Town group without
+hurting the rivalry gain (e.g. Landmark or rivalry Renown), measured at both levels.
