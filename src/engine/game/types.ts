@@ -19,16 +19,20 @@ export type Kind = (typeof KINDS)[number];
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
 export type Season = (typeof SEASONS)[number];
 
-/** R11.4 measure ids (Honours and `scoreBeat`). */
+/** R11.5 measure ids (Honours, `scoreBeat`, `scoreThreshold`). */
 export const MEASURES = [
   'guard',
   'holdings',
   'halls',
   'markets',
+  'watches',
+  'lore',
+  'landmarks',
   'loreRun',
   'tiers',
   'coins',
   'kinds',
+  'valour',
 ] as const;
 export type Measure = (typeof MEASURES)[number];
 

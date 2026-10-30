@@ -71,6 +71,12 @@ export const FX_CARDS: WwCardDef[] = [
   card('tf-mark-sets', 'landmark', 'winter', [{ type: 'scoreSets', amount: 3 }]),
   card('tf-mark-goods', 'landmark', 'winter', [{ type: 'scoreGoods', per: 2, amount: 1 }]),
   card('tf-mark-beat', 'landmark', 'winter', [{ type: 'scoreBeat', measure: 'halls', amount: 3 }]),
+  card('tf-mark-watch', 'landmark', 'winter', [
+    { type: 'scoreThreshold', measure: 'watches', atLeast: 2, amount: 5 },
+  ]),
+  card('tf-mark-seasons', 'landmark', 'winter', [
+    { type: 'scoreSeasons', kind: 'hall', amount: 2 },
+  ]),
 ];
 
 const tiers = (thresholds: number[], rewards: EffectSpec[][]): GreatWorkDef['tiers'] =>

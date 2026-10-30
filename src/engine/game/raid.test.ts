@@ -50,14 +50,25 @@ describe('Raids (R9)', () => {
     expect(townData(s, 1).valour).toEqual([]);
   });
 
-  it('R9.6 after all plunder, a town that held gains 1 coin per plundered neighbour', () => {
+  it('R9.6 after all plunder, each plundered neighbour pays a held town 1 coin', () => {
     const s = summer();
     build(s, 0, 'tf-fence');
     build(s, 0, 'tf-fence');
     build(s, 0, 'tf-fence'); // guard 3: holds
     resolveRaid(fx, ctxOf(s));
     expect(townData(s, 0).coins).toBe(5 + 2);
-    expect(townData(s, 1).coins).toBe(5 - 3);
+    expect(townData(s, 1).coins).toBe(5 - 3 - 1); // plunder, then the bounty to seat 0
+    expect(townData(s, 2).coins).toBe(5 - 3 - 1);
+  });
+
+  it('R9.6 a plundered town pays from the coins it has left, its left neighbour first', () => {
+    const s = summer(4);
+    for (const seat of [0, 2, 3]) for (let i = 0; i < 3; i++) build(s, seat, 'tf-fence');
+    townData(s, 1).coins = 4; // plundered for 3: 1 coin left, for its left neighbour (seat 2)
+    resolveRaid(fx, ctxOf(s));
+    expect(townData(s, 1).coins).toBe(0);
+    expect(townData(s, 2).coins).toBe(6);
+    expect(townData(s, 0).coins).toBe(5);
   });
 
   it('R9.6 with 2 towns the bounty is at most 1 (the neighbour counts once, R14.5)', () => {
@@ -65,6 +76,7 @@ describe('Raids (R9)', () => {
     for (let i = 0; i < 3; i++) build(s, 0, 'tf-fence');
     resolveRaid(fx, ctxOf(s));
     expect(townData(s, 0).coins).toBe(6);
+    expect(townData(s, 1).coins).toBe(1);
   });
 
   it("R9.3 every town compares at once: later seats' plunder still pays an earlier seat's bounty", () => {
@@ -73,8 +85,10 @@ describe('Raids (R9)', () => {
     for (let i = 0; i < 3; i++) build(s, 1, 'tf-fence'); // seat 1 holds
     const out = resolveRaid(fx, ctxOf(s));
     expect(out).toEqual(['held', 'held', 'plundered', 'plundered']);
-    expect(townData(s, 0).coins).toBe(5 + 1); // seat 3 plundered
-    expect(townData(s, 1).coins).toBe(5 + 1); // seat 2 plundered
+    expect(townData(s, 0).coins).toBe(5 + 1); // from seat 3
+    expect(townData(s, 1).coins).toBe(5 + 1); // from seat 2
+    expect(townData(s, 2).coins).toBe(5 - 3 - 1);
+    expect(townData(s, 3).coins).toBe(5 - 3 - 1);
   });
 
   it('R9.7 Guard above the strength gives nothing more and is not used up', () => {
@@ -91,12 +105,14 @@ describe('Raids (R9)', () => {
     expect(townData(s, 0).valour).toEqual([2, 3]);
   });
 
-  it('R17.6 a town with 0 coins loses nothing but still gains no Valour', () => {
+  it('R17.6 a town with 0 coins loses nothing, gains no Valour and pays no bounty', () => {
     const s = summer();
+    for (let i = 0; i < 3; i++) build(s, 0, 'tf-fence'); // seat 0 holds
     townData(s, 1).coins = 0;
     resolveRaid(fx, ctxOf(s));
     expect(townData(s, 1).coins).toBe(0);
     expect(townData(s, 1).valour).toEqual([]);
+    expect(townData(s, 0).coins).toBe(5 + 1); // only seat 2 could pay
   });
 
   it('R13 heldBonus pays after the bounty, each time the town holds, from cards and tiers', () => {
@@ -107,9 +123,9 @@ describe('Raids (R9)', () => {
     build(s, 0, 'tf-fence'); // guard 3
     resolveRaid(fx, ctxOf(s));
     expect(townData(s, 0).coins).toBe(5 + 2 + 1 + 2);
-    townData(s, 1).coins = 5; // a second Raid: the bonus pays again
+    townData(s, 1).coins = 5; // a second Raid: the bonus pays again (seat 2 has no coin left)
     resolveRaid(fx, ctxOf(s));
-    expect(townData(s, 0).coins).toBe(10 + 2 + 1 + 2);
+    expect(townData(s, 0).coins).toBe(10 + 1 + 1 + 2);
   });
 
   it('R3.6 and R12.1 Winter ends with the Raid, then Season-end effects, then the game', () => {

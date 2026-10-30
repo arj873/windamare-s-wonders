@@ -47,7 +47,7 @@ describe('Honours (R11)', () => {
     }
   });
 
-  it('R11.4 the eight measures', () => {
+  it('R11.4 and R11.5 the measures', () => {
     const s = newWwGame(3);
     for (const def of [
       'tf-hut',
@@ -64,16 +64,21 @@ describe('Honours (R11)', () => {
     }
     setGreatWork(s, 0, 'tg-crown'); // Perk guard 1
     townData(s, 0).tiers = 1;
+    townData(s, 0).valour = [1, 3];
     const values = Object.fromEntries(MEASURES.map((m) => [m, measure(fx, s, 0, m)]));
     expect(values).toEqual({
       guard: 2,
       holdings: 2,
       halls: 1,
       markets: 1,
+      watches: 1,
+      lore: 3,
+      landmarks: 1,
       loreRun: 2,
       tiers: 1,
       coins: 5 + 3, // the Stall paid 3
       kinds: 6,
+      valour: 2, // tokens, not their values
     });
   });
 });

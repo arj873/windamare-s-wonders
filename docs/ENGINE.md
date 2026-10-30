@@ -706,8 +706,9 @@ yield, greatWorkCheck]`, step-major, in seat order (R4.5). Winter skips `yield` 
 ## 15. The Windamere game (E2, in progress)
 
 `src/engine/game/`, exported from the barrel. Rules: `docs/RULES.md`, approved by the human
-(H1). D2c will change the turn structure (a single-card pick), the goods and add neighbour
-trade, so those parts are not written yet.
+(H1), with design's D2c changes (on `agent/design` d3eda57, not on main yet): five new goods, a
+single-card pick with a glean on the fifth turn, buying goods from neighbours. The systems below
+follow D2c (including its new bounty, R11.5 measures and six score groups); the turn is next.
 
 **Content in, rules out.** `compileContent(content: WwContent): WwRules` (throws on bad content)
 turns design's data (`src/content/`, CARDS.md §1 shapes) into lookups, the effect registry and
@@ -737,31 +738,33 @@ interface WwTable {
 
 **Done (unchanged systems), each with tests named by rule id:**
 
-| System                  | Code                                                                                                                                   | Rules                                |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| Setup                   | `setupTable` (Honours, Raids), `setupSeat`; Raid reveal in `onRoundStart`                                                              | R2.2, R2.3, R2.6, R3.2, R1.11        |
-| Halls, upgrades         | `checkBuildRules`, `buildCost`, `placeBuild` (covered cards move to the public `covered` zone)                                         | R7.1, R7.3, R7.8-R7.10, R13.1, R17.7 |
-| Great Work track, Perks | `greatWorkCheck`, `nextThreshold`; Perk and tiers via `activeEffects`                                                                  | R8.1-R8.6                            |
-| Raids                   | `resolveRaid` (Season end, every Guard read first), `currentRaid`                                                                      | R9.1-R9.7, R17.6, R14.5              |
-| Lore                    | `loreRanks`, `loreRuns`, `loreScore`                                                                                                   | R10.1-R10.5                          |
-| Honours                 | `honourStandings` (leaders all game, works on views), `honourScore`                                                                    | R11.1-R11.4                          |
-| End scoring             | `scoreTown` (categories `CATEGORIES`, R12.2 a-g), `tiebreakOf` [tiers, coins]                                                          | R12.2-R12.5, R7.7                    |
-| Effects                 | `renown guard lore onBuild onBuildPerKind heldBonus seasonEnd scorePerKind scorePerTier scorePerValour scoreSets scoreGoods scoreBeat` | R13, R17.8                           |
+| System                  | Code                                                                                                                                                               | Rules                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
+| Setup                   | `setupTable` (Honours, Raids), `setupSeat`; Raid reveal in `onRoundStart`                                                                                          | R2.2, R2.3, R2.6, R3.2, R1.11        |
+| Halls, upgrades         | `checkBuildRules`, `buildCost`, `placeBuild` (covered cards move to the public `covered` zone)                                                                     | R7.1, R7.3, R7.8-R7.10, R13.1, R17.7 |
+| Great Work track, Perks | `greatWorkCheck`, `nextThreshold`; Perk and tiers via `activeEffects`                                                                                              | R8.1-R8.6                            |
+| Raids                   | `resolveRaid` (Season end, every Guard read first; bounty paid by the plundered neighbour), `currentRaid`                                                          | R9.1-R9.7, R17.6, R14.5              |
+| Lore                    | `loreRanks`, `loreRuns`, `loreScore`                                                                                                                               | R10.1-R10.5                          |
+| Honours                 | `honourStandings` (leaders all game, works on views), `honourScore`, `measure` (R11.5)                                                                             | R11.1-R11.5                          |
+| End scoring             | `scoreTown` (groups `CATEGORIES`: town, greatWork, raids, lore, honours, purse), `tiebreakOf` [tiers, coins]                                                       | R12.2-R12.5, R7.7                    |
+| Effects                 | `renown guard lore onBuild onBuildPerKind heldBonus seasonEnd scorePerKind scorePerTier scorePerValour scoreSets scoreGoods scoreBeat scoreThreshold scoreSeasons` | R13, R17.8                           |
 
-Score by source (R12.2): on a card, `renown` is Buildings and the `score…` effects are
-Landmarks; on the Perk or a tier, both are Great Work. A covered card counts for nothing.
-Readers for ui and bots: `measure(rules, state, seat, id)` (R11.4), `guardOf`, `countKind`,
+Score by source (R12.2): on an uncovered card, printed `renown` and `score…` effects are Town
+(a); on the Perk or a completed tier they are Great Work (b). A covered card counts for nothing.
+Readers for ui and bots: `measure(rules, state, seat, id)` (R11.5), `guardOf`, `countKind`,
 `kindCounts`, `honourStandings`, `scoreTown`; all read public information only.
 
 `windamereRuleset(rules)` wires these into a core `Ruleset` (Season end: `resolveRaid`, then the
 core runs `seasonEnd` effects in seat order, R3.6). Tested end to end for Winter's end: Raid,
 Season-end effects, game over with scores (R3.6, R12.1).
 
-**Not yet (waits for D2c, or for core changes in §14):**
+**Not yet (the turn, next; or waiting on core changes in §14):**
 
-- the turn: deal sizes (`roundSpec`), picks and their validation, resolve steps, paying (R6),
-  trade, Yield (R4.5 step 4, Winter has none), and the handlers `yield`, `income`, `exchange`,
-  `discount`, `caravan`, `spendBonus`, `buildBonus`. They are `TURN_PENDING` in the ruleset.
+- the turn: deal sizes (`roundSpec`), picks and their validation, the glean, resolve steps,
+  paying and buying from neighbours (R6), Tolls, Yield (R4.5 step 4, Winter has none), and the
+  handlers `yield`, `income`, `exchange`, `discount`, `toll`, `sellBonus`, `spendBonus`,
+  `buildBonus`. They are `TURN_PENDING` in the ruleset.
+- the 2-player variant (R14: Burn on turns 1-4, needs a hidden burned face, §14 C2).
 - the Great Work choice at setup (R2.4, R2.5, R15.10): needs §14 C3 and C4.
 - the Great Work check's place in the turn (after steps 2 and 4, R8.3): `greatWorkCheck` is
   ready to be called from those steps.

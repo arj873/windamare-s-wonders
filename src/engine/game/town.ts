@@ -126,7 +126,7 @@ export function loreScore(rules: WwRules, state: WwState, seat: SeatId): number 
   );
 }
 
-/** R11.4: a town's value for an Honour or a `scoreBeat`. */
+/** R11.5: a town's value for an Honour, a `scoreBeat` or a `scoreThreshold`. */
 export function measure(rules: WwRules, state: WwState, seat: SeatId, m: Measure): number {
   const town = townOf(state, seat).data;
   switch (m) {
@@ -138,6 +138,12 @@ export function measure(rules: WwRules, state: WwState, seat: SeatId, m: Measure
       return countKind(rules, state, seat, 'hall');
     case 'markets':
       return countKind(rules, state, seat, 'market');
+    case 'watches':
+      return countKind(rules, state, seat, 'watch');
+    case 'lore':
+      return countKind(rules, state, seat, 'lore');
+    case 'landmarks':
+      return countKind(rules, state, seat, 'landmark');
     case 'loreRun':
       return Math.max(0, ...loreRuns(loreRanks(rules, state, seat)));
     case 'tiers':
@@ -146,7 +152,25 @@ export function measure(rules: WwRules, state: WwState, seat: SeatId, m: Measure
       return town.coins;
     case 'kinds':
       return Object.values(kindCounts(rules, state, seat)).filter((n) => n > 0).length;
+    case 'valour':
+      return town.valour.length;
   }
+}
+
+/** `scoreSeasons`: the number of Seasons whose cards of `kind` the town has uncovered. */
+export function seasonsWithKind(
+  rules: WwRules,
+  state: WwState,
+  seat: SeatId,
+  kind: string,
+): number {
+  const seasons = new Set(
+    uncovered(state, seat)
+      .map((c) => rules.card(c.def))
+      .filter((d) => d.kind === kind)
+      .map((d) => d.season),
+  );
+  return seasons.size;
 }
 
 /** Number of the town's neighbours (each counted once, R14.5) whose measure is strictly lower. */

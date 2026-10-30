@@ -1,15 +1,15 @@
 /**
  * The R13 effect vocabulary as data-driven handlers (docs/ENGINE.md §8). Only the types whose
- * whole behaviour lies in the unchanged systems are here; the turn-structure types (`yield`,
- * `income`, `exchange`, `discount`, `caravan`, `spendBonus`, `buildBonus`) come with D2c.
+ * whole behaviour lies outside the turn are here; the turn's types (`yield`, `income`,
+ * `exchange`, `discount`, `toll`, `sellBonus`, `spendBonus`, `buildBonus`) come with it.
  *
- * `score` returns `{ renown: n }`; `scoreTown` files it under a category by the effect's
- * source (R12.2).
+ * `score` returns `{ renown: n }`; `scoreTown` files it under a group by the effect's source
+ * (R12.2).
  */
 import type { EffectHandler, EffectSpec, Json } from '../core';
 import type { WwRules } from './content';
 import { addGains, checkGains, type GainsAllow } from './gains';
-import { countKind, goodsHeld, neighboursBeaten, townOf } from './town';
+import { countKind, goodsHeld, measure, neighboursBeaten, seasonsWithKind, townOf } from './town';
 import {
   KINDS,
   MEASURES,
@@ -72,7 +72,7 @@ export function makeEffects(rules: WwRules): Record<string, Handler> {
       validate: gainsCheck(),
       onRoundEnd: (ctx, seat, spec) => addGains(townOf(ctx.state, seat).data, spec.gains as Gains),
     },
-    // R12.2e and Great Work scoring effects.
+    // R12.2a-b scoring effects.
     scorePerKind: {
       validate: perKind,
       score: (state, seat, spec) =>
@@ -111,6 +111,25 @@ export function makeEffects(rules: WwRules): Record<string, Handler> {
           : `measure must be one of ${MEASURES.join(', ')}`,
       score: (state, seat, spec) =>
         renown(num(spec, 'amount') * neighboursBeaten(rules, state, seat, spec.measure as Measure)),
+    },
+    scoreThreshold: {
+      validate: (spec) => {
+        if (!measureOk(spec.measure)) return `measure must be one of ${MEASURES.join(', ')}`;
+        if (!isCount(spec.atLeast, 1)) return 'atLeast must be a positive integer';
+        return amountCheck(spec);
+      },
+      score: (state, seat, spec) =>
+        renown(
+          measure(rules, state, seat, spec.measure as Measure) >= num(spec, 'atLeast')
+            ? num(spec, 'amount')
+            : 0,
+        ),
+    },
+    // Per Season whose deck gave the town at least one uncovered card of `kind`.
+    scoreSeasons: {
+      validate: perKind,
+      score: (state, seat, spec) =>
+        renown(num(spec, 'amount') * seasonsWithKind(rules, state, seat, spec.kind as string)),
     },
   };
 }

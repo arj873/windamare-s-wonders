@@ -85,19 +85,29 @@ export function resolveRaid(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): RaidOutc
     }
   }
 
-  // R9.6: after all plunder, held towns gain per plundered neighbour (each neighbour once, R14.5).
+  // R9.6: after all plunder, each plundered town pays a bounty to each neighbour that held, from
+  // the coins it has left, left neighbour first (each neighbour once, R14.5; none at 0, R17.6).
+  // A plundered town only pays and a held one only takes, so the order of towns does not matter.
+  for (const p of seats) {
+    if (outcome[p] !== 'plundered') continue;
+    const payer = townOf(state, p);
+    for (const n of neighboursOf(state, p)) {
+      if (outcome[n] !== 'held') continue;
+      const bounty = Math.min(t.bountyPerNeighbour, payer.data.coins);
+      if (bounty === 0) continue;
+      payer.data.coins -= bounty;
+      const taker = townOf(state, n);
+      taker.data.coins += bounty;
+      ctx.log(n, 'bounty', `${taker.name} takes a bounty of ${bounty} from ${payer.name}.`, {
+        data: { from: p, bounty },
+      });
+    }
+  }
+  // R13 heldBonus: after R9.6, each time the town holds.
   for (const s of seats) {
     if (outcome[s] !== 'held') continue;
-    const town = townOf(state, s);
-    const plundered = neighboursOf(state, s).filter((n) => outcome[n] === 'plundered').length;
-    if (plundered > 0) {
-      const bounty = plundered * t.bountyPerNeighbour;
-      town.data.coins += bounty;
-      ctx.log(s, 'bounty', `${town.name} takes a bounty of ${bounty} coins.`, { data: { bounty } });
-    }
-    // R13 heldBonus: after R9.6, each time the town holds.
     for (const e of activeEffects(rules, state, s, 'heldBonus')) {
-      addGains(town.data, e.spec.gains as Gains);
+      addGains(townOf(state, s).data, e.spec.gains as Gains);
     }
   }
   return outcome;

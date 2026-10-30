@@ -133,7 +133,7 @@ describe('content check', () => {
     expect(checkContent(noWinter)).toEqual(['no Raid for winter']);
   });
 
-  it('R11.4 an Honour uses one of the eight measures', () => {
+  it('R11.5 an Honour uses one of the measures', () => {
     const bad = {
       ...FIXTURE,
       honours: [...FIXTURE.honours, { id: 'h', name: 'H', measure: 'luck' as 'coins' }],

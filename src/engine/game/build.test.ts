@@ -19,11 +19,11 @@ describe('Halls, upgrades and Landmarks (R7)', () => {
     expect(checkInvariants(s)).toEqual([]);
   });
 
-  it('R7.3 a Hall is worth its printed Renown (Buildings, R12.2a)', () => {
+  it('R7.3 a Hall is worth its printed Renown (Town, R12.2a)', () => {
     const s = newWwGame(3);
     build(s, 0, 'tf-shrine');
     build(s, 0, 'tf-hall');
-    expect(scoreTown(fx, s, 0).buildings).toBe(6);
+    expect(scoreTown(fx, s, 0).town).toBe(6);
   });
 
   it('R7.8 at most one copy of each Landmark per town; other cards may repeat', () => {
@@ -49,7 +49,7 @@ describe('Halls, upgrades and Landmarks (R7)', () => {
     expect(town.data.covers).toEqual([{ card: shrine.id, by: hall.id }]);
     expect(coveredBy(s, 0, shrine.id)).toBe(hall.id);
     // The covered card has no effects, no Renown and does not count.
-    expect(scoreTown(fx, s, 0).buildings).toBe(4);
+    expect(scoreTown(fx, s, 0).town).toBe(4);
     expect(countKind(fx, s, 0, 'hall')).toBe(1);
     expect(checkInvariants(s)).toEqual([]);
   });
@@ -89,7 +89,7 @@ describe('Halls, upgrades and Landmarks (R7)', () => {
     const great = build(s, 0, 'tf-great-hall', hall.id);
     expect(s.seats[0]!.tableau).toEqual([great]);
     expect(s.seats[0]!.zones[COVERED]).toEqual([shrine, hall]);
-    expect(scoreTown(fx, s, 0).buildings).toBe(7);
+    expect(scoreTown(fx, s, 0).town).toBe(7);
   });
 
   it('R7.10 every count of cards counts uncovered cards only', () => {

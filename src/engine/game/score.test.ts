@@ -11,45 +11,40 @@ function bare(seats = 3): WwState {
 }
 
 describe('end scoring (R12)', () => {
-  it('R12.2 a town scores the seven categories a to g', () => {
+  it('R12.2 a town scores the six groups a to f, in score-sheet order', () => {
     const s = bare();
     build(s, 0, 'tf-shrine'); // a: 2
     build(s, 0, 'tf-strongbox'); // a: 1, +6 coins
-    build(s, 0, 'tf-mark-halls'); // e: 2 per Hall = 2
+    build(s, 0, 'tf-mark-halls'); // a: 2 per Hall = 2
     build(s, 0, 'tf-lore-1'); // d: 1
     townData(s, 0).valour = [1, 2]; // c: 3
     setGreatWork(s, 0, 'tg-crown');
     townData(s, 0).tiers = 2; // b: tier II renown 3
-    s.table.honours = ['th-halls']; // f: sole leader, 5
+    s.table.honours = ['th-halls']; // e: sole leader, 5
     const score = scoreTown(fx, s, 0);
     expect(Object.keys(score)).toEqual([...CATEGORIES]);
     expect(score).toEqual({
-      buildings: 3,
+      town: 5,
       greatWork: 3,
-      valour: 3,
+      raids: 3,
       lore: 1,
-      landmarks: 2,
       honours: 5,
-      treasury: 2, // g: 11 coins / 4
+      purse: 2, // f: 11 coins / 4
     });
   });
 
-  it("R12.2b the Perk's and the tiers' scoring effects are Great Work Renown", () => {
+  it("R12.2b the Perk's and the tiers' Renown and scoring effects are Great Work", () => {
     const s = bare();
     build(s, 0, 'tf-fence'); // guard 1 beats both neighbours (0)
     build(s, 0, 'tf-shrine');
     setGreatWork(s, 0, 'tg-bell');
     townData(s, 0).tiers = 2; // I renown 2, II 2 per Hall
-    expect(scoreTown(fx, s, 0)).toMatchObject({
-      greatWork: 2 * 2 + 2 + 2,
-      buildings: 2,
-      landmarks: 0,
-    });
+    expect(scoreTown(fx, s, 0)).toMatchObject({ greatWork: 2 * 2 + 2 + 2, town: 2 });
   });
 
-  it('R7.7 and R12.2e each Landmark scores at game end by its condition', () => {
+  it('R7.7 and R12.2a each Landmark scores at game end by its condition, in Town', () => {
     const s = bare();
-    const score = () => scoreTown(fx, s, 0).landmarks;
+    const score = () => scoreTown(fx, s, 0).town;
     build(s, 0, 'tf-mark-tiers');
     townData(s, 0).tiers = 3;
     expect(score()).toBe(6);
@@ -61,18 +56,18 @@ describe('end scoring (R12)', () => {
     expect(score()).toBe(6 + 3 + 2);
   });
 
-  it('R12.2e scoreSets counts full sets of Holding, Hall, Market, Watch and Lore', () => {
+  it('R13 scoreSets counts full sets of Holding, Hall, Market, Watch and Lore', () => {
     const s = bare();
     build(s, 0, 'tf-mark-sets');
     for (const def of ['tf-hut', 'tf-shrine', 'tf-stall', 'tf-fence']) build(s, 0, def);
-    expect(scoreTown(fx, s, 0).landmarks).toBe(0);
+    expect(scoreTown(fx, s, 0).town).toBe(2); // the Shrine only
     build(s, 0, 'tf-lore-1');
-    expect(scoreTown(fx, s, 0).landmarks).toBe(3);
+    expect(scoreTown(fx, s, 0).town).toBe(2 + 3);
     build(s, 0, 'tf-shrine'); // a second Hall alone is no second set
-    expect(scoreTown(fx, s, 0).landmarks).toBe(3);
+    expect(scoreTown(fx, s, 0).town).toBe(2 + 2 + 3);
   });
 
-  it('R12.2e scoreBeat: per neighbour whose measure is strictly lower; with 2 towns, once (R14.5)', () => {
+  it('R13 scoreBeat: per neighbour whose measure is strictly lower; with 2 towns, once (R14.5)', () => {
     const s = bare(3);
     build(s, 0, 'tf-mark-beat'); // 3 per neighbour beaten on Halls
     build(s, 0, 'tf-shrine');
@@ -80,18 +75,39 @@ describe('end scoring (R12)', () => {
     build(s, 1, 'tf-shrine');
     build(s, 2, 'tf-shrine');
     build(s, 2, 'tf-shrine'); // equal: not beaten
-    expect(scoreTown(fx, s, 0).landmarks).toBe(3);
+    expect(scoreTown(fx, s, 0).town).toBe(4 + 3);
     const two = bare(2);
     build(two, 0, 'tf-mark-beat');
     build(two, 0, 'tf-shrine');
-    expect(scoreTown(fx, two, 0).landmarks).toBe(3);
+    expect(scoreTown(fx, two, 0).town).toBe(2 + 3);
   });
 
-  it('R12.2g 1 Renown per 4 coins, rounded down; goods score nothing', () => {
+  it('R13 scoreThreshold pays once the measure is at least the threshold', () => {
+    const s = bare();
+    build(s, 0, 'tf-mark-watch'); // 5 with at least 2 Watches
+    build(s, 0, 'tf-fence');
+    expect(scoreTown(fx, s, 0).town).toBe(0);
+    build(s, 0, 'tf-fence');
+    expect(scoreTown(fx, s, 0).town).toBe(5);
+    build(s, 0, 'tf-fence');
+    expect(scoreTown(fx, s, 0).town).toBe(5);
+  });
+
+  it('R13 scoreSeasons: per Season whose deck gave the town an uncovered card of the kind', () => {
+    const s = bare();
+    build(s, 0, 'tf-mark-seasons'); // 2 per Season with a Hall
+    const shrine = build(s, 0, 'tf-shrine'); // spring
+    build(s, 0, 'tf-shrine'); // spring again: no new Season
+    expect(scoreTown(fx, s, 0).town).toBe(4 + 2);
+    build(s, 0, 'tf-hall', shrine.id); // summer; one spring Shrine is left uncovered
+    expect(scoreTown(fx, s, 0).town).toBe(2 + 4 + 2 * 2);
+  });
+
+  it('R12.2f 1 Renown per 4 coins, rounded down; goods score nothing', () => {
     const s = bare();
     townData(s, 0).coins = 11;
     Object.assign(townData(s, 0).store, { flint: 9, slate: 9 });
-    expect(scoreTown(fx, s, 0)).toMatchObject({ treasury: 2, landmarks: 0 });
+    expect(scoreTown(fx, s, 0)).toMatchObject({ purse: 2, town: 0 });
   });
 
   it('R12.3 the town with the most Renown wins', () => {
