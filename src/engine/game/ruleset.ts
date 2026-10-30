@@ -29,6 +29,8 @@ export function windamereRuleset(rules: WwRules): Ruleset<WwSeat, WwTable> {
     // R2.4, R2.5: the Great Work choice, before the first deal.
     onGameStart: (ctx) => offerGreatWorks(rules, ctx),
     startBeforeDeal: true,
+    // R15.8: a town may look at the hands it passed on, until the Season ends.
+    recall: true,
     onRoundStart: (ctx, round) => revealRaid(rules, ctx, round),
     normalizePick: (state, seat, pick) => normalizePick(rules, state, seat, pick),
     validatePick: (state, seat, pick) => validatePick(rules, state, seat, pick),

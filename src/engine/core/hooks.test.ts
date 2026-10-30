@@ -170,6 +170,39 @@ describe('prompt groups (C3) and start prompts before the deal (C4)', () => {
   });
 });
 
+describe('recall (C10)', () => {
+  it('each seat keeps the hands it passed this round, owner-only, cleared at round end', () => {
+    const e = variant({ recall: true });
+    let s = e.createGame(toyConfig(3, { rounds: 2 }));
+    const firstPick = s.seats.map((t) => t.hand[0]!.id);
+    for (const seat of [0, 1, 2]) {
+      const r = e.applyAction(s, { type: 'pick', seat, pick: sellFirst(s, seat) });
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+    // Seat 0 passed its hand (less its pick) to its left neighbour, seat 1.
+    expect(s.seats[0]!.recall).toEqual([{ turn: 0, to: 1, cards: s.seats[1]!.hand }]);
+    expect(s.seats[0]!.recall[0]!.cards.some((c) => c.id === firstPick[0])).toBe(false);
+    expect(e.viewFor(s, 0).seats[0]!.recall).toEqual(s.seats[0]!.recall);
+    expect(e.viewFor(s, 1).seats[0]!.recall).toEqual([]);
+    expect(e.viewFor(s, 'spectator').seats[0]!.recall).toEqual([]);
+    s = playRound(e, s);
+    expect(s.round).toBe(1);
+    expect(s.seats.every((t) => t.recall.length === 0)).toBe(true);
+  });
+
+  it('is off by default (the recall lists stay empty)', () => {
+    let s = newToyGame(3);
+    for (const seat of [0, 1, 2]) {
+      const r = toy.applyAction(s, { type: 'pick', seat, pick: sellFirst(s, seat) });
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+    expect(s.turn).toBe(1); // hands were passed
+    expect(s.seats.every((t) => t.recall.length === 0)).toBe(true);
+  });
+});
+
 describe('onLeftovers', () => {
   it("receives each seat's last-turn leftovers before the resolve steps, instead of the discard", () => {
     const order: string[] = [];

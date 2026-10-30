@@ -195,8 +195,14 @@ function passHands<S, T>(ctx: Ctx<S, T>): void {
   const draft = ctx.state;
   const hands = draft.seats.map((s) => s.hand);
   draft.seats.forEach((s, i) => {
-    const to = draft.seats[passTarget(draft, s.id)];
-    if (to) to.hand = hands[i] ?? [];
+    const target = passTarget(draft, s.id);
+    const hand = hands[i] ?? [];
+    // Recall: the seat saw this hand as it passed it on (copies; the cards move on).
+    if (ctx.rules.recall === true && hand.length > 0) {
+      s.recall.push({ turn: draft.turn, to: target, cards: hand.map((c) => ({ ...c })) });
+    }
+    const to = draft.seats[target];
+    if (to) to.hand = hand;
   });
   ctx.log(null, 'pass', `Hands pass ${draft.passDirection}.`);
 }
@@ -204,6 +210,7 @@ function passHands<S, T>(ctx: Ctx<S, T>): void {
 function roundEnd<S, T>(ctx: Ctx<S, T>): void {
   const { state: draft, rules } = ctx;
   ctx.log(null, 'roundEnd', `Round ${draft.round + 1} ends.`);
+  for (const s of draft.seats) s.recall = [];
   rules.onRoundEnd?.(ctx);
   for (const s of draft.seats) {
     for (const spec of effectsOf(rules, draft, s.id))

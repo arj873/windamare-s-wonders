@@ -4,9 +4,9 @@ Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this fil
 **If you change a public type in `src/engine/core/types.ts`, update this file in the same commit.**
 
 Status (2026-10-30): **E1 implemented** in `src/engine/core/` (toy ruleset, §12). §1-§13 are
-what the code does. **§14 lists the contract changes the Windamere rules still need: planned,
-not implemented. §15 is the Windamere game (E2): playable for 2 to 7 towns on the D2c rules and
-the shipped content, Great Work choice included; not yet Recall.**
+what the code does. **§15 is the Windamere game (E2): playable for 2 to 7 towns on the D2c rules
+and the shipped content, Great Work choice and Recall included.** §14 keeps three optional core
+changes (C7, C8, C11) the game does without (it does that work in `src/engine/game/`).
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
 resolution order, hand passing, rounds, prompts, scoring hooks and per-seat views. It does not
@@ -141,6 +141,7 @@ interface SeatState<S> {
   //                    the picked card stays in `hand` until the reveal
   tableau: Card[]; // public, in the order played
   zones: Record<string, Card[]>; // ruleset zones (e.g. cards tucked under a monument); visibility per zone
+  recall: { turn: number; to: SeatId; cards: Card[] }[]; // owner only; hands passed this round (§7)
   data: S; // ruleset seat data
 }
 
@@ -328,6 +329,7 @@ A view has the `DraftState` shape, so UI renders it unchanged. Masked for everyo
 | -------------------------------------- | --------------------------------------------------------------------------- |
 | other seats' `hand`                    | placeholder cards `{ id: -1 - i, def: HIDDEN_CARD }`, same length           |
 | other seats' `pick`                    | `null` (`view.submitted` says whether they picked)                          |
+| other seats' `recall`                  | `[]`                                                                        |
 | seat `zones` with visibility `'owner'` | placeholders for non-owners; `'hidden'` zones: placeholders for all         |
 | `deck`                                 | placeholders, always                                                        |
 | `discard`                              | placeholders unless `ruleset.discardVisibility === 'public'`                |
@@ -345,10 +347,10 @@ viewer may not know (cards across hidden lists, other seats' picks, rng, seed, p
 texts) leaves `viewFor` unchanged. A deliberately unmasked deck makes it fail (checked once by
 hand).
 
-Not in a view on purpose: what a seat could _remember_ (the cards it saw in a hand it passed on).
-Clients and bots that want that memory track it themselves from successive views. The rules
-want the engine to hand it out (R15.8), so that a bot with memory has no edge over a human:
-§14 C10.
+**Recall:** with `ruleset.recall`, each seat's `recall` lists the hands it passed on this round
+(turn, to whom, the cards as passed: copies, not the cards), so a bot with memory has no edge
+over a human (R15.8). The core fills it when it passes hands and clears it at round end. Views
+show a seat its own `recall` only (others: `[]`). Card conservation ignores it.
 
 `isDraftView(x)` tells views from states. **Never pass a view to `applyAction`.** `legalActions`
 on a view is fine for the viewer's own seat (§6).
@@ -370,6 +372,7 @@ interface Ruleset<S, T> {
   setupSeat(ctx, seat): S; // ctx.rng may be used (e.g. deal monuments)
   onGameStart?(ctx): void;
   startBeforeDeal?: boolean; // true: onGameStart's prompts come before round 0 is dealt (§5)
+  recall?: boolean; // true: seats keep `recall`, the hands they passed this round (§7)
   onRoundStart?(ctx, round): void; // just before each deal (round 0 too), before roundSpec
   validateOptions?(options): string | null;
   normalizePick?(state, seat, pick): Pick; // fill default choices; keep card and use; view-safe
@@ -522,8 +525,9 @@ legalActions soundness and view-safety on random playouts (2-5 seats).
 - Prompts come in groups (§6): one seat after another, or a group of seats at once (the Great
   Work choice). `startBeforeDeal` is opt-in so the toy keeps dealing first (net's session tests
   rely on hands during the toy's opening prompts).
-- Memory of passed hands is not in views (§7). The rules want the engine to hand it out
-  (R15.8): §14 C10.
+- Memory of passed hands: `SeatState.recall`, opt-in per ruleset (`recall`), owner-only in
+  views (§7). Opt-in so the toy's views keep no ids of cards in other hands (net's session test
+  scans for them).
 - 2-player: the rules use no neutral seat (R14): §15.3.
 - Pick changes before the reveal stay (R15.2): `unpick` and re-picking are kept.
 - The log is not trimmed (a game is ~20 turns); revisit if states get large.
@@ -542,7 +546,6 @@ same commit, and the row leaves this list. Done so far: C3 (prompt groups, §6),
 | --- | ------------------------------------------------------------------------ | -------- | ------------------------- |
 | C7  | Effects carry their source (card, Perk, tier)                            | R12.2a-b | ruleset code only         |
 | C8  | `checkRuleset` also validates effects that are not on cards              | R13.3    | none (additive)           |
-| C10 | Recall: each seat's owner-only record of the hands it passed this round  | R15.8    | none (additive field)     |
 | C11 | `Ruleset` takes the card type, so `ctx.def()` returns the Windamere card | none     | ruleset code only (types) |
 
 ### C7. Effect sources
@@ -558,14 +561,6 @@ R12.2 scores printed Renown by source: Buildings (cards, a) apart from Great Wor
 Great Work Perks and tier rewards are `EffectSpec`s outside `cards`. New optional
 `Ruleset.effectLists?(): { where: string; effects: EffectSpec[] }[]` (e.g.
 `'the-wind-organ tier II'`). `checkRuleset` validates them like card effects and names `where`.
-
-### C10. Recall
-
-R15.8: a town may look at the cards it saw in each hand it passed on, until the Season ends.
-Change: `SeatState.recall: { turn: number; to: SeatId; cards: Card[] }[]`, the hand as it was
-passed. The core records it when it passes hands and clears it at round end; views show it to the
-owner only (others: `[]`). These are copies, not cards: card conservation ignores them. Bots and
-humans get the same memory, so bots no longer track it themselves (§7).
 
 ### C11. Card type parameter
 
@@ -588,8 +583,8 @@ Everything else the rules need fits the current contract; how the game uses it i
 `src/engine/game/`, exported from the barrel. Rules: `docs/RULES.md`, approved by the human
 (H1), with design's D2c changes (on `agent/design` d3eda57, not on main yet): five new goods, a
 single-card pick with a glean on the fifth turn, buying goods from neighbours. Everything below
-follows D2c. **Playable for 2 to 7 towns** with `createWindamereEngine()`, Great Work choice
-included; not yet: Recall (§15.3).
+follows D2c. **Playable for 2 to 7 towns** with `createWindamereEngine()`: the whole of RULES.md
+R1-R15 that is the engine's (clocks, away towns and timeout bots are net's and bots').
 
 **Content in, rules out.** `compileContent(content: WwContent): WwRules` (throws on bad content)
 turns design's data (`src/content/`, CARDS.md §1 shapes) into lookups, the effect registry and
@@ -707,8 +702,8 @@ not which. The only neighbour counts once everywhere (buying limit 2 a turn in a
 Tolls, `scoreBeat`). `legalPicks` lists each choice with every other card as the Burn: up to
 10 × 9 Spends plus the payable Builds × 9 on a fresh hand.
 
-**Not yet:** Recall (R15.8, §14 C10). Timeouts use the fallback pick (R15.6); the Easy bot is
-bots' lane.
+**Recall** (R15.8) is on (`recall: true`, §7): each town's `recall` lists the hands it passed this
+Season. Timeouts use the fallback pick (R15.6); the Easy bot is bots' lane.
 
 **Shipped content** (`shipped.ts`): `windamereContent()` maps design's `src/content/windamere`
 (goods, cards, Great Works, Raids, Honours, its R16 `TUNABLES`) to `WwContent`; design keeps its

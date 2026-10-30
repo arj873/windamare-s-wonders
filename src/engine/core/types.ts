@@ -113,8 +113,20 @@ export interface SeatState<S = unknown> {
   tableau: Card[];
   /** Ruleset zones (`ruleset.zones`), each with its own visibility. */
   zones: Record<string, Card[]>;
+  /**
+   * Owner only: the hands this seat passed on this round, as passed (copies, not the cards;
+   * filled only when `ruleset.recall` is true, cleared at round end).
+   */
+  recall: RecallEntry[];
   /** Ruleset seat data (JSON). */
   data: S;
+}
+
+export interface RecallEntry {
+  /** The turn after which the hand was passed. */
+  turn: number;
+  to: SeatId;
+  cards: Card[];
 }
 
 export interface DraftState<S = unknown, T = unknown> {
@@ -294,6 +306,8 @@ export interface Ruleset<S = unknown, T = unknown> {
    * Default false: round 0 is dealt first.
    */
   startBeforeDeal?: boolean;
+  /** true: each seat keeps `recall`, the hands it passed this round (owner-only in views). */
+  recall?: boolean;
   /** Runs just before each round is dealt (round 0 included), before `roundSpec`. */
   onRoundStart?(ctx: Ctx<S, T>, round: number): void;
   validateOptions?(options: Record<string, Json>): string | null;

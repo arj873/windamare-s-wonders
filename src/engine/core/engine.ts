@@ -107,6 +107,7 @@ export function createDraftEngine<S, T>(rules: Ruleset<S, T>): DraftEngine<S, T>
         pick: null,
         tableau: [],
         zones: Object.fromEntries(zoneNames.map((z) => [z, []])),
+        recall: [],
         data: null as S,
       })),
       deck: [],

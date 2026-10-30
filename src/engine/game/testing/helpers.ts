@@ -43,6 +43,7 @@ export function newWwGame(seats = 3, seed: number | string = 1, rules: WwRules =
       pick: null,
       tableau: [],
       zones: Object.fromEntries(Object.keys(ruleset.zones ?? {}).map((z) => [z, []])),
+      recall: [],
       data: null as unknown as WwSeat,
     })),
     deck: [],

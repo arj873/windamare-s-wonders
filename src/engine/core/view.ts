@@ -38,6 +38,7 @@ export function viewFor<S, T>(
       ...s,
       hand: own ? s.hand : hide(s.hand),
       pick: own ? s.pick : null,
+      recall: own ? s.recall : [],
       zones,
       data: rules.maskSeat ? rules.maskSeat(s.data, viewer, s.id) : s.data,
     };
