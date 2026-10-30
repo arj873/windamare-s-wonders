@@ -139,9 +139,11 @@ function observe(s: WwState): Record<string, number[]> {
   (m.bankGoodsPerTown ??= []).push(bank / s.seats.length);
   if (pays > 0) (m.coinsPerBuild ??= []).push(paid / pays);
 
-  // I1 with D10b's neighbour types, which observeWindamere does not count yet: Renown from
-  // scoreNeighbourMin and scoreSales, and onBuildNeighbourMin coins (a Build's logged gains,
-  // which are only that effect's while no buildBonus applies to the card's kind) / coinsPerRenown.
+  // I1 cross-check. observeWindamere's nbrNet counts D10b since bots baa7915, with
+  // onBuildNeighbourMin taken from the weaker neighbour's Holdings at game end (an upper bound).
+  // Here the same I1 with that part replaced by the coins Wend Fair-type cards actually paid at
+  // Build (the Build's logged gains: only that effect's while no buildBonus applies to the card's
+  // kind) / coinsPerRenown. If observeWindamere has no nbrD10b, nothing is subtracted.
   const per = windamereRules.tunables.coinsPerRenown;
   const nbrBuild = new Set(
     content.cards
@@ -161,10 +163,35 @@ function observe(s: WwState): Record<string, number[]> {
         d10b += windamereRules.effects[spec.type]?.score?.(s, x.id, spec).renown ?? 0;
     const coinsR = (nbrCoins[i] ?? 0) / per;
     const tot = total(all[i] as Record<Source, number>);
+    const botsD10b = m.nbrD10b?.[i] ?? 0;
     (m.nbrD10bScore ??= []).push(d10b);
     (m.nbrD10bCoins ??= []).push(coinsR);
-    (m.nbrShareAll ??= []).push(tot > 0 ? ((m.nbrNet?.[i] ?? 0) + d10b + coinsR) / tot : 0);
+    (m.nbrShareAll ??= []).push(
+      tot > 0 ? ((m.nbrNet?.[i] ?? 0) - botsD10b + d10b + coinsR) / tot : 0,
+    );
   });
+
+  // Rivalry payoff (design D12 item 4): Renown from scoreBeat, scoreNeighbourMin and scoreSales,
+  // for the winner and every town, and the part from cards (the rest is Great Work Perks/tiers).
+  const RIVAL = ['scoreBeat', 'scoreNeighbourMin', 'scoreSales'];
+  const rivalOf = (seat: number) => {
+    let all = 0;
+    let cards = 0;
+    for (const type of RIVAL)
+      for (const { spec, source } of activeEffects(windamereRules, s, seat, type)) {
+        const r = windamereRules.effects[spec.type]?.score?.(s, seat, spec).renown ?? 0;
+        all += r;
+        if (source.kind === 'card') cards += r;
+      }
+    return { all, cards };
+  };
+  const rw = rivalOf(w);
+  const wTotal = total(src);
+  (m.rivalWinner ??= []).push(rw.all);
+  (m.rivalWinnerCards ??= []).push(rw.cards);
+  (m.rivalWinnerShare ??= []).push(wTotal > 0 ? rw.all / wTotal : 0);
+  (m['gap.rival'] ??= []).push(rw.all - rivalOf(ru).all);
+  for (const x of s.seats) (m.rivalTown ??= []).push(rivalOf(x.id).all);
   return m;
 }
 
@@ -298,17 +325,32 @@ if (sections.has('1')) {
   }
   out();
   out(
-    'I1 with the D10b neighbour types (observeWindamere counts net coins and scoreBeat only; this adds scoreNeighbourMin and scoreSales Renown and onBuildNeighbourMin coins / coinsPerRenown):',
+    "I1 and the D10b neighbour types (bots' I1 counts them since baa7915, Wend Fair coins as an upper bound from game-end Holdings; the cross-check column uses the coins actually paid at Build):",
   );
   out();
   out(
-    '| seats | I1 median, metrics as shipped | I1 median incl. D10b | D10b score Renown per town | D10b Build coins per town (Renown-equiv.) |',
+    "| seats | I1 median (bots' metric) | I1 median, Build-time Wend Fair coins | D10b score Renown per town | Wend Fair coins per town (Renown-equiv.) |",
   );
   out('|---|---|---|---|---|');
   for (const n of seatCounts) {
     const m = (equal[n] as SimSummary).metrics;
     out(
       `| ${n} | ${pct(quantile(m.nbrShare, 0.5))} | ${pct(quantile(m.nbrShareAll, 0.5))} | ${f1(mean(m.nbrD10bScore))} | ${f1(mean(m.nbrD10bCoins))} |`,
+    );
+  }
+  out();
+  out(
+    'Rivalry payoff (Renown from scoreBeat, scoreNeighbourMin and scoreSales; design D12 item 4):',
+  );
+  out();
+  out(
+    '| seats | winner mean | winner, from cards | share of winner total | winner - runner-up | every town mean |',
+  );
+  out('|---|---|---|---|---|---|');
+  for (const n of seatCounts) {
+    const m = (equal[n] as SimSummary).metrics;
+    out(
+      `| ${n} | ${f1(mean(m.rivalWinner))} | ${f1(mean(m.rivalWinnerCards))} | ${pct(mean(m.rivalWinnerShare))} | ${f1(mean(m['gap.rival']))} | ${f1(mean(m.rivalTown))} |`,
     );
   }
   out();
@@ -420,6 +462,11 @@ if (sections.has('1')) {
       nbrShareAllMedian: quantile(m.nbrShareAll, 0.5),
       nbrD10bScore: mean(m.nbrD10bScore),
       nbrD10bCoins: mean(m.nbrD10bCoins),
+      rivalWinner: mean(m.rivalWinner),
+      rivalWinnerCards: mean(m.rivalWinnerCards),
+      rivalWinnerShare: mean(m.rivalWinnerShare),
+      rivalGap: mean(m['gap.rival']),
+      rivalTown: mean(m.rivalTown),
       heldSpring: mean(m['held.spring']),
       spendSpring: spendShare('spring'),
       spendSummer: spendShare('summer'),

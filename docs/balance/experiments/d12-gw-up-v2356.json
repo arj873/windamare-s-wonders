@@ -1,0 +1,6 @@
+{
+  "extends": "d12-gw-up.json",
+  "name": "d12-gw-up-v2356",
+  "hypothesis": "Design D12 item 2b: d12-gw-up plus Valour Autumn and Winter +1 (2/3/4/5 -> 2/3/5/6). A bigger nudge than d12-gw-up-v6: Valour reaches 10% of level-2 winners at 3-7 seats; risk that it leads at level 1 (Valour 3/4/5/6 was level 1's top source at 3 seats, 62%, in L3).",
+  "tunables": { "valourBySeason": [2, 3, 5, 6] }
+}
