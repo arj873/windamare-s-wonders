@@ -76,6 +76,15 @@ export interface ChoiceOption {
   warn?: boolean;
 }
 
+export interface SeasonEndInfo {
+  /** "End of Spring · Wolf Pack, strength 3". */
+  title: string;
+  /** One line per town (Raid held or plundered, bounties), then table-wide lines. */
+  lines: { seat: SeatId | null; text: string; tone: 'gain' | 'loss' | 'info' }[];
+  /** "Next: Summer · hands pass ▶ right", or null after the last Season. */
+  next: string | null;
+}
+
 /** A hand card's affordability at a glance: "✓ Build", "Build: buy 2 · 4g", "✗ Spend only". */
 export interface HandBadge {
   text: string;
@@ -137,6 +146,13 @@ export interface Presenter<S = unknown, T = unknown> {
    * legal pick (null when that use is not possible).
    */
   badge?(view: DraftView<S, T>, seat: SeatId, pick: Pick | null): HandBadge;
+  /**
+   * R6 #4: what else the latest action did, for the Revealed panel: purchases, sales, tolls,
+   * tiers, Raids, bounties ("Ana bought Peat from Bo (3g)"). Plain sentences, in order.
+   */
+  happenings?(view: DraftView<S, T>): string[];
+  /** UX.md §10.1: the Season-end summary when the latest action ended a Season, else null. */
+  seasonEnd?(view: DraftView<S, T>): SeasonEndInfo | null;
   /** A player-facing reason for the engine's refusal `error` of `pick`. */
   whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
 }

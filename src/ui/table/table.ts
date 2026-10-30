@@ -22,7 +22,7 @@ import {
 } from './model';
 import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
-import type { KindInfo, MonumentInfo, SeatStat } from './present';
+import type { KindInfo, MonumentInfo, SeasonEndInfo, SeatStat } from './present';
 import '../shell.css';
 import './table.css';
 
@@ -57,6 +57,8 @@ export interface TimerState {
 export const TIMER_WARN_SEC = 10;
 /** Matches `.dt-pop` width in table.css (used before the popover has a layout). */
 const POPOVER_W = 300;
+/** The Season-end card closes by itself after this long (UX.md §10.1). */
+export const SEASON_CARD_MS = 8000;
 
 const STATUS_MARK: Record<SeatStatus, string> = { picked: '✓', thinking: '⋯', idle: '' };
 const STATUS_TEXT: Record<SeatStatus, string> = {
@@ -85,6 +87,10 @@ export class DraftTable {
   private cover: CoverInfo | null = null;
   /** fx draws its reveal here: kept as the root's last child across renders. */
   private readonly fxLayer: HTMLElement;
+  /** The Season-end card (UX.md §10.1): the action it was closed for, and its auto-close. */
+  private seasonSeen: string | null = null;
+  private seasonTimerFor: string | null = null;
+  private seasonTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly handlers: DraftTableHandlers) {
     this.timerEl = h('div', {
@@ -107,6 +113,7 @@ export class DraftTable {
   destroy(): void {
     document.removeEventListener('keydown', this.onKey);
     window.removeEventListener('resize', this.placePopover);
+    if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
     this.element.remove();
   }
 
@@ -229,6 +236,9 @@ export class DraftTable {
       case 'reveal':
         this.handlers.reveal?.();
         break;
+      case 'season-ok':
+        this.closeSeasonCard();
+        break;
       case 'rematch':
         this.handlers.rematch?.();
         break;
@@ -309,7 +319,13 @@ export class DraftTable {
       this.neighbour(m.right, 'right', m),
       this.cover ? this.hiddenHand() : this.hand(m),
       this.side(m),
-      ...(m.result ? [this.result(m.result)] : this.cover ? [this.coverScreen(this.cover)] : []),
+      ...(m.result
+        ? [this.result(m.result)]
+        : this.cover
+          ? [this.coverScreen(this.cover)]
+          : m.seasonEnd && m.actionKey !== this.seasonSeen
+            ? [this.seasonCard(m.seasonEnd)]
+            : []),
       this.fxLayer,
     ]);
     if (focused && !this.element.contains(document.activeElement)) this.focusKey(focused);
@@ -528,6 +544,60 @@ export class DraftTable {
   }
 
   /** UX.md §9: "Pass to Ana", then Ana shows her own hand. Port of catan's coverScreen. */
+  /** UX.md §10.1: each town's Raid result and bounties, then the next Season's pass direction. */
+  private seasonCard(s: SeasonEndInfo): HTMLElement {
+    const key = this.model?.actionKey ?? '';
+    if (this.seasonTimerFor !== key) {
+      this.seasonTimerFor = key;
+      if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
+      this.seasonTimer = setTimeout(() => this.closeSeasonCard(), SEASON_CARD_MS);
+      queueMicrotask(() => this.focusKey('season-ok'));
+    }
+    return h(
+      'div',
+      { class: 'ww-scrim dt-season-scrim' },
+      h(
+        'div',
+        {
+          class: 'ww-dialog dt-season',
+          attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dt-season-title' },
+        },
+        h('h2', { id: 'dt-season-title' }, s.title),
+        h(
+          'ul',
+          { class: 'dt-season-lines' },
+          ...s.lines.map((l) =>
+            h(
+              'li',
+              {
+                class: `is-${l.tone}`,
+                attrs: l.seat === null ? {} : { 'data-seat': String(l.seat) },
+              },
+              l.text,
+            ),
+          ),
+        ),
+        s.next && h('p', { class: 'dt-season-next' }, s.next),
+        h(
+          'div',
+          { class: 'ww-dialog-actions' },
+          h(
+            'button',
+            { class: 'btn btn-primary', attrs: { 'data-act': 'season-ok', 'data-k': 'season-ok' } },
+            'Continue',
+          ),
+        ),
+      ),
+    );
+  }
+
+  private closeSeasonCard(): void {
+    if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
+    this.seasonTimer = null;
+    this.seasonSeen = this.model?.actionKey ?? null;
+    this.render();
+  }
+
   private coverScreen(c: CoverInfo): HTMLElement {
     return h(
       'div',
@@ -950,6 +1020,9 @@ export class DraftTable {
               ),
             ),
           ),
+          // R6 #4: the interaction (purchases, tolls, Raids, bounties), not just the cards.
+          m.reveal.happenings.length > 0 &&
+            h('ul', { class: 'dt-happenings' }, ...m.reveal.happenings.map((t) => h('li', {}, t))),
         ),
       h(
         'section',

@@ -577,6 +577,47 @@
   color: var(--ink-dim);
 }
 
+/* ---- R6 #4: the interaction in the Revealed panel; the Season-end card --- */
+.dt-happenings {
+  margin-top: 6px !important;
+  padding-top: 6px !important;
+  border-top: 1px solid var(--line);
+}
+.dt-happenings li {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+.dt-season h2 {
+  font-size: 18px;
+}
+.dt-season-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dt-season-lines li {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface-sunken);
+  font-weight: 600;
+}
+.dt-season-lines li.is-gain::before {
+  content: '✓ ';
+  color: var(--good);
+}
+.dt-season-lines li.is-loss::before {
+  content: '✗ ';
+  color: var(--bad);
+}
+.dt-season-next {
+  margin: 10px 0 0;
+  text-align: center;
+  font-family: var(--font-display);
+}
+
 /* ---- final scores: one card per town in Renown bands (UX.md §10.2) ----- */
 .dt-result {
   width: min(860px, 100%);

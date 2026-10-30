@@ -193,6 +193,34 @@ describe('windamerePresenter', () => {
     expect(model(own).hand[0]!.badge?.tone).toBe('ok');
   });
 
+  it('names trades in the Revealed panel and sums up the Season end (R6 #4)', () => {
+    const m = model(pastureState(20, 2, 0));
+    let s = structuredClone(pastureState(20, 2, 0));
+    // Seat 0 builds by buying Reed from Bo; everyone else Spends.
+    const build = m.hand[0]!.options.find((o) => o.use.id === 'build')!.pick!;
+    for (const seat of engine.waitingOn(s)) {
+      const pick = seat === 0 ? build : { card: s.seats[seat]!.hand[0]!.id, use: 'spend' };
+      const r = engine.applyAction(s, { type: 'pick', seat, pick });
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+    const spring = rules.tunables.marketPrice[0]!;
+    expect(model(s).reveal?.happenings).toContain(`Ana bought Reed from Bo (${spring}g)`);
+    expect(model(s).seasonEnd).toBeNull();
+
+    // Play out Spring: the action that ends it carries the Raid summary.
+    const summer = advance(s, (x) => x.round === 1);
+    const end = model(summer).seasonEnd!;
+    expect(end.title).toMatch(/^End of Spring · .+, strength \d+$/);
+    expect(end.lines.filter((l) => l.seat !== null && /Raid|plundered/.test(l.text))).toHaveLength(
+      4,
+    );
+    expect(end.next).toMatch(/^Next: Summer · hands pass ▶ right$/);
+    expect(
+      model(summer).reveal?.happenings.some((t) => /held the Raid|was plundered/.test(t)),
+    ).toBe(true);
+  });
+
   it('never highlights a Build that can only pay the bank (R6 #2)', () => {
     const m = model(pastureState(20, 0, 0)); // nobody sells Reed: the bank is the only way
     const card = m.hand[0]!;

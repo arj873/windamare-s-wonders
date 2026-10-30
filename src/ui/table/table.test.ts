@@ -4,7 +4,7 @@ import { act, newToyGame, toy } from '../../engine/core/testing/helpers';
 import type { ToyState } from '../../engine/core/testing/toy';
 import type { Viewer } from '../../engine';
 import { tableModel } from './model';
-import { clockText, DraftTable, type DraftTableHandlers } from './table';
+import { clockText, DraftTable, SEASON_CARD_MS, type DraftTableHandlers } from './table';
 import { toyPresenter } from './testing/toy';
 
 const looks = [
@@ -187,6 +187,30 @@ describe('DraftTable', () => {
     expect(a.stage()).not.toBeNull();
     el.querySelector<HTMLElement>('.dt-town')!.click();
     expect(handlers.skip).toHaveBeenCalled();
+  });
+
+  it('shows the Season-end card once per Season end; Continue or time closes it', () => {
+    vi.useFakeTimers();
+    const state = newToyGame(3);
+    const { el, table } = mount(state);
+    const base = model(state);
+    const seasonEnd = {
+      title: 'End of Spring · Wolf Pack, strength 2',
+      lines: [{ seat: 0, text: 'P0 held the Raid', tone: 'gain' as const }],
+      next: 'Next: Summer · hands pass ▶ right',
+    };
+    table.update({ ...base, actionKey: 'end-1', seasonEnd });
+    expect($(el, '#dt-season-title')?.textContent).toBe(seasonEnd.title);
+    expect($(el, '.dt-season-next')?.textContent).toBe(seasonEnd.next);
+    $(el, '[data-k="season-ok"]')!.click();
+    expect($(el, '.dt-season')).toBeNull();
+    table.update({ ...base, actionKey: 'end-1', seasonEnd }); // same action: stays closed
+    expect($(el, '.dt-season')).toBeNull();
+    table.update({ ...base, actionKey: 'end-2', seasonEnd });
+    expect($(el, '.dt-season')).not.toBeNull();
+    vi.advanceTimersByTime(SEASON_CARD_MS);
+    expect($(el, '.dt-season')).toBeNull();
+    vi.useRealTimers();
   });
 
   it('stops listening to keys once destroyed', () => {

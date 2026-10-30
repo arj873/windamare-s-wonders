@@ -24,6 +24,7 @@ import type {
   HandBadge,
   MonumentInfo,
   PurseInfo,
+  SeasonEndInfo,
   Presenter,
   SeatStat,
   UseInfo,
@@ -172,7 +173,10 @@ export interface TableModel {
   canUnpick: boolean;
   /** The open prompt, when it is the viewer's. */
   prompt: PromptModel | null;
-  reveal: { title: string; lines: RevealLine[] } | null;
+  /** The latest reveal: who did what with which card, then what else happened (R6 #4). */
+  reveal: { title: string; lines: RevealLine[]; happenings: string[] } | null;
+  /** UX.md §10.1: the latest action ended a Season (not the game): its summary card. */
+  seasonEnd: SeasonEndInfo | null;
   log: { key: string; text: string }[];
   result: ResultModel | null;
   /** Changes with every action that logged anything: a new key = something for fx to reveal. */
@@ -325,7 +329,9 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
           verb: useOf(p.use)?.verb ?? p.use,
         };
       }),
+      happenings: present.happenings?.(view) ?? [],
     },
+    seasonEnd: phase === 'gameOver' ? null : (present.seasonEnd?.(view) ?? null),
     log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
     result: resultModel(input, seats),
     banner: present.banner?.(view) ?? [],

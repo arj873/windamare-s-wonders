@@ -21,6 +21,7 @@ import {
   SEASONS,
   SPEND,
   spendGains,
+  latestEvents,
   type DraftEngine,
   type DraftView,
   type Gains,
@@ -41,6 +42,7 @@ import type {
   MonumentInfo,
   Presenter,
   PurseInfo,
+  SeasonEndInfo,
   SeatStat,
 } from '../../ui/table/present';
 import { effectsText, gainsText, goodName, KIND_LABELS } from './text';
@@ -74,6 +76,9 @@ const icon = (name: string): string => `${import.meta.env.BASE_URL}art/goods/${n
 /** Any file under public/art (kinds/<kind>, great-works/<content id>: art A6). */
 const art = (path: string): string => `${import.meta.env.BASE_URL}art/${path}.svg`;
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+/** A Raid's Season as a round index (Raids are drawn per Season, R2.6). */
+const raidSeason = (season: string): number =>
+  Math.max(0, (SEASONS as readonly string[]).indexOf(season));
 const argsOf = (pick: Pick): WwPickArgs => (pick.args ?? {}) as WwPickArgs;
 const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
@@ -272,6 +277,111 @@ export function windamerePresenter(
     return rows;
   }
 
+  /** R6 #4: the latest action's interaction in plain sentences, with names and prices. */
+  function happenings(view: View): string[] {
+    const name = (s: SeatId) => nameOf(view, s);
+    const good = (g: string) => goodName(rules, g);
+    const out: string[] = [];
+    for (const { event: e } of latestEvents(view)) {
+      switch (e.type) {
+        case 'pay':
+          for (const g of e.bank) {
+            out.push(
+              `${name(e.seat)} bought ${good(g)} from the bank (${rules.tunables.bankPrice}g)`,
+            );
+          }
+          for (const x of e.exchanges) {
+            out.push(
+              `${name(e.seat)} exchanged ${rules.tunables.exchangeRate} ${good(x.give)} for ${good(x.for)}`,
+            );
+          }
+          break;
+        case 'trade':
+          out.push(
+            e.filled
+              ? `${name(e.buyer)} bought ${good(e.good)} from ${name(e.seller)} (${e.price}g)`
+              : `${name(e.buyer)} bought ${good(e.good)} from the bank: ${name(e.seller)} ran short`,
+          );
+          break;
+        case 'toll':
+          out.push(`${name(e.seat)} collected ${e.coins} coin${e.coins === 1 ? '' : 's'} in tolls`);
+          break;
+        case 'tier':
+          out.push(
+            `${name(e.seat)} completed ${rules.greatWork(e.greatWork).name} tier ${ROMAN[e.tier - 1] ?? e.tier}`,
+          );
+          break;
+        case 'raid':
+          out.push(raidLine(view, e));
+          break;
+        case 'bounty':
+          out.push(`${name(e.to)} took a ${e.coins}-coin bounty from ${name(e.from)}`);
+          break;
+        case 'honour': {
+          const h = rules.honour(e.honour).name;
+          out.push(
+            e.leaders.length
+              ? `${e.leaders.map(name).join(' and ')} now lead${e.leaders.length === 1 ? 's' : ''} ${h}`
+              : `Nobody leads ${h} now`,
+          );
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    return out;
+  }
+
+  function raidLine(
+    view: View,
+    e: {
+      seat: SeatId;
+      outcome: string;
+      guard: number;
+      strength: number;
+      valour: number;
+      lost: number;
+    },
+  ): string {
+    const who = nameOf(view, e.seat);
+    return e.outcome === 'held'
+      ? `${who} held the Raid (Guard ${e.guard} vs ${e.strength}): +${e.valour} Valour`
+      : `${who} was plundered (Guard ${e.guard} vs ${e.strength}): −${e.lost} coin${e.lost === 1 ? '' : 's'}`;
+  }
+
+  /** UX.md §10.1: the Season-end card, when the latest action resolved a Raid. */
+  function seasonEnd(view: View): SeasonEndInfo | null {
+    const events = latestEvents(view).map((x) => x.event);
+    const raids = events.flatMap((e) => (e.type === 'raid' ? [e] : []));
+    const first = raids[0];
+    if (!first) return null;
+    const raid = rules.raid(first.raid);
+    const season = (r: number) => capitalize(SEASONS[r] ?? `Season ${r + 1}`);
+    const lines: SeasonEndInfo['lines'] = raids.map((e) => ({
+      seat: e.seat,
+      text: raidLine(view, e),
+      tone: e.outcome === 'held' ? 'gain' : 'loss',
+    }));
+    for (const e of events) {
+      if (e.type === 'bounty') {
+        lines.push({
+          seat: e.to,
+          text: `${nameOf(view, e.to)} took a ${e.coins}-coin bounty from ${nameOf(view, e.from)}`,
+          tone: 'info',
+        });
+      }
+    }
+    // The next Season is already dealt (round + 1) when this action ended the last one.
+    const next = view.round > raidSeason(raid.season) ? view.round : null;
+    const dir = view.passDirection === 'left' ? '◀ left' : '▶ right';
+    return {
+      title: `End of ${season(raidSeason(raid.season))} · ${raid.name}, strength ${raid.strength}`,
+      lines,
+      next: next === null ? null : `Next: ${season(next)} · hands pass ${dir}`,
+    };
+  }
+
   /** R6 #1: a hand card's Build at a glance, from its default legal Build (null = illegal). */
   function badge(view: View, seat: SeatId, pick: Pick | null): HandBadge {
     if (!pick) return { text: '✗ Spend only', tone: 'no' };
@@ -428,5 +538,7 @@ export function windamerePresenter(
     whyNot,
     purse,
     badge,
+    happenings,
+    seasonEnd,
   };
 }
