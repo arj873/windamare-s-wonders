@@ -4,7 +4,8 @@ Owner: **engine** lane (`src/engine/**`). Net, ui and bots code against this fil
 **If you change a public type in `src/engine/core/types.ts`, update this file in the same commit.**
 
 Status (2026-10-29): **E1 implemented** in `src/engine/core/` with 70 vitest tests (toy ruleset,
-§12). Everything below is what the code does. Not measured yet: simulation speed (§11).
+§12). §1-§13 are what the code does. Not measured yet: simulation speed (§11). **§14 lists the
+contract changes the Windamere rules need (E1b): planned, not implemented.**
 
 The core is **game-agnostic**: it knows seats, hands, simultaneous hidden picks, reveal,
 resolution order, hand passing, rounds, prompts, scoring hooks and per-seat views. It does not
@@ -89,8 +90,8 @@ interface Card {
 - Seats sit clockwise. **Left neighbour = `(s + 1) % n`**, **right neighbour = `(s - 1 + n) % n`**
   (sitting at a table, the next player clockwise is on your left).
 - Hands pass **`'left'`** (to `s + 1`) or **`'right'`** (to `s - 1`), per round (§5).
-- With 2 seats both neighbours are the same seat. Whether 2 players get a variant (a neutral seat)
-  is a rules question (design lane), not a core feature yet.
+- With 2 seats both neighbours are the same seat. The rules use no neutral seat (R14); their
+  2-player variant needs §14 C1 and C2.
 
 Helpers: `leftOf(state, s)`, `rightOf(state, s)`, `neighboursOf(state, s)` → `[left, right]`
 (deduplicated with 2 seats), `passTarget(state, s)`.
@@ -266,8 +267,8 @@ Errors are short English strings (`'not the pick phase'`, `'card 12 is not in yo
 **Prompts** are follow-up decisions that effects create during resolution, round end or game
 start ("choose a card from the discard pile to build for free"). They are answered **one at a
 time, in queue order**; an answer may queue more prompts. Prompt `data` (the options) is visible
-to the prompted seat only. Open question: rules may need simultaneous prompts (several seats
-deciding at once, hidden); the queue can grow that later.
+to the prompted seat only. The rules need simultaneous prompts too (several seats deciding at
+once, hidden): §14 C3.
 
 `legalActions(state, seat?)`:
 
@@ -320,8 +321,9 @@ texts) leaves `viewFor` unchanged. A deliberately unmasked deck makes it fail (c
 hand).
 
 Not in a view on purpose: what a seat could _remember_ (the cards it saw in a hand it passed on).
-Clients and bots that want that memory track it themselves from successive views. Open question
-for design/bots: should the engine hand it out, so a bot with memory has no edge over a human?
+Clients and bots that want that memory track it themselves from successive views. The rules
+want the engine to hand it out (R15.8), so that a bot with memory has no edge over a human:
+§14 C10.
 
 `isDraftView(x)` tells views from states. **Never pass a view to `applyAction`.** `legalActions`
 on a view is fine for the viewer's own seat (§6).
@@ -451,8 +453,7 @@ Ruleset code must not touch `deck`/`hands` dealing, `phase`, `seq`, `round`, `tu
   action. Picks are secret until the reveal: never echo another seat's `pick` action to other
   clients, only the new views. Snapshots: the state is versioned JSON (`schemaVersion`,
   `ruleset.version`); a future schema bump ships an upgrade function, like Catan's `migrate.ts`.
-  Changing a pick before the reveal is supported; if design rules it out, net/ui just do not offer
-  `unpick` (the engine would grow a ruleset flag).
+  Changing a pick before the reveal is supported, and the rules keep it (R15.2).
 - **ui:** render from a view (online) or the full state through `viewFor(state, seat)` (hotseat:
   the seat whose turn it is on the shared screen). `lastReveal` changes once per turn: animate it.
   `view.submitted` shows who has locked in.
@@ -487,7 +488,211 @@ legalActions soundness and view-safety on random playouts (2-5 seats).
 
 - Signature `engine.applyAction(state, action)` (bound to a ruleset) instead of a global ruleset
   registry: no hidden global state, and tests bind the toy ruleset.
-- Prompts are sequential (§6). Simultaneous prompts: later, if the rules need them.
-- Memory of passed hands is not in views (§7): open question.
-- 2-player: no neutral-seat support yet (§3): waits for the rules.
+- Prompts are sequential (§6). The rules need simultaneous ones: §14 C3.
+- Memory of passed hands is not in views (§7). The rules want the engine to hand it out
+  (R15.8): §14 C10.
+- 2-player: the rules use no neutral seat (R14): §14 C1, C2.
+- Pick changes before the reveal stay (R15.2): `unpick` and re-picking are kept.
 - The log is not trimmed (a game is ~20 turns); revisit if states get large.
+
+## 14. Contract changes for E2 (E1b: planned, not implemented)
+
+Source: `docs/RULES.md` (R-numbers) and `docs/design/CARDS.md`, both drafts of 2026-10-29 that
+the human has not approved yet (H1). None of this is in the code. Each change lands with its
+tests, §1-§13 are updated in the same commit, and the row leaves this list.
+
+| #   | Change                                                                   | Rules         | Breaking for                    |
+| --- | ------------------------------------------------------------------------ | ------------- | ------------------------------- |
+| C1  | A pick holds several cards, each with a role                             | R4.1, R14.2   | net, ui, bots: `Pick`, `Reveal` |
+| C2  | Secret roles: a burned card's face stays hidden in the reveal            | R14.3         | none (additive)                 |
+| C3  | Prompt groups: several seats answer at once, hidden                      | R2.5          | net, ui, bots: `Prompt`         |
+| C4  | Start prompts come before the first deal; new `onRoundStart` hook        | R2.5, R3.2    | ui (no hand during the start)   |
+| C5  | `normalizePick`: the ruleset fills default choices when a pick arrives   | R4.3, R15.7   | none (additive)                 |
+| C6  | `ctx.play(seat, card, args)` passes the pick's choices to `onPlay`       | R13 `onBuild` | ruleset code only               |
+| C7  | Effects carry their source (card, Perk, tier)                            | R12.2a-b      | ruleset code only               |
+| C8  | `checkRuleset` also validates effects that are not on cards              | R13.3         | none (additive)                 |
+| C9  | Tie-break is a list of numbers, compared in order                        | R12.4         | ui: `SeatScore.tiebreak`        |
+| C10 | Recall: each seat's owner-only record of the hands it passed this round  | R15.8         | none (additive field)           |
+| C11 | `Ruleset` takes the card type, so `ctx.def()` returns the Windamere card | none          | ruleset code only (types)       |
+
+### C1. Multi-card picks
+
+```ts
+interface Pick {
+  cards: PickedCard[];
+} // was { card, use, args? }
+interface PickedCard {
+  card: CardId;
+  use: string;
+  args?: Json;
+} // Windamere uses: 'build' | 'spend' | 'burn'
+interface RoundSpec {
+  handSize: number;
+  turns: number; // was `picks`
+  cardsPerTurn: number; // new
+  pass: PassDirection;
+  deck: CardDefId[];
+}
+// DraftState: `roundPicks` → `roundTurns`, new `cardsPerTurn`
+// Reveal.picks[i]: { seat, cards: { card: Card; use: string; args?: Json }[] }
+type ResolveStep<S, T> = (ctx, seat, pick: Pick, cards: Card[]) => void; // cards[i] = pick.cards[i]
+```
+
+- The core checks the shape: exactly `min(cardsPerTurn, hand.length)` cards, distinct, all in the
+  seat's hand, each `use` a non-empty string, JSON `args`. Roles (at most one Build, exactly one
+  Burn with 2 seats) are the ruleset's `validatePick`, which sees the whole pick, so a Build can
+  count the same pick's Spend gains (R4.2, R5.2).
+- The deal checks `turns * cardsPerTurn <= handSize`. Leftovers (`handSize - turns *
+cardsPerTurn`) are discarded on the last turn as now: 9 - 4 × 2 = 1 card (R3.5); 12 - 4 × 3 = 0
+  with 2 seats (R14.4).
+- Card order inside a pick is kept as submitted. Windamere's result does not depend on it (R4.7:
+  gains only add), and C5 sorts it so that equal picks are equal JSON.
+- Size of `legalPicks` (default choices only, C5), first turn of a Season: 3-7 seats, 9 cards: at
+  most 9 × 8 Build+Spend + 36 Spend+Spend = **108**. 2 seats, 12 cards: 12 × 11 × 10
+  Build+Spend+Burn + 12 × 55 Spend+Spend+Burn = **1980**. That is a bot's budget (B1) if it rates
+  every pick. Other ways to pay are not listed (§6: complete up to `args`).
+
+### C2. Secret roles (2-player Burn)
+
+- `Ruleset.secretUses?: string[]` (Windamere: `['burn']`). In `lastReveal` and in the public
+  `'reveal'` log entry, a card with a secret use shows as `{ id: -1 - k, def: HIDDEN_CARD }` to
+  everyone but its owner. The role stays public ("a card was burned", R14.3). The full state
+  keeps the face.
+- Today the reveal log entry carries `card.def` for every pick (`reveal` in flow.ts), so without
+  C2 a burn leaks through the log as well as through `lastReveal`.
+- The leak test (§7) adds: scramble the face of every secret-use card.
+
+### C3. Prompt groups (simultaneous hidden answers)
+
+```ts
+interface Prompt {
+  id: number;
+  seat: SeatId;
+  kind: string;
+  data: Json; // owner only, as now
+  group: number; // prompts with the same group are open together
+  answered: boolean; // public
+  answer: Json; // the answer waiting for the group; null until answered; owner only (views: null)
+}
+ctx.prompt(seat, kind, data); // a group of one: applies on its answer, as now
+ctx.promptGroup([{ seat, kind, data }, ...]); // one group, at most one prompt per seat
+```
+
+- The open group is every prompt with `prompts[0].group`; `refresh` runs on each of them when the
+  group opens.
+- `answer` on an open prompt stores the answer, hidden. A seat may answer again until the group is
+  complete (R2.5: "a choice may change until the last town has chosen"). The last answer applies
+  the whole group in `resolveOrder`, so arrival order never matters (tested like picks). Then the
+  queue goes on.
+- `waitingOn` = seats with an unanswered prompt in the open group. `defaultAction` answers with
+  `defaultAnswer`. `legalActions(state)` lists answers for every seat in the group.
+- Windamere: the Great Work choice (R2.4, R2.5). Each town gets a `'greatWork'` prompt whose
+  owner-only `data` holds its two offers. The chosen ids become public seat data when the group
+  applies. Offers not chosen are never logged or stored outside prompt data, so they leave the
+  game unseen.
+- Net: the session must relay `answer` actions too, with their own 60 s clock (R15.3). The seam in
+  `src/net/engineApi.ts` has picks only.
+
+### C4. Start prompts before the first deal; `onRoundStart`
+
+- Today `createGame` deals round 0 and then calls `onGameStart`, so towns would see their Spring
+  hand while they choose a Great Work. The rules put the choice first (R2.5) and the deal at the
+  start of the Season (R3.2).
+- Change: `createGame` runs `onGameStart` and its prompts first, and deals round 0 once they are
+  all answered. The phase is `prompt` with `then: 'start'`, as now, but hands are empty during it.
+- New optional hook `onRoundStart?(ctx, round)`, run just before each deal, round 0 included.
+  Windamere reveals the Season's Raid there (R3.2).
+- The toy tests that expect hands during the opening prompt change.
+
+### C5. `normalizePick`
+
+- `Ruleset.normalizePick?(state, seat, pick): Pick` runs after the core's shape checks and before
+  `validatePick`. The core stores and reveals what it returns. Windamere fills every choice the
+  pick left out with the R15.7 defaults (payment plan, "any" goods, upgrade target, discount
+  goods) and sorts the cards (Build first, then hand order).
+- So a client may submit only cards and roles. The reveal shows the choices that were used, and
+  `legalPicks` lists picks with default choices only (bounded, C1).
+- It must decide from the seat's own state and public information (view-safe, §6). It must not
+  throw on junk: it returns the pick unchanged and `validatePick` rejects it.
+
+### C6. Pick choices reach `onPlay`
+
+R13 `onBuild` gains may include "any", chosen in the pick, but `onPlay` gets no pick today.
+Change: `ctx.play(seat, card, args?)` and `onPlay(ctx, seat, spec, source, args)`. Likewise
+`ctx.trigger(seat, specs, source, args?)`; tier rewards pass no `args`.
+
+### C7. Effect sources
+
+R12.2 scores printed Renown by source: Buildings (cards, a) apart from Great Work (tiers, b). A
+`renown` handler's `score` cannot tell a card from a tier today. Change:
+`activeEffects?(state, seat): { source: string; effects: EffectSpec[] }[]` (e.g. `'perk'`,
+`'tier:2'`); `effectsOf` returns `{ spec, source: Card | string }[]`; `EffectHandler.score` and
+`onRoundEnd` get the source as their last argument.
+
+### C8. `checkRuleset` beyond cards
+
+Great Work Perks and tier rewards are `EffectSpec`s outside `cards`. New optional
+`Ruleset.effectLists?(): { where: string; effects: EffectSpec[] }[]` (e.g.
+`'the-wind-organ tier II'`). `checkRuleset` validates them like card effects and names `where`.
+
+### C9. Tie-break list
+
+R12.4: most completed tiers, then most coins, then a shared win. Change:
+`tiebreak?(state, seat): number[]`, compared element by element; `SeatScore.tiebreak: number[]`.
+A single number would need `tiers * 1e6 + coins`, which ui cannot show.
+
+### C10. Recall
+
+R15.8: a town may look at the cards it saw in each hand it passed on, until the Season ends.
+Change: `SeatState.recall: { turn: number; to: SeatId; cards: Card[] }[]`, the hand as it was
+passed. The core records it when it passes hands and clears it at round end; views show it to the
+owner only (others: `[]`). These are copies, not cards: card conservation ignores them. Bots and
+humans get the same memory, so bots no longer track it themselves (§7).
+
+### C11. Card type parameter
+
+`Ruleset<S, T, C extends CardDef = CardDef>` with `cards: readonly C[]`, and `ctx.def()` returns
+`C`. Types only; it saves casts in E2.
+
+### Fits the current contract (no change)
+
+- **Pair picks:** Build + Spend resolve as steps `[spend, build, greatWorkCheck, caravans,
+yield, greatWorkCheck]`, step-major, in seat order (R4.5). Winter skips `yield` by reading
+  `state.round` (R3.7).
+- **2 players:** `neighboursOf` already returns the other seat once (R14.5). The 3 undealt cards
+  stay in `deck`, then go to `box` (R14.1). Only C1 and C2 are needed.
+- **Labour track:** the Great Work check (R8.3) is a resolve step after Build and after Yield, run
+  for every seat. The Perk and lasting tier rewards come from `activeEffects` (C7); one-off rewards
+  run through `ctx.trigger`. Labour, tiers and the chosen Great Work are public seat data.
+- **Raids (R9):** drawn in `setupTable` with `ctx.rng` and kept in `table` with a `revealed` flag.
+  `maskTable` hides the unrevealed ones (R1.11), and `onRoundStart` reveals one (C4). Resolution
+  happens in `onRoundEnd`: every Guard is computed first, then plunder, bounty and `heldBonus`,
+  all at once (R9.3). `seasonEnd` effects then run through the core's per-seat `onRoundEnd`, in
+  seat order (R3.6), which is what the core does now. Caravans (step 3) read this turn's Builds
+  from `lastReveal`, which the core sets before the resolve steps.
+- **Honours (R11):** drawn in `setupTable` and kept as public table data. They are scored in
+  `score`, which sees every seat.
+- **Upgrades (R7.9):** the covered card moves to a public zone `covered` (`ctx.take`, then
+  `ctx.place`), and the seat data records which card covers it. It is out of the tableau, so
+  `effectsOf` and every count skip it (R7.10, R13.1).
+- **Picks (R15.2, R15.6):** `unpick` and re-picking already work. `defaultPick` gives the R15.6
+  pick, with the C5 defaults.
+
+### E2 exports for ui and bots (new API, outside the core)
+
+- `paymentPlans(stateOrView, seat, pick)`: the ways to pay a Build (R6.3), for the payment
+  picker. `legalPicks` lists only the default way.
+- `measure(state, seat, id)` (R11.4), `honourLeaders(state)` (R11.3), `guardOf(state, seat)`,
+  `scorePreview(state, seat)`. They read public information only, so they work on views.
+
+### Rules questions found (for design)
+
+1. **R14.3 against R15.8.** With 2 seats, a town can work out the other town's burn whenever it
+   comes from a hand the town passed. It knows that hand (Recall), the reveal shows two of the
+   three cards taken, and the hand that comes back shows which three were taken. So only the
+   first turn's burn in each Season stays secret. Burns on turns 2 and 3 are known one turn
+   later. Turn 4's is known at once, since all three cards are taken. C2 still hides the face,
+   so the engine never tells more than the rules do.
+2. **R8.3** runs the Great Work check only after steps 2 and 4. Labour gained at Season end would
+   wait for the next turn, and at Winter's end it would never count. No card in CARDS.md gives
+   labour at Season end today, so this is moot unless one is added.
