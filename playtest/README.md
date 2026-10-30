@@ -1,7 +1,24 @@
-# Playtest harness (qa, card Q2): plan
+# Playtest harness (qa, card Q2)
 
-Status: **plan only**. Nothing runs yet. Blocked on platform P9 (Playwright in `package.json`,
-`pt`/`pt:serve` scripts, `playtest/**` in the vitest include list) and on a playable table (ui U1+).
+## Layer 1 is built: text mode (no browser)
+
+```
+pnpm pt:serve --seats 3 --humans 1,2 --seed demo --level medium   # one game, bots in the other seats
+pnpm -s pt 1 status | cards | choose <n> | pick <n> build|spend [flags] | unpick | wait | result
+pnpm -s pt 1 report --title ... --severity ... --expected ... --actual ... --steps ...
+pnpm -s pt stop
+```
+
+It runs the real engine and the shipped bots (`pickFor`) and prints what that seat's `viewFor`
+allows, using the UI's own `windamerePresenter` for the Build/Spend lines and the refusal wording.
+So it finds rules, wording and flow problems, not UI bugs. Tests: `playtest/*.test.ts` (a scripted
+human plays whole games at 2, 3 and 7 seats; two humans never see each other's hand or pick).
+`boot.ts` patches `import.meta.env` for node (see Needs in the status file). `--pay` takes one
+entry per missing good, as `cards` lists them: `buy:<seat>`, `bank`, `exchange:<good>` or `auto`.
+
+Layers 2 and 3 (browser, online) below are still plans: they need the ui hooks and a scripted room.
+
+## Plan for the browser layer
 
 ## What Catan has (`/home/blop/projects/catan/scripts/playtest`, ~4000 lines, read-only reference)
 
