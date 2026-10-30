@@ -610,7 +610,7 @@ export class DraftTable {
                   this.kindMark(col.kind),
                   `${col.kind.label} ${col.cards.length}`,
                 ),
-                ...col.cards.map((c) => this.mini(c)),
+                ...col.cards.map((c) => this.mini(c, true)),
               ),
             ),
           )
@@ -773,16 +773,18 @@ export class DraftTable {
     );
   }
 
-  private mini(c: TableauCard): HTMLElement {
+  /** A built card. `withText` (your town, R6 #10): what it does, under its name. */
+  private mini(c: TableauCard, withText = false): HTMLElement {
     return h(
       'span',
       {
-        class: `dt-mini${c.fresh ? ' is-fresh' : ''}`,
+        class: `dt-mini${c.fresh ? ' is-fresh' : ''}${withText ? ' has-text' : ''}`,
         title: `${c.face.name}: ${c.face.text}`,
         attrs: { 'data-card': String(c.id), 'data-kind': c.kind.id },
       },
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
+      withText && c.face.text && h('span', { class: 'dt-mini-text' }, c.face.text),
     );
   }
 
