@@ -201,7 +201,8 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
 
 - **R8.1** A Great Work has a **Perk**, active from the reveal (R2.5) to the end, and four tiers,
   I to IV. Each tier has a **labour threshold** and a **reward**. Thresholds rise from tier to
-  tier; the standard set is 4, 9, 15, 22† (each Great Work may differ, CARDS.md; D9 re-tune).
+  tier; the standard set is 5, 10, 17, 25† (each Great Work may differ, CARDS.md; D9 and D12a
+  re-tunes).
 - **R8.2** Labour comes from Spend bands, `yield` effects and other effects that say labour. It
   only ever goes up.
 - **R8.3** **Great Work check**: while the town's labour is at or above the threshold of its next
@@ -416,7 +417,7 @@ These answer the open questions from net (MULTIPLAYER.md §2.1, §6) and researc
 | Exchange rate               | 2 of one good → 1 other                      | R6.3   |
 | Buying limit per neighbour  | 2 goods a turn                               | R6.6b  |
 | Market price by Season      | 1, 1, 1, 3 coins a good                      | R6.6c  |
-| Tier thresholds (standard)  | 4, 9, 15, 22 labour                          | R8.1   |
+| Tier thresholds (standard)  | 5, 10, 17, 25 labour                         | R8.1   |
 | Valour by Season            | 2, 3, 4, 5                                   | R9.4   |
 | Plunder                     | 1 coin per point short                       | R9.5   |
 | Bounty                      | 1 coin from each plundered neighbour         | R9.6   |
