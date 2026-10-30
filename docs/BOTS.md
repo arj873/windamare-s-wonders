@@ -226,3 +226,46 @@ Adds to Medium:
 greedy; `focus: kind` makes a specialist), `windamereMetrics.ts` (per-game samples),
 `scripts/balance.ts` (the report). Results and findings: `docs/BALANCE.md`. Level 1 is weak
 (1.6-2.1x fair against random), so it is a probe of the rules, not a finished Easy bot.
+
+## 9. Levels 2 and 3 as built (B5)
+
+`pickFor(engine, view, seat, { level })`: `'easy'` = uniform random over legal moves (the setup
+screen's hint), `'medium'` = level 2, `'hard'` = level 3. Windamere only; another ruleset gets easy.
+The setup screen's `normal` maps to `'medium'` in `src/game/play.ts`.
+
+**Level 2** (`windamereBots.ts` + `windamereEval.ts`): for each legal pick, copy only the acting
+town of the view, apply the pick (Spend gains and glean, Build cost and the engine's payment plan,
+cover, "when built" gains, Great Work tiers) and score the difference:
+change in the engine's own `scoreTown` (Hall, Landmark, card Renown, Great Work, Valour, Lore runs,
+Honours; the purse is priced smoothly instead) + coins, goods and labour at fixed Renown prices
+(coin 0.28, good 0.4, labour = remaining tier Renown per labour left) + the future income of a built
+card (Yield, Income, Season-end, Tolls, Exchange, discounts, bonuses, over the turns left) + Guard
+against the Raid (this Season's is public, later ones are averaged by Season). Trade enters through
+the payment plan the engine proposes (neighbour purchases at the Season's price vs the bank).
+Noise +/-0.6 Renown on every score so games differ. The Great Work is chosen by the same rating
+rule as level 1. Every weight is an untuned first guess.
+
+**Level 3** adds **denial**: if hands are passed this turn, each pick is charged 0.7 x the best use
+(Build or Spend, same evaluator, on that town's public store, coins and tableau) the receiving
+neighbour would have of the other cards, and the noise is +/-0.15.
+
+**Measured** (Windamere, seeds 1.., `nice -n 19`, hidden info never read):
+
+| Table                                                            | Result                                                             |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 3 seats: random, greedy, level 2 (100 games)                     | level 2 wins 97%, greedy 3%, random 0%                             |
+| 4 seats: random, greedy, level 2, level 3 (400 games)            | level 2 45%, level 3 54%, greedy 0.5%, random 0.5% (fair 25%)      |
+| 6 seats: random, greedy, 2x level 2, level 3, random (400 games) | level 3 34% per seat, level 2 33% per seat, greedy 0.3%, random 0% |
+| 4 seats: 2x level 2 vs 2x level 3 (600 games)                    | level 3 29.2% per seat, level 2 20.8% (fair 25%): ratio 1.4x       |
+| same, denial weight 0 (600 games)                                | level 3 27.4% per seat, level 2 22.6%: ratio 1.2x                  |
+
+Reading: levels 2/3 are far above level 1 and random (K2 ratio met by a wide margin). **Level 3 over
+level 2 is only 1.2-1.4x**, short of K2's 1.5x; most of that edge is level 3's lower noise, and
+denial adds about 2 points (inside about 1.8 points of noise at 600 games). So "hard" is a small
+step over "normal" today. Think time: about 0.3 ms per decision in a whole-game sim (P4 target
+<= 300 ms: met by far). Not tested: against humans.
+
+**Not done / next:** Lore-run planning beyond one-ply marginal Renown, Honour racing, trade
+planning across turns, Recall (R15.8) use, and engine's lookahead API (E5) for real search at
+level 3. Needs from engine (E5): a pure `step`-style call on a state a bot builds from its view
+(sampled hidden hands), cheap enough for ~1000 calls per decision. Until then level 3 stays one-ply.

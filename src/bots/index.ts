@@ -6,3 +6,4 @@ export { pickFor } from './pickFor';
 export type { BotLevel, PickForOptions } from './pickFor';
 export { createGreedyBot } from './greedy';
 export type { GreedyAdapter, PickAssessment } from './greedy';
+export { createWindamereBot } from './windamereBots';
