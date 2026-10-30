@@ -330,3 +330,21 @@ a better price per pick. Honour planning: not done. Untried.
   its lookahead from the engine that asks it (`ctx.engine.ruleset`), so a balance overlay is
   played out under its own rules. `pickFor` still routes only the shipped engine to the smart
   levels. Untested with a real overlay: the unit test covers the shipped engine only.
+
+## 13. Lore build share (tutorial's report: Normal and Hard never build Lore)
+
+Mean cards per town at the end, 4 identical bots, 100 games (main c252cd5, shipped content):
+
+| bot              | Holding | Market | Hall | Watch | Lore | Landmark | towns with no Lore |
+| ---------------- | ------- | ------ | ---- | ----- | ---- | -------- | ------------------ |
+| level 1 (greedy) | 2.38    | 2.53   | 1.43 | 2.14  | 3.11 | 1.14     | 2%                 |
+| level 2          | 3.23    | 1.63   | 2.75 | 2.26  | 1.11 | 0.90     | 36%                |
+| level 3          | 3.09    | 1.67   | 2.79 | 2.08  | 1.03 | 0.78     | 38%                |
+
+So the report is right in kind, not in size: levels 2 and 3 build about 1 Lore card per town (a run
+of 1 scores 1 Renown) and over a third build none, against 3 for level 1. The one-ply score values a
+Lore card at its marginal run score, which is 1 for a first rank and grows only once ranks are held;
+the loop of "no Lore, so Lore is worth little" keeps them out. The projected-Lore knob (§11,
+`loreProject`) tried to price the later runs and lost 3 points of win share at level 2 (24 vs 26%),
+so it is off; level 2 and 3 also win far more than level 1 without Lore. Whether a Lore plan (commit
+to a run early, price each rank at the run it would complete) beats that is untested.
