@@ -28,6 +28,22 @@ const MEASURE_LABELS: Record<string, string> = {
   valour: 'Valour tokens',
 };
 
+/** One unit of a measure (R11.5): "for each Holding your weaker neighbour has". */
+const MEASURE_ONE: Record<string, string> = {
+  guard: 'point of Guard',
+  holdings: 'Holding',
+  halls: 'Hall',
+  markets: 'Market',
+  watches: 'Watch',
+  lore: 'Lore card',
+  landmarks: 'Landmark',
+  loreRun: 'card in its longest Lore run',
+  tiers: 'Great Work tier',
+  coins: 'coin',
+  kinds: 'kind of card',
+  valour: 'Valour token',
+};
+
 export const kindOne = (kind: unknown): string => KIND_LABELS[String(kind)]?.one ?? String(kind);
 export const kindMany = (kind: unknown): string => KIND_LABELS[String(kind)]?.many ?? String(kind);
 export const measureLabel = (m: unknown): string => MEASURE_LABELS[String(m)] ?? String(m);
@@ -51,7 +67,10 @@ const gainsOf = (spec: EffectSpec): Gains => (spec.gains ?? {}) as Gains;
 const num = (x: unknown): number => (typeof x === 'number' ? x : 0);
 const coins = (n: number): string => `${n} coin${n === 1 ? '' : 's'}`;
 
-/** One R13 effect in a short sentence. Unknown types fall back to their id. */
+/**
+ * One R13 effect in a short sentence. A type this file does not know yet never shows its raw id
+ * on a card: it reads as a plain "Special effect" (qa audits that every shipped type has text).
+ */
 export function effectText(rules: WwRules, spec: EffectSpec): string {
   const g = gainsText(rules, gainsOf(spec));
   const amount = num(spec.amount);
@@ -102,10 +121,22 @@ export function effectText(rules: WwRules, spec: EffectSpec): string {
       return `${amount} Renown at ${num(spec.atLeast)}+ ${measureLabel(spec.measure)}`;
     case 'scoreSeasons':
       return `${amount} Renown per Season you built a ${kindOne(spec.kind)}`;
+    // D10b (E7). The weaker neighbour has less of it (a tie counts that number; 2 towns: the one).
+    case 'onBuildNeighbourMin':
+      return `When built: +${g} for each ${kindOne(spec.kind)} your weaker neighbour has`;
+    case 'scoreNeighbourMin':
+      return `${amount} Renown for each ${measureOne(spec.measure)} your weaker neighbour has`;
+    case 'scoreSales':
+      return `${amount} Renown per ${num(spec.per)} goods you sell to neighbours`;
     default:
-      return spec.type;
+      return UNKNOWN_EFFECT;
   }
 }
+
+/** What a card says for an effect type with no sentence yet (never the raw type id). */
+export const UNKNOWN_EFFECT = 'Special effect (see How to play)';
+
+const measureOne = (m: unknown): string => MEASURE_ONE[String(m)] ?? measureLabel(m);
 
 export function effectsText(rules: WwRules, specs: readonly EffectSpec[]): string {
   return specs.length ? specs.map((s) => effectText(rules, s)).join('; ') : 'No effect';
