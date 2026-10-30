@@ -502,42 +502,42 @@ Honours to pull towards other kinds.
 ## Design note: how much score depends on neighbours (research R4 D1)
 
 Research's review estimated that **under 10%** of a winning score depended on neighbours in the
-draft before D2c. With D2c, our arithmetic (untested; assumes 4-5 towns, a winning score of about
-60-65 Renown, and each town buying and selling about 8 goods a game at an average market price of
-about 3.5 coins, since purchases lean towards the dear late Seasons, research N2):
+draft before D2c. Our D2c estimate of 20-35% counted gross trade coins and was **withdrawn**: every
+town both buys and sells, so the coins mostly cancel. Bots measure the **net** share (target I1:
+median ≥ 10%): coins received minus paid with neighbours (sales, purchases, bounty) in Renown, plus
+Renown from effects that read the neighbours (`scoreBeat`, `scoreNeighbourMin`, `scoreSales`, Wend
+Fair's coins), over all Renown. Tolls are reported apart.
 
-| Source                                 | Per town per game                   | ≈ Renown  |
-| -------------------------------------- | ----------------------------------- | --------- |
-| Coins from goods sold to neighbours    | about 28 coins (R6.6)               | 7         |
-| Coins saved buying instead of the bank | about 20 coins (6 − 3.5, 8 goods)   | 5         |
-| Bounty paid or taken (R9.6)            | 0-8 coins, now moving between towns | 0-2       |
-| Tolls (R13 `toll`), if drafted         | 0-10 coins                          | 0-2       |
-| `scoreBeat` Landmarks and Perks        | 0-6 Renown                          | 0-6       |
-| **Total**                              |                                     | **12-22** |
+| Step (CARDS.md)                              | I1 median, level 1 (2-7 seats)              | I1 median, level 2 (2-7 seats)               |
+| -------------------------------------------- | ------------------------------------------- | -------------------------------------------- |
+| D9b, trade and bounty only (bots B4)         | 1.2-2.0%                                    | not measured                                 |
+| D10a: four rivalry cards, 1 copy each (§12)  | 5.4-11.4%                                   | not measured                                 |
+| D10b: weaker neighbour and goods sold (§12)  | 8.7-16.0% (3-7 seats)                       | 8.6-15.6% (3-7 seats)                        |
+| D10c: second rivalry copy at 6-7 seats (§16) | 10-11% at 6-7 seats                         | 11-12% at 6-7 seats                          |
+| **Main after D10c** (balance L5, `2db6fa1`)  | **7.9 / 16.8 / 14.7 / 13.2 / 14.8 / 13.3%** | **11.2 / 17.1 / 15.9 / 12.5 / 15.6 / 13.8%** |
 
-So about **20-35%** of a winning score now moves with what the neighbours do, plus the
-hate-draft. Bots (B1) should report the real share: Renown-equivalent from sales, purchases,
-bounty, Tolls and `scoreBeat`, over all Renown (research balance target I1: median ≥ 10%).
-
-**Measured (bots B4, 2026-10-30): the net share is only 1.2-2.0%.** Every town both buys and
-sells, so the coins cancel; my estimate above counted gross coins and is withdrawn. Trade gives
-neighbours access to goods, not score swings. Raising I1 needs a new design element (for example
-an Honour or Landmark scored against each neighbour); see CARDS.md §11.
+I1 passes at 3-7 seats at both levels, and at 2 seats at level 2. Level-2 winners take 8-15
+Renown from the neighbour effects but lead the runner-up on them by only 2-4 (BALANCE.md §9.3), so
+they add interaction more than they decide games. Trade itself gives neighbours access to goods,
+not score swings. Every number is bot play, not human play.
 
 ## Design note: planned tuning (research R4 N1-N4)
 
-Nothing below is a rule yet. Each item waits on bot numbers (B1) against
+Nothing below is a rule yet. Each item waits on bot numbers against
 `docs/design/research/balance-targets.md`; a fix becomes a numbered rule or a data change.
+Status (2026-10-30): N4 done by data re-tunes; N1-N3 not measured yet.
 
-- **N1, forced sales drain Winter stock** (R6.6-R6.7). Only this turn's own Build is protected,
+- **N1, forced sales drain Winter stock** (R6.6-R6.7). Open, not measured. Since D9c a Winter
+  sale pays 3 coins (it was 5), so selling Winter stock now earns the seller less. Only this turn's own Build is protected,
   so goods saved for next turn's Build can be bought out from under you. Intended interaction
   (D1), but it must not feel like theft. Measure: goods sold per town in Autumn and Winter, and
   how often a town's best Build next turn became unaffordable after a sale. If too often, the
   first lever is a **reserve**: neighbours may not buy a town's last 1† of each good. Second
   lever: limit 1 per neighbour in Winter. UI shows on your store what neighbours can buy.
-- **N2, Spring trade is thin**: stores start empty. Report only; Spring's price of 1 is meant
-  to help late Spring.
-- **N3, plunder plus bounty double-charges** a weak town. Measure the final rank of towns
+- **N2, Spring trade is thin**: stores start empty. Report only; the price of 1 (Spring to
+  Autumn since D9c) is meant to help late Spring.
+- **N3, plunder plus bounty double-charges** a weak town. Open, not measured. Measure the final
+  rank of towns
   plundered twice or more. Levers: cap plunder plus bounty at 3† coins a Season, or pay the
   bounty from the bank again (as before D2c, which weakens D1).
 - **N4, costs were tuned for pair picks** (CARDS.md §9). A single pick is a Build or a Spend, so
@@ -545,4 +545,6 @@ Nothing below is a rule yet. Each item waits on bot numbers (B1) against
   bands and costs Season by Season until (a) every card is built 5-60% of the times it is
   picked (target S5), (b) Spend picks are at most about a third of picks in Spring to Autumn
   (target P3, restated for single picks), and (c) most Builds need at most one purchase. Change
-  Spend bands before costs, and Spring before later Seasons.
+  Spend bands before costs, and Spring before later Seasons. **Done** in D9, D9b, D9c and D11
+  (CARDS.md §11, §13, §14): level-1 Summer/Autumn Spends pass at 3-7 seats; level-2 bots still
+  Spend 29-45% in Summer and Autumn (balance P3 at level 2, open).

@@ -317,32 +317,33 @@ Thieves. A stronger Watch or a second one holds that too. A test checks this.
 - the ORIGINALITY.md §5 blocklist against every card, Great Work, Raid and Honour name and id,
   and our goods against the banned goods.
 
-Not checked (needs B1 bots and qa playtests):
+Not checked by tests: measured by bots (BALANCE.md), and later by qa playtests. Status
+2026-10-30 (D13); every number is bot play:
 
 1. **Economy curve.** A turn-1 Spring Holding yields up to 15 goods (R4 D4). Watch for
-   Holding-only towns winning; next lever is Spring Holding cost or a store cap (R4 D5).
-2. **Labour supply.** The Summer upgrades give up to 10 labour each. If most towns finish tier IV,
-   raise thresholds (R16) or cut the upgrade labour.
-3. **Trade.** Whether the Season price (1, 1, 1, 3 since D9c; bank 6) and the limit of 2 per neighbour
-   make buying the default; target: most Builds need at most one purchase. Bots should report
-   goods bought per town and the share of score from neighbours (RULES.md design note, R4 D1).
-4. **Tolls.** `toll 1` (any kind) on Fairground and Merchants' Row pays up to 2 coins a turn; may
-   be strong at 7 seats where neighbours always build.
-5. **Lore at 4 seats** is 18 of 96 cards. Check that runs of 5-6 are reachable but not routine.
-6. **Winter goods.** Whether towns can afford Winter cards (5-6 goods) from stores, gleans and
-   purchases at 3 coins (5 before D9c); if not, lower costs or raise Root Cellar's payout. Linked to N1: Winter
-   stock can be bought out by neighbours (RULES.md "planned tuning").
-7. **Teach load** (R4 D9): 23 effect types now. A "first game" option that turns off Honours and
-   upgrades is card D7 (after the first sim numbers).
-8. **Re-tune for single picks** (research N4). Costs and Spend bands here were first sized when
-   each Build had a Spend beside it; now a turn is a Build or a Spend, so fuel per Build roughly
-   halves. D5 only made first moves (Spring Holdings 3c, cheaper Lore, Spend bands of 2-4 units).
-   Plan (also in RULES.md "planned tuning"): run B1 on this data, then adjust **Spend bands
-   first, costs second, Spring first**, until every card is built 5-60% of the times it is
-   picked (balance target S5), Spend picks stay at most about a third of picks in Spring to
-   Autumn (P3, restated for single picks), and most Builds need at most one purchase.
-9. **Forced sales** (research N1): see item 6. First lever if bots show planned Builds broken by
-   sales: neighbours may not buy a town's last 1 of each good.
+   Holding-only towns winning. **Answered** (§11, D9): Holding-only fell from about 2x fair to
+   0.36-0.85x at level 1 (BALANCE.md §8.3). One-kind plans are now weak, not dominant.
+2. **Labour supply.** If most towns finish tier IV, raise thresholds. **Done twice**: D9 (§11)
+   and D12a (§18). Level-2 tier IV is 36-51%; level 1 9-15% (report only, research R11).
+3. **Trade.** Season price 1, 1, 1, 3 (D9c, §14), bank 6, limit 2 per neighbour. The neighbour
+   share is measured (I1 passes at 3-7 seats: RULES.md design note). **Open**: whether most
+   Builds need at most one purchase. No bot metric counts purchases per Build yet.
+4. **Tolls.** `toll 1` on Fairground and Merchants' Row. **Answered**: Tolls are worth 0.5-1.9
+   Renown per town at level 1 and 0.3-1.0 at level 2 (balance L5 baselines). Not strong at 7
+   seats.
+5. **Lore at 4 seats.** Runs of 5-6 should be reachable but not routine. **Partly**: runs of 5+
+   reach 3-4% of towns at level 1 and 2.5-5% at level 2, at or under the 5% floor. Runs of 3+ pass
+   at level 1 (27-33%) and fail at level 2 (16-21%), a bots matter first (D14 after bots).
+6. **Winter goods.** Whether towns can afford Winter cards (5-6 goods). **Open**, not measured
+   directly. Since D9c, Winter purchases cost 3 coins (5 before).
+7. **Teach load** (R4 D9): 26 effect types since D10b. **Done**: the First game option (D7, R19)
+   turns off Honours and upgrades.
+8. **Re-tune for single picks** (research N4). **Done** in D9, D9b, D9c and D11 (§11, §13, §14):
+   level-1 Summer/Autumn Spends pass at 3-7 seats. Level-2 bots still Spend 29-45% in Summer and
+   Autumn (balance P3 at level 2, open).
+9. **Forced sales** (research N1): neighbours buying out stock saved for next turn. **Open**, not
+   measured. First lever if bots or playtests show planned Builds broken by sales: neighbours may
+   not buy a town's last 1 of each good.
 
 ## 10. Research R4 findings: what was done
 
