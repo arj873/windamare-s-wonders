@@ -1,0 +1,5 @@
+{
+  "name": "bank-cheaper",
+  "hypothesis": "8-12 purchases a game find the seller out of goods and go to the bank at 6 coins a good (D8). Bank 6 -> 5 makes more Summer-Autumn Builds legal for towns with poor neighbours, cutting Spends and blowouts. Expect a smaller effect than market-cheaper: the bank is the fallback.",
+  "tunables": { "bankPrice": 5 }
+}

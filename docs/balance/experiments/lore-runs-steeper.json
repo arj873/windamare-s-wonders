@@ -1,0 +1,5 @@
+{
+  "name": "lore-runs-steeper",
+  "hypothesis": "Level 2 builds almost no Lore (run >= 3 in 4-9% of towns, Lore 2% of Renown). Design tried Lore run scores 1/3/6/10/14/18 -> 1/3/7/11/16/20 under level 1 and saw nothing, which is expected: level 1 ignores Renown. Level 2 reads score deltas, so the same values should raise its Lore runs. Tested at level 2 only.",
+  "tunables": { "loreRunScores": [1, 3, 7, 11, 16, 20] }
+}

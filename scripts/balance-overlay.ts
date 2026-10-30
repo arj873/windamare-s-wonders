@@ -8,9 +8,10 @@
  *   tunables: engine `WwTunables` keys (shipped.ts maps design's TUNABLES onto these), replaced
  *   greatWorks: { "<id>" | "*": GwPatch } — "*" applies to every Great Work first, then by id
  *   cards: { "<def id>": { cost?, spend?, effects?, counts?, upgrade? } } — fields replaced
- *   cardSpend: { labourDelta, refund?, kinds?, seasons? } — every matching card's Spend band
- *     with labour gets `labourDelta` labour (floored at 0) and `refund` coins (default 1) per
- *     labour removed
+ *   cardSpend: { labourDelta?, refund?, coinsDelta?, kinds?, seasons? } — every matching card's
+ *     Spend band with labour gets `labourDelta` labour (floored at 0) and `refund` coins
+ *     (default 1) per labour removed; every matching band gets `coinsDelta` coins
+ *   cardRenown: { delta, kinds?, seasons? } — printed `renown` of matching cards + delta (min 1)
  *   raids: { "<id>": { strength } }
  */
 import { readFileSync } from 'node:fs';
@@ -46,7 +47,16 @@ export interface Overlay {
     string,
     Partial<Pick<WwCardDef, 'cost' | 'spend' | 'effects' | 'counts' | 'upgrade'>>
   >;
-  cardSpend?: { labourDelta?: number; refund?: number; kinds?: string[]; seasons?: string[] };
+  cardSpend?: {
+    labourDelta?: number;
+    refund?: number;
+    /** Coins added to every matching Spend band (floored at 0). */
+    coinsDelta?: number;
+    kinds?: string[];
+    seasons?: string[];
+  };
+  /** Printed `renown` of every matching card + `delta`, floored at 1 (cards with none untouched). */
+  cardRenown?: { delta: number; kinds?: string[]; seasons?: string[] };
   raids?: Record<string, { strength: number }>;
 }
 
@@ -129,12 +139,30 @@ export function applyOverlay(base: WwContent, ov: Overlay): WwContent {
   const cs = ov.cardSpend;
   const cards = base.cards.map((c) => {
     let out: WwCardDef = { ...c, ...(ov.cards?.[c.id] ?? {}) };
-    if (
-      cs?.labourDelta &&
+    const match =
+      cs &&
       (!cs.kinds || cs.kinds.includes(c.kind)) &&
-      (!cs.seasons || cs.seasons.includes(c.season))
-    )
+      (!cs.seasons || cs.seasons.includes(c.season));
+    if (match && cs.labourDelta)
       out = { ...out, spend: patchSpend(out.spend, cs.labourDelta, cs.refund ?? 1) };
+    if (match && cs.coinsDelta) {
+      const spend = { ...out.spend };
+      const coins = Math.max(0, (spend.coins ?? 0) + cs.coinsDelta);
+      if (coins > 0) spend.coins = coins;
+      else delete spend.coins;
+      out = { ...out, spend };
+    }
+    const cr = ov.cardRenown;
+    if (
+      cr &&
+      (!cr.kinds || cr.kinds.includes(c.kind)) &&
+      (!cr.seasons || cr.seasons.includes(c.season))
+    ) {
+      const effects = out.effects.map((e) =>
+        e.type === 'renown' ? { ...e, amount: Math.max(1, (e.amount as number) + cr.delta) } : e,
+      );
+      out = { ...out, effects };
+    }
     return out;
   });
 

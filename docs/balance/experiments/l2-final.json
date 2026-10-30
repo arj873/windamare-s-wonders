@@ -1,0 +1,22 @@
+{
+  "name": "l2-final",
+  "hypothesis": "The candidates that do not break the other level, together: lore-cheaper (S3 passes at level 1, small gain at level 2), market-cheaper-2 (P3 passes at 3-7 seats at level 1, blowouts -0..-6 pts) and gw-both (level-robust Great Work fix). Each keeps its gain and none undoes another's; watch S4 at 3 seats under level 1 (lore-cheaper took it to 19%).",
+  "tunables": { "marketPrice": [1, 2, 2, 3] },
+  "greatWorks": {
+    "the-fourfold-gate": { "tierRenown": [2, 3, 7, 6] },
+    "the-hall-of-echoes": { "tierRenown": [2, 3, 5, null] },
+    "the-wind-organ": { "tierRenown": [null, 3, 7, null] },
+    "the-mere-bridge": { "tierRenown": [2, null, 5, null] },
+    "the-ring-of-oaths": { "tierRenown": [null, 3, 5, null] },
+    "the-tide-mill": { "tierRenown": [null, null, null, 6] },
+    "the-salt-stair": { "tierRenown": [null, null, null, 5] },
+    "the-stonewrights-spire": { "tierRenown": [null, null, null, 7] }
+  },
+  "cards": {
+    "rune-stone": { "cost": { "peat": 1 } },
+    "almanac-house": { "cost": { "wax": 1, "coins": 1 } },
+    "ferrymans-charts": { "cost": { "wax": 1 } },
+    "sealed-archive": { "cost": { "salt": 1, "wax": 1, "horn": 1 } },
+    "orrery": { "cost": { "peat": 1, "wax": 1, "horn": 2 } }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "gw-f2b",
+  "hypothesis": "gw-f2 left two Great Works just over 1.25x: The Tide Mill 1.27x (n=2936) and The Harvest Wheel 1.27x (n=283, within noise). gw-f2 plus Tide Mill tier IV 8 -> 7 and Harvest Wheel tier IV 5 -> 4 puts all 13 chosen Great Works inside 0.75-1.25x.",
+  "greatWorks": {
+    "the-stonewrights-spire": { "tierRenown": [2, 3, 4, 5] },
+    "the-mere-bridge": { "tierRenown": [2, 3, 5, null] },
+    "the-fourfold-gate": { "tierRenown": [2, 3, 7, null] },
+    "the-hall-of-echoes": { "tierRenown": [2, 3, 5, null] },
+    "the-tide-mill": { "tierRenown": [null, null, null, 7] },
+    "the-harvest-wheel": { "tierRenown": [null, null, null, 4] }
+  }
+}

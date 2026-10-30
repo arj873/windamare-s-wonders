@@ -8,6 +8,8 @@ import { readFileSync } from 'node:fs';
 interface Doc {
   overlay: string | null;
   name: string;
+  /** Bot level of sections 1-2 (absent = 1, files written before --level). */
+  level?: number;
   games: number;
   seed: number;
   seats: Record<string, Record<string, number | string>>;
@@ -72,6 +74,16 @@ const ROWS: [string, string, (r: Record<string, number | string>) => string][] =
         ? 'n/a'
         : `${num(r.gapBuilds as number)} / ${pct(r.winnerMostBuilds as number)}`,
   ],
+  [
+    'Builds per town / coins paid per Build / bank goods per town',
+    'report',
+    (r) =>
+      r.bankGoodsPerTown === undefined
+        ? 'n/a'
+        : [r.buildsPerTown, r.coinsPerBuild, r.bankGoodsPerTown]
+            .map((x) => num(x as number))
+            .join(' / '),
+  ],
   ['I1 neighbour share median', '>= 10%', (r) => pct(r.nbrShareMedian as number)],
   ['F1 max seat deviation', '<= 3 pts', (r) => `${num((r.seatMaxDev as number) * 100)}`],
   ['winning score median', 'report', (r) => num(r.winScoreMedian as number)],
@@ -93,7 +105,11 @@ const seatsOf = (d: Doc) => Object.keys(d.seats).sort((a, b) => Number(a) - Numb
 for (const p of expPaths) {
   const exp = load(p);
   const seats = seatsOf(exp).filter((n) => base.seats[n]);
-  console.log(`### ${exp.name} (${exp.overlay ?? 'no overlay'})`);
+  console.log(`### ${exp.name}, level ${exp.level ?? 1} bots (${exp.overlay ?? 'no overlay'})`);
+  if ((exp.level ?? 1) !== (base.level ?? 1))
+    console.log(
+      `\n(warning: baseline is level ${base.level ?? 1}, experiment level ${exp.level ?? 1})`,
+    );
   console.log();
   if (exp.games !== base.games || exp.seed !== base.seed)
     console.log(
