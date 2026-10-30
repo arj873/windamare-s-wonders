@@ -334,7 +334,13 @@ describe('online room visit (O1)', () => {
     expect(view?.seats.every((s) => s.hand.every((c) => c.def === HIDDEN_CARD))).toBe(true);
     expect(view?.seats.every((s) => s.pick === null)).toBe(true);
     expect(q(cy, '.dt [data-act^="select:"]')).toBeNull();
-    expect(k(cy, 'you-watch')?.textContent).toMatch(/You're watching/);
+    // ui's spectator layout (server's viewFor(state, 'spectator')): no hand row, a row of towns
+    // to follow instead; following Bob's town shows it in the middle.
+    expect(q(cy, '.dt-watch')).not.toBeNull();
+    expect(q(cy, '.dt-hand')).toBeNull();
+    k(cy, 'follow-1')?.click();
+    expect(k(cy, 'follow-1')?.getAttribute('aria-checked')).toBe('true');
+    expect(k(cy, 'you-watch')?.textContent).toBe('You can take a seat in the next game.');
     expect(k(ann, 'watchers')?.textContent).toBe('1 watching');
     // An unnamed watcher cannot chat.
     expect((k(cy, 'chat-input') as HTMLInputElement).disabled).toBe(true);
@@ -366,16 +372,25 @@ async function playToEnd(w: ReturnType<typeof world>, app: App): Promise<number>
 describe('online room visit (O3)', () => {
   it('host sets a bot level and seat colours; the guest and the table follow', async () => {
     const { w, ann, bob } = await lobbyOfTwo();
+    // Online bots default to Normal like hotseat's (net's own default is Easy): the host's
+    // client fills the levels once, and the real session takes them.
+    expect(ann.roomClient?.room?.config.botLevels).toEqual([
+      'medium',
+      'medium',
+      'medium',
+      'medium',
+    ]);
+    expect(k(bob, 'seat-3')?.textContent).toContain('a Normal bot plays it');
     // The real session accepts the lists and sends them back on every seat.
     const level = k(ann, 'level-2') as HTMLSelectElement;
     level.value = 'hard';
     level.dispatchEvent(new Event('change'));
     await w.settle();
     expect(bob.roomClient?.room?.seats.map((s) => s.botLevel)).toEqual([
-      'easy',
-      'easy',
+      'medium',
+      'medium',
       'hard',
-      'easy',
+      'medium',
     ]);
     expect(k(bob, 'seat-2')?.textContent).toContain('a Hard bot plays it');
     expect(k(bob, 'level-2')).toBeNull();
@@ -393,7 +408,13 @@ describe('online room visit (O3)', () => {
     await w.settle();
     const seats = bob.roomClient?.room?.seats ?? [];
     expect(seats.map((s) => s.colour)).toEqual([6, 0, 2]);
-    expect(seats.map((s) => s.botLevel)).toEqual(['easy', 'easy', 'hard']);
+    expect(seats.map((s) => s.botLevel)).toEqual(['medium', 'medium', 'hard']);
+    // A new seat gets the online default too.
+    k(ann, 'add-bot')?.click();
+    await w.settle();
+    expect(bob.roomClient?.room?.seats[3]?.botLevel).toBe('medium');
+    k(ann, 'remove-bot')?.click();
+    await w.settle();
     expect(w.toasts).toEqual([]);
     // In the game the table and the chat use the chosen colours.
     k(ann, 'lobby-start')?.click();
@@ -401,6 +422,51 @@ describe('online room visit (O3)', () => {
     const looks = roomLooks(bob.roomClient?.room ?? null, 3);
     expect(looks.map((l) => l.color)).toEqual([6, 0, 2].map((c) => seatColor(c).color));
     expect(looks.map((l) => l.bot)).toEqual([false, false, true]);
+  });
+});
+
+describe('online ☰ menu (O4)', () => {
+  it('How to play, Animations and Sound in the lobby and the game; All cards on the table', async () => {
+    const w = world();
+    const openRules = vi.fn();
+    const destroy = vi.fn();
+    const openCards = vi.fn();
+    let muted = false;
+    const sound = {
+      get muted() {
+        return muted;
+      },
+      setMuted: vi.fn((m: boolean) => void (muted = m)),
+    };
+    const env = { ...w.env(), help: { attach: () => ({ openRules, destroy }), openCards }, sound };
+    const ann = w.mount(await OnlineApp.create(env, 'Ann'));
+    await w.settle();
+    const openMenu = () => q(ann, '.ww-menu-btn')?.click();
+    openMenu();
+    const labels = [...ann.element.querySelectorAll('.ww-menu-item, .ww-menu-label')].map(
+      (e) => e.firstChild?.textContent,
+    );
+    // R8 #4: no New game or Bot speed online (the room owns those).
+    expect(labels).toEqual(['How to play', 'Animations', 'Sound']);
+    k(ann, 'item-0')?.click();
+    expect(openRules).toHaveBeenCalledTimes(1);
+    openMenu();
+    k(ann, 'choice-2-off')?.click();
+    expect(sound.setMuted).toHaveBeenLastCalledWith(true);
+    k(ann, 'choice-1-off')?.click();
+    expect(document.documentElement.classList.contains('no-anim')).toBe(true);
+    k(ann, 'choice-1-on')?.click();
+    expect(document.documentElement.classList.contains('no-anim')).toBe(false);
+    // The same menu over the table, and the hand's "All cards" opens the card list.
+    k(ann, 'lobby-start')?.click();
+    await w.settle();
+    answerFirst(ann);
+    await w.settle(200);
+    expect(q(ann, '.ww-menu-btn')).not.toBeNull();
+    k(ann, 'catalog')?.click();
+    expect(openCards).toHaveBeenCalledWith(ann.roomClient?.game?.view);
+    ann.dispose();
+    expect(destroy).toHaveBeenCalled();
   });
 });
 
@@ -419,11 +485,15 @@ describe('online room visit (O2)', () => {
     }
     expect(k(ann, 'rematch')).not.toBeNull();
     expect(k(bob, 'rematch')).toBeNull();
+    // UX.md §6: the result buttons say where they go online.
+    expect(k(ann, 'rematch')?.textContent).toBe('Back to lobby');
+    expect(k(ann, 'new')?.textContent).toBe('Leave room');
+    expect(k(bob, 'new')?.textContent).toBe('Leave room');
     expect(k(ann, 'waiting-line')?.textContent).toBe(
-      'Game over. Rematch takes everyone back to the lobby.',
+      'Game over. Back to lobby takes everyone there for the next game.',
     );
     expect(k(bob, 'waiting-line')?.textContent).toBe(
-      'Game over. Waiting for Ann to open a rematch.',
+      'Game over. Waiting for Ann to go back to the lobby.',
     );
     // Timed-out humans were told (R15.6, net's "ran out of time" line).
     expect(w.toasts).toContain('Time’s up: a card was picked for you');

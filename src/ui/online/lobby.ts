@@ -575,10 +575,10 @@ export class LobbyScreen {
       h(
         'div',
         { class: 'su-field ol-field' },
-        h('span', { class: 'ol-field-label' }, 'Pick clock'),
+        h('span', { class: 'ol-field-label' }, 'Turn clock'),
         h(
           'div',
-          { class: 'seg', attrs: { role: 'group', 'aria-label': 'Pick clock' } },
+          { class: 'seg', attrs: { role: 'group', 'aria-label': 'Turn clock' } },
           ...TIMER_OPTIONS.map((t) =>
             h(
               'button',
@@ -593,7 +593,13 @@ export class LobbyScreen {
             ),
           ),
         ),
-        h('small', { class: 'muted' }, `${timerHint(config.timer)}; shorter later in a Season.`),
+        h(
+          'small',
+          { class: 'muted' },
+          config.timer === 'off'
+            ? 'Off: the table waits for every player (bots never keep it waiting).'
+            : `${timerHint(config.timer)}; shorter later in a Season.`,
+        ),
       ),
     );
     refocus(this.configBox, focus);

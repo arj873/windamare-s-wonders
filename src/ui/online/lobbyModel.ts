@@ -13,6 +13,7 @@ import {
 } from '../../net/protocol';
 import {
   BOT_LEVELS as SETUP_LEVELS,
+  clockLabel,
   SEAT_COLORS,
   type BotLevel as SetupLevel,
 } from '../setup/model';
@@ -215,12 +216,10 @@ export function lobbyView(room: RoomInfo, meId: string | null, range: SeatRange)
   };
 }
 
-export const TIMER_LABEL: Record<TimerPreset, string> = {
-  off: 'No clock',
-  relaxed: 'Relaxed',
-  normal: 'Normal',
-  fast: 'Fast',
-};
+/** The setup screen's words for the clock options (research R8 #5: one name for Off). */
+export const TIMER_LABEL: Record<TimerPreset, string> = Object.fromEntries(
+  TIMER_PRESETS.map((id) => [id, clockLabel(id)]),
+) as Record<TimerPreset, string>;
 
 /** "90 s first pick" (the clock shortens later in a Season, RULES.md R15.3), or "picks wait". */
 export function timerHint(preset: TimerPreset): string {
@@ -231,24 +230,38 @@ export function timerHint(preset: TimerPreset): string {
 export const TIMER_OPTIONS: readonly { id: TimerPreset; label: string; hint: string }[] =
   TIMER_PRESETS.map((id) => ({ id, label: TIMER_LABEL[id], hint: timerHint(id) }));
 
-/** "4 towns · 2 players + 2 bots · Normal clock". */
+/** "4 towns · 2 players + 2 bots · Normal clock" (no clock part when Off, as on setup). */
 export function configSummary(c: RoomConfig, humans: number): string {
   const bots = c.seatCount - humans;
   const who = [
     `${humans} player${humans === 1 ? '' : 's'}`,
     ...(bots > 0 ? [`${bots} bot${bots === 1 ? '' : 's'}`] : []),
   ].join(' + ');
-  const clock = c.timer === 'off' ? 'no clock' : `${TIMER_LABEL[c.timer]} clock`;
-  return [`${c.seatCount} towns`, who, clock].join(' · ');
+  const clock = c.timer === 'off' ? [] : [`${TIMER_LABEL[c.timer]} clock`];
+  return [`${c.seatCount} towns`, who, ...clock].join(' · ');
 }
 
-/** Net refuses per-seat lists longer than the table, so a smaller table trims them. */
+/** Online bots play at Normal unless the host picks another level, as in hotseat. */
+export const ONLINE_BOT_LEVEL: BotLevel = 'medium';
+
+/** Every seat's bot level set to the online default (a room net made with none chosen). */
+export function withDefaultLevels(c: RoomConfig): RoomConfig {
+  return { ...c, botLevels: Array.from({ length: c.seatCount }, () => ONLINE_BOT_LEVEL) };
+}
+
+/**
+ * Net refuses per-seat lists longer than the table, so a smaller table trims them; a bigger one
+ * gets the online default level on its new seats.
+ */
 export function withSeatCount(c: RoomConfig, seatCount: number): RoomConfig {
   const { botLevels, colours, ...rest } = c;
+  const levels = botLevels
+    ? Array.from({ length: seatCount }, (_, i) => botLevels[i] ?? ONLINE_BOT_LEVEL)
+    : undefined;
   return {
     ...rest,
     seatCount,
-    ...(botLevels ? { botLevels: botLevels.slice(0, seatCount) } : {}),
+    ...(levels ? { botLevels: levels } : {}),
     ...(colours ? { colours: colours.slice(0, seatCount) } : {}),
   };
 }

@@ -32,8 +32,10 @@ export interface NetPlayOptions<S, T> {
    * as play.ts offline). Absent = no reveal animation.
    */
   fx?: RevealHook<S, T>;
-  /** Final scores: "New game" = leave the room. */
+  /** Final scores: "Leave room" (DraftTable's newGame button). */
   onLeave(): void;
+  /** "All cards" in the hand header (the tutorial lane's card list); absent hides it. */
+  cards?(): void;
   /** A pick / answer could not be sent (not connected). */
   onSendFailed?(): void;
   /** Repeating timer (tests inject a fake); returns a stop function. */
@@ -114,8 +116,8 @@ export function presence<S, T>(
     const host = room?.members.find((m) => m.id === room.host);
     line =
       me !== null && room?.host === me
-        ? 'Game over. Rematch takes everyone back to the lobby.'
-        : `Game over. Waiting for ${host?.name ?? 'the host'} to open a rematch.`;
+        ? 'Game over. Back to lobby takes everyone there for the next game.'
+        : `Game over. Waiting for ${host?.name ?? 'the host'} to go back to the lobby.`;
   } else if (waiting.size > 0) {
     const others = seats.filter((s) => s.waiting && !s.you);
     const mine = mySeat !== null && waiting.has(mySeat);
@@ -155,10 +157,13 @@ export class NetPlay<S, T> {
         this.sent(client.answer(prompt, answer)),
       newGame: () => opts.onLeave(),
       skip: () => opts.fx?.skip?.(),
-      // Read at every render: only the host gets "Rematch" (it takes the room back to the lobby).
+      // Read at every render: only the host gets the rematch button (back to the lobby).
       get rematch() {
         return client.isHost ? () => void client.rematch() : undefined;
       },
+      // UX.md §6: online the result buttons say where they go.
+      labels: { rematch: 'Back to lobby', newGame: 'Leave room' },
+      ...(opts.cards ? { cards: opts.cards } : {}),
     };
     this.table = new DraftTable(handlers);
     this.presenceEl = h('div', {
@@ -303,7 +308,8 @@ export class NetPlay<S, T> {
         h(
           'span',
           { class: 'ol-presence-watch', attrs: { 'data-k': 'you-watch' } },
-          "You're watching: no hand is shown. You can play in the next game.",
+          // ui's watch row already says "You are watching".
+          'You can take a seat in the next game.',
         ),
       );
     }

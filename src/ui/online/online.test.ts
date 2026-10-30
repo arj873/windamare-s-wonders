@@ -10,9 +10,11 @@ import {
   inviteUrl,
   lobbyView,
   seatColor,
+  TIMER_OPTIONS,
   timerHint,
   withBotLevel,
   withColour,
+  withDefaultLevels,
   withSeatCount,
 } from './lobbyModel';
 import { errorText, fatalText } from './messages';
@@ -134,13 +136,19 @@ describe('lobbyView', () => {
     expect(trimmed).toEqual({ seatCount: 3, timer: 'normal', botLevels: ['easy', 'easy', 'hard'] });
     expect(withSeatCount({ ...r.config, colours: [4, 0, 1, 2] }, 2).colours).toEqual([4, 0]);
     expect(withSeatCount(r.config, 5)).toEqual({ seatCount: 5, timer: 'normal' });
+    // Online bots default to Normal (net's medium); a bigger table's new seats get it too.
+    expect(withDefaultLevels(r.config).botLevels).toEqual(['medium', 'medium', 'medium', 'medium']);
+    const grown = withSeatCount({ ...r.config, botLevels: ['easy', 'hard'] }, 3);
+    expect(grown.botLevels).toEqual(['easy', 'hard', 'medium']);
   });
 
   it('summarises the config and builds the invite link', () => {
     expect(configSummary({ seatCount: 4, timer: 'fast' }, 1)).toBe(
       '4 towns · 1 player + 3 bots · Fast clock',
     );
-    expect(configSummary({ seatCount: 3, timer: 'off' }, 3)).toBe('3 towns · 3 players · no clock');
+    // The setup screen's words: "Off", and no clock part in the summary (R8 #5).
+    expect(configSummary({ seatCount: 3, timer: 'off' }, 3)).toBe('3 towns · 3 players');
+    expect(TIMER_OPTIONS.map((t) => t.label)).toEqual(['Off', 'Relaxed', 'Normal', 'Fast']);
     expect(timerHint('normal')).toBe(
       `${(clockMs('normal', 'pick', 0) ?? 0) / 1000} s for the first pick`,
     );
