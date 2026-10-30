@@ -929,6 +929,7 @@ export class DraftTable {
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
       withText && c.face.text && h('span', { class: 'dt-mini-text' }, c.face.text),
+      withText && c.standing && h('span', { class: 'dt-mini-standing' }, c.standing),
     );
   }
 
@@ -1124,6 +1125,8 @@ export class DraftTable {
       { class: 'dt-pop', attrs: { role: 'group', 'aria-label': `${c.face.name}: choose a use` } },
       h('div', { class: 'dt-pop-title' }, c.face.name),
       h('div', { class: 'dt-pop-text' }, c.face.text),
+      // R10 #4: a neighbour-comparison card shows the race as it stands.
+      c.standing && h('div', { class: 'dt-pop-standing' }, c.standing),
       // A row every use has (a 2-town Burn) comes once, before the uses.
       ...(first
         ? first.choices.flatMap((row, r) =>

@@ -271,6 +271,47 @@ describe('windamerePresenter', () => {
     expect(last.choices.some((r) => r.key === 'burn')).toBe(false);
   });
 
+  it('shows the live race on neighbour-comparison cards (R10 #4)', () => {
+    const s = structuredClone(newGame());
+    const ofKind = (kind: string) =>
+      rules.content.cards.find((c) => c.kind === kind && c.effects.length)!;
+    const withEffect = (
+      type: string,
+      pred: (e: { [k: string]: unknown }) => boolean = () => true,
+    ) => rules.content.cards.find((c) => c.effects.some((e) => e.type === type && pred(e)))!;
+    let next = 9000;
+    const give = (seat: number, def: string, n: number) => {
+      for (let i = 0; i < n; i++) s.seats[seat]!.tableau.push({ id: next++, def });
+    };
+    // Ana (seat 0) between Bo (1) and Dee (3): Markets 3 / 2 / 4, Holdings 0 / 2 / 5.
+    const market = ofKind('market').id;
+    const holding = ofKind('holding').id;
+    give(0, market, 3);
+    give(1, market, 2);
+    give(3, market, 4);
+    give(1, holding, 2);
+    give(3, holding, 5);
+    const view = engine.viewFor(s, 0);
+    const beat = withEffect('scoreBeat', (e) => e['measure'] === 'markets');
+    const per = beat.effects.find((e) => e.type === 'scoreBeat')!.amount as number;
+    expect(present.standing!(view, 0, beat.id, true)).toBe(
+      `Now +${per} · Markets: You 3, Bo 2, Dee 4`, // beats Bo only
+    );
+    const min = withEffect('scoreNeighbourMin', (e) => e['measure'] === 'holdings');
+    expect(present.standing!(view, 0, min.id, true)).toBe('Now +4 · Holdings: Bo 2, Dee 5');
+    const onBuild = withEffect('onBuildNeighbourMin');
+    expect(present.standing!(view, 0, onBuild.id, false)).toBe(
+      'Built now: +4 coins · Holdings: Bo 2, Dee 5',
+    );
+    expect(present.standing!(view, 0, onBuild.id, true)).toBeNull(); // spent once built
+    expect(present.standing!(view, 0, holding, true)).toBeNull(); // compares nothing
+    // The model carries it to the town's built cards.
+    give(0, beat.id, 1);
+    const m = tableModel({ view: engine.viewFor(s, 0), engine, present, looks });
+    const mini = m.me!.columns.flatMap((col) => col.cards).find((c) => c.face.name === beat.name);
+    expect(mini?.standing).toMatch(/^Now \+\d+ · Markets: You \d+, Bo 2, Dee 4$/);
+  });
+
   it('keeps Recall of the hands passed this Season (R15.8)', () => {
     expect(model(newGame()).recall).toEqual([]);
     const s = advance(newGame(), (x) => x.turn === 2);

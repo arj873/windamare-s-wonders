@@ -169,6 +169,12 @@ export interface Presenter<S = unknown, T = unknown> {
    */
   badge?(view: DraftView<S, T>, seat: SeatId, pick: Pick | null): HandBadge;
   /**
+   * R10 #4: how a card that compares a town with its neighbours stands for `seat` right now
+   * ("Now +3 · Markets: You 3, Bo 2, Cy 4"), or null for a card that compares nothing. `built`:
+   * the card is in the town (its when-built part is spent), else it is in the hand.
+   */
+  standing?(view: DraftView<S, T>, seat: SeatId, def: CardDefId, built: boolean): string | null;
+  /**
    * R6 #4: what else the latest action did, for the Revealed panel: purchases, sales, tolls,
    * tiers, Raids, bounties ("Ana bought Peat from Bo (3g)"). Plain sentences, in order.
    */

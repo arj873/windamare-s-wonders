@@ -53,6 +53,8 @@ export interface TableauCard {
   kind: KindInfo;
   /** Arrived in the latest reveal. */
   fresh: boolean;
+  /** R10 #4: how its neighbour comparison stands for its town now; null = compares nothing. */
+  standing?: string | null;
 }
 
 export interface ZoneModel {
@@ -111,6 +113,8 @@ export interface HandCard {
   staged: boolean;
   /** Affordability before the tap (R6 #1), or null when the presenter gives none. */
   badge: HandBadge | null;
+  /** R10 #4: how its neighbour comparison would stand if built now; null = compares nothing. */
+  standing: string | null;
 }
 
 export interface RevealLine {
@@ -260,14 +264,23 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
     return (view.view.handCounts[seat] ?? 0) > 0 ? 'thinking' : 'idle';
   };
 
-  const tableauCard = (c: Card): TableauCard => {
+  /** `town`: the seat whose built card this is (its standing is that town's). */
+  const tableauCard = (c: Card, town?: SeatId): TableauCard => {
     const face = present.card(c.def);
-    return { id: c.id, face, kind: kindOf(face.kind), fresh: fresh.has(c.id) };
+    const standing =
+      town === undefined ? null : (present.standing?.(view, town, c.def, true) ?? null);
+    return {
+      id: c.id,
+      face,
+      kind: kindOf(face.kind),
+      fresh: fresh.has(c.id),
+      ...(standing ? { standing } : {}),
+    };
   };
 
   const seats: SeatModel[] = view.seats.map((s) => {
     const look = input.looks[s.id] ?? DEFAULT_LOOK;
-    const cards = s.tableau.map(tableauCard);
+    const cards = s.tableau.map((c) => tableauCard(c, s.id));
     const order = [...present.kinds.map((k) => k.id)];
     for (const c of cards) if (!order.includes(c.kind.id)) order.push(c.kind.id);
     const columns = order
@@ -276,7 +289,12 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
     const zones = Object.entries(present.zones ?? {}).map(([id, label]): ZoneModel => {
       const list = s.zones[id] ?? [];
       const hidden = list.some((c) => c.def === HIDDEN_CARD);
-      return { id, label, count: list.length, cards: hidden ? null : list.map(tableauCard) };
+      return {
+        id,
+        label,
+        count: list.length,
+        cards: hidden ? null : list.map((c) => tableauCard(c)),
+      };
     });
     return {
       seat: s.id,
@@ -424,6 +442,7 @@ function handCards<S, T>(
       playable: options.some((o) => o.pick !== null),
       staged: seat.pick?.card === c.id,
       badge: picking ? (present.badge?.(view, viewer, options[0]?.pick ?? null) ?? null) : null,
+      standing: present.standing?.(view, viewer, c.def, false) ?? null,
     };
   });
 }
