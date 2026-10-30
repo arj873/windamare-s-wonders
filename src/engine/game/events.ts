@@ -8,7 +8,7 @@
  * Order: the order things happened, so ui can replay a turn: the core's `reveal`, then the
  * resolve steps step-major (R4.8), then Season end. Every event of one action shares its `seq`.
  */
-import type { Card, CardId, Ctx, Json, LogEntry, SeatId } from '../core';
+import type { Card, CardId, Ctx, Json, LogEntry, LogPart, SeatId } from '../core';
 import type { RaidOutcome } from './raid';
 import type { Gains, GoodId, WwSeat, WwState, WwTable } from './types';
 
@@ -114,10 +114,37 @@ function actor(e: WwEvent): SeatId | null {
   }
 }
 
-/** Record an event (public unless `to` limits it to some seats). */
-export function emit(ctx: Ctx<WwSeat, WwTable>, event: WwEvent, text: string, to?: SeatId[]): void {
+/** E8: the other seats an entry involves (who bought, who paid, who leads), actor not repeated. */
+function targets(e: WwEvent): SeatId[] {
+  switch (e.type) {
+    case 'trade':
+      return [e.buyer];
+    case 'bounty':
+      return [e.from];
+    case 'toll':
+      return e.from;
+    case 'pay':
+      return [...new Set(e.buys.map((b) => b.from))];
+    case 'honour':
+      return e.leaders;
+    default:
+      return [];
+  }
+}
+
+/**
+ * Record an event (public unless `to` limits it to some seats). `text` names its seats as
+ * pieces (E8, `named`), so a client can say "You".
+ */
+export function emit(
+  ctx: Ctx<WwSeat, WwTable>,
+  event: WwEvent,
+  text: readonly LogPart[],
+  to?: SeatId[],
+): void {
   ctx.log(actor(event), event.type, text, {
     data: event as unknown as Json,
+    targets: targets(event),
     ...(to ? { to } : {}),
   });
 }
@@ -153,6 +180,10 @@ export interface WwEventEntry {
   round: number;
   turn: number;
   text: string;
+  /** E8: the line in pieces, for `logText(entry, viewer)`; absent when it names no seat. */
+  parts?: LogPart[];
+  /** E8: the other seats it involves (the entry's `seat` is the event's actor). */
+  targets?: SeatId[];
   event: WwEvent;
 }
 
@@ -165,6 +196,8 @@ export function eventsOf(state: WwState): WwEventEntry[] {
     round: e.round,
     turn: e.turn,
     text: e.text,
+    ...(e.parts ? { parts: e.parts } : {}),
+    ...(e.targets ? { targets: e.targets } : {}),
     event: e.data as unknown as WwEvent,
   }));
 }

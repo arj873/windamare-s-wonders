@@ -7,3 +7,4 @@ export { checkInvariants, locate } from './invariants';
 export { isSeat, leftOf, neighboursOf, passTarget, rightOf } from './seats';
 export { cloneJson, isJson } from './clone';
 export { createLookahead, type Lookahead, type Policy, type Until } from './lookahead';
+export { andList, joinParts, logText, named } from './log';

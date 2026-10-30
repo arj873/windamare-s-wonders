@@ -1,6 +1,7 @@
 /** The `Ctx` ruleset code gets over applyAction's draft (docs/ENGINE.md §8). */
 import { defOf } from './effects';
 import { cardLists, locate } from './invariants';
+import { joinParts } from './log';
 import type { Rng } from './rng';
 import { isSeat, leftOf, neighboursOf, rightOf } from './seats';
 import type { Card, Ctx, DraftState, EffectSpec, Json, LogEntry, Ruleset, SeatId } from './types';
@@ -99,10 +100,14 @@ export function makeCtx<S, T>(
         turn: draft.turn,
         seat,
         kind,
-        text,
+        text: typeof text === 'string' ? text : joinParts(text),
       };
       if (opts.data !== undefined) entry.data = opts.data;
       if (opts.to !== undefined) entry.to = [...opts.to];
+      if (opts.targets?.length) entry.targets = [...opts.targets];
+      if (typeof text !== 'string' && text.some((p) => typeof p !== 'string')) {
+        entry.parts = text.map((p) => (typeof p === 'string' ? p : { ...p }));
+      }
       draft.log.push(entry);
     },
     left: (seat) => leftOf(draft, seat),

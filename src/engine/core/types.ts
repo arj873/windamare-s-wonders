@@ -72,11 +72,17 @@ export interface Reveal {
   picks: RevealedPick[];
 }
 
+/**
+ * A piece of a log line (E8). A seat piece reads `you` for the player of `seat` ("You sell") and
+ * `text` for everyone else ("Player 1 sells").
+ */
+export type LogPart = string | { seat: SeatId; text: string; you: string };
+
 export interface LogEntry {
   seq: number;
   round: number;
   turn: number;
-  /** Who it is about; null = the table. */
+  /** Who it is about (the actor); null = the table. */
   seat: SeatId | null;
   kind: string;
   /** Plain English, safe to show to everyone the entry is shown to. */
@@ -84,6 +90,13 @@ export interface LogEntry {
   data?: Json;
   /** Private entry: only these seats see it. */
   to?: SeatId[];
+  /** E8: the other seats it involves (a buyer, a payer, the leaders, the winners); none: absent. */
+  targets?: SeatId[];
+  /**
+   * E8: `text` in pieces, present when the line names a seat; joined with every seat piece's
+   * `text` it is `text`. `logText(entry, viewer)` reads it as the viewer.
+   */
+  parts?: LogPart[];
 }
 
 export interface SeatScore {
@@ -249,7 +262,13 @@ export interface Ctx<S = unknown, T = unknown> {
    * hidden and may change until the last one arrives; then all apply in `resolveOrder`.
    */
   promptGroup(entries: readonly { seat: SeatId; kind: string; data: Json }[]): void;
-  log(seat: SeatId | null, kind: string, text: string, opts?: { data?: Json; to?: SeatId[] }): void;
+  /** `text` may come in pieces (E8, `LogPart`) when it names seats; the entry keeps both. */
+  log(
+    seat: SeatId | null,
+    kind: string,
+    text: string | readonly LogPart[],
+    opts?: { data?: Json; to?: SeatId[]; targets?: SeatId[] },
+  ): void;
   left(seat: SeatId): SeatId;
   right(seat: SeatId): SeatId;
   neighbours(seat: SeatId): SeatId[];
