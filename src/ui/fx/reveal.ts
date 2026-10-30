@@ -24,7 +24,17 @@ export interface RevealAnchors {
   tier?(seat: SeatId, tier: number): HTMLElement | null;
 }
 
+/** What a card sprite shows: ui supplies it from the same presenter as the card faces. */
+export interface CardLook {
+  /** Illustration URL (public/art/cards/...), shown in the sprite's art window. */
+  art?: string;
+  /** Kind id: the name band takes the kind's colour (`kind-head`, theme/kinds.css). */
+  kind?: string;
+}
+
 export interface RevealOptions extends PlanOptions {
+  /** Look up the art and kind of a card def. Without it sprites show just the name. */
+  face?: (def: string) => CardLook | null;
   /** Skip all motion (also forced by prefers-reduced-motion). */
   instant?: boolean;
   /** Called as each beat starts with its sound id and the seat it is about. */
@@ -79,7 +89,9 @@ export async function playReveal(
     if (opts.cancelled?.()) return;
     if (beat.cue) opts.onCue?.(beat.cue, beat.seat);
     if (instant) continue;
-    await Promise.all(beat.steps.map((s) => playStep(s, anchors, speed).catch(() => undefined)));
+    await Promise.all(
+      beat.steps.map((s) => playStep(s, anchors, speed, opts.face).catch(() => undefined)),
+    );
     await wait(BEAT_GAP_MS / speed);
   }
 }
@@ -122,14 +134,48 @@ async function run(el: HTMLElement, frames: Keyframe[], ms: number): Promise<voi
 
 const CENTER = 'translate(-50%,-50%)';
 
-async function playStep(step: Step, a: RevealAnchors, speed: number): Promise<void> {
+/** A card sprite: kind-coloured name band over the illustration; a plain back when unnamed. */
+function cardSprite(
+  layer: HTMLElement,
+  at: Pt,
+  def: string | null,
+  name: string | null,
+  face?: (def: string) => CardLook | null,
+): HTMLElement {
+  const look = def ? (face?.(def) ?? null) : null;
+  const el = sprite(layer, `fx-card${def ? '' : ' fx-back'}`, '', at);
+  if (name) {
+    const band = document.createElement('span');
+    // art's kinds.css colours `.kind-head[data-kind]`.
+    band.className = 'fx-card-name kind-head';
+    if (look?.kind) band.dataset.kind = look.kind;
+    band.textContent = name;
+    el.append(band);
+  }
+  if (look?.art) {
+    const img = document.createElement('img');
+    img.className = 'fx-card-art';
+    img.src = look.art;
+    img.alt = '';
+    img.decoding = 'async';
+    el.append(img);
+  }
+  return el;
+}
+
+async function playStep(
+  step: Step,
+  a: RevealAnchors,
+  speed: number,
+  face?: (def: string) => CardLook | null,
+): Promise<void> {
   const ms = STEP_MS[kindTime(step)] / speed;
   const layer = a.layer;
   switch (step.kind) {
     case 'flip': {
       const at = centre(a.hand?.(step.seat) ?? a.town(step.seat), layer);
       if (!at) return;
-      const el = sprite(layer, 'fx-card', step.card ?? '?', at);
+      const el = cardSprite(layer, at, step.card, step.name, face);
       return run(
         el,
         [
@@ -145,7 +191,7 @@ async function playStep(step: Step, a: RevealAnchors, speed: number): Promise<vo
       const from = centre(a.hand?.(step.seat) ?? a.town(step.seat), layer);
       const to = centre(a.town(step.seat), layer);
       if (!from || !to) return;
-      const el = sprite(layer, 'fx-card', step.card, from);
+      const el = cardSprite(layer, from, step.card, step.name, face);
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       return run(

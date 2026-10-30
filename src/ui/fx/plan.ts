@@ -11,9 +11,9 @@ import type { WwEvent, WwEventEntry } from '../../engine/game/events';
 /** What one step shows. `seat`/`from`/`to` are towns; the player resolves them to elements. */
 export type Step =
   /** A town's picked card flips face up. */
-  | { kind: 'flip'; seat: SeatId; card: string | null }
+  | { kind: 'flip'; seat: SeatId; card: string | null; name: string | null }
   /** A built card flies from the hand into the town. */
-  | { kind: 'build'; seat: SeatId; card: string }
+  | { kind: 'build'; seat: SeatId; card: string; name: string }
   /** A floating gain / loss over a town. */
   | { kind: 'chip'; seat: SeatId; text: string; tone: 'gain' | 'loss' | 'note' }
   /** Coins or a good travel from one town to another (buys, tolls, bounty). */
@@ -98,7 +98,12 @@ export function planReveal(entries: readonly WwEventEntry[], opts: PlanOptions =
   for (const { event: e } of entries) {
     switch (e.type) {
       case 'spend':
-        push(e, { kind: 'flip', seat: e.seat, card: e.card.def }, 'spend', e.seat);
+        push(
+          e,
+          { kind: 'flip', seat: e.seat, card: e.card.def, name: label(e.card.def) },
+          'spend',
+          e.seat,
+        );
         if (Object.keys(e.gains).length)
           push(
             e,
@@ -108,7 +113,7 @@ export function planReveal(entries: readonly WwEventEntry[], opts: PlanOptions =
           );
         break;
       case 'glean':
-        push(e, { kind: 'flip', seat: e.seat, card: null }, 'spend', e.seat);
+        push(e, { kind: 'flip', seat: e.seat, card: null, name: null }, 'spend', e.seat);
         if (Object.keys(e.gains).length)
           push(
             e,
@@ -143,7 +148,12 @@ export function planReveal(entries: readonly WwEventEntry[], opts: PlanOptions =
         );
         break;
       case 'build':
-        push(e, { kind: 'build', seat: e.seat, card: e.card.def }, 'build', e.seat);
+        push(
+          e,
+          { kind: 'build', seat: e.seat, card: e.card.def, name: label(e.card.def) },
+          'build',
+          e.seat,
+        );
         if (Object.keys(e.gains).length)
           push(
             e,
