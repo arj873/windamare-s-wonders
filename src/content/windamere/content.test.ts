@@ -108,8 +108,10 @@ describe('Season decks (R3.2, R14.1)', () => {
   });
 
   it('2 seats deal 10 each from the 4-seat deck', () => {
+    const i = SEAT_COUNTS.indexOf(TUNABLES.twoSeat.deckCounts);
+    expect(i).toBeGreaterThanOrEqual(0);
     for (const season of SEASONS) {
-      const deck = BY_SEASON[season].reduce((n, c) => n + c.counts[1], 0);
+      const deck = BY_SEASON[season].reduce((n, c) => n + c.counts[i]!, 0);
       expect(2 * TUNABLES.twoSeat.handSize).toBeLessThanOrEqual(deck);
     }
   });
@@ -137,6 +139,15 @@ describe('Season decks (R3.2, R14.1)', () => {
       for (let i = 1; i < 5; i++)
         expect(c.counts[i]!, c.id).toBeGreaterThanOrEqual(c.counts[i - 1]!);
     }
+  });
+});
+
+describe('prices (R6.3, R6.6c)', () => {
+  it('market price rises every Season, never costs 2, and stays below the bank', () => {
+    const p = SEASONS.map((s) => TUNABLES.marketPrice[s]);
+    for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThan(p[i - 1]!);
+    expect(p).not.toContain(2);
+    expect(Math.max(...p)).toBeLessThan(TUNABLES.bankPrice);
   });
 });
 
