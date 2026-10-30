@@ -250,18 +250,43 @@ dependencies, `tsconfig` that allows `src/server` Worker types, a `dev:server` s
 - **Sub-second bot staggering** via alarms is fine for pacing, not for precise timing (as Catan).
 - Nothing here has been run. No code written, no tests, no Cloudflare access used.
 
-## 8. N1 progress (as built so far)
+## 8. N1 progress (as built)
 
-Built in `src/net` (gate passes, 20 session tests with a toy engine; `src/server` not started):
+Gate passes (157 tests across the repo; net's: session 21, room server 8, router/limits/api ported).
 
-- `engineApi.ts`: `DraftEngine<State, View, Pick>`, the seam §6 asks the engine lane to satisfy.
-  Net's requirement, **not** the real engine API (ENGINE.md did not exist yet).
-- `protocol.ts`, `guard.ts` (copied), `session.ts` (`GameSession`, generic over the engine),
-  `testHarness.ts` (`LocalNet`, `fakeDeps`, toy engine).
-- Decisions made where §2 left a choice: a pick can be changed or withdrawn until the reveal;
-  `autoPickAway` (default on) resolves as soon as every connected seat has picked, giving away
-  seats their default pick; one round clock; bots pick `botDelayMs` after a round opens from
-  their own `viewFor`; an empty room freezes its clock.
-- Not done: `src/server` (blocked on platform P5), host succession, seat colours, bot levels,
-  `api.ts`/`client.ts` ports, a leak test against the real engine's `viewFor`.
-- Known gap: the leak checks use the toy engine; the real guarantee depends on the engine's `viewFor`.
+**The real engine, no adapter.** `docs/ENGINE.md` landed, and its `DraftEngine<S, T>` (bound with
+`createDraftEngine(ruleset)`) is used directly: `GameSession<S, T>` takes it as a constructor
+argument. The §2.1 design (session-held pending picks, batch resolve) is **superseded**: the engine
+stores each seat's hidden pick itself and reveals when the last one arrives, in a fixed order.
+
+- Client messages: `pick {pick}`, `unpick`, `answer {prompt, answer}` (seat is implied by the
+  sender, never taken from the message). Engine errors come back as `illegal_action`.
+- `game` message: `seq` (engine), `view` (engine `viewFor`: own pick and `view.submitted[]`
+  included), `legal` (engine `legalActions` for that seat, [] for spectators), `waiting`
+  (`waitingOn`), `timer`.
+- Clock: one per _stage_ (turn, or one prompt); resets when `(round, turn, phase, prompt)`
+  changes. On expiry every seat in `waitingOn` gets `defaultAction`.
+- Bots: `defaultAction` computed from the seat's own `viewFor`, `botDelayMs` after a stage opens
+  (placeholder policy until the bots lane has one).
+- Away seats: when every seat in `waitingOn` is away, they get `defaultAction` at once
+  (`autoPickAway`, default on). Design has not confirmed this yet.
+- Leak test over a whole game with a prompt (`session.test.ts`): after every step each seat's
+  `game` message holds no card id from another seat's hand, other zones or the deck, no other
+  seat's pick, no seed or rng, and only its own legal actions. Toy ruleset only; it must be
+  re-run on the Windamere ruleset.
+- A bug the room tests found: a snapshot dropped the socket ids, so after a Durable Object
+  hibernation every live socket got `not_joined`. Snapshots now keep them and `reconcile` drops
+  the dead ones.
+
+**Server** (`src/server/`, ported from Catan): `router.ts`, `origin.ts`, `limits.ts`, `room.ts`
+(`RoomCore`), `worker.ts`, `testRuntime.ts`; `src/net/api.ts`; `wrangler.jsonc` (copied, name not
+yet changed). `RoomCore` gets the engine through `RoomPlatform.engine`.
+
+**Not done**
+
+- `src/server/engine.ts` throws: the Windamere ruleset (engine card E2) is not on main, so a
+  deployed room cannot start. Tests inject the toy ruleset.
+- `src/net/client.ts` (browser `RoomClient`) is not ported; the ui lane will need it.
+- Host succession, seat colours, bot levels, profiles.
+- Nothing has run under workerd or `wrangler dev`; no deploy (needs the human).
+- Per-IP HTTP limits live in isolate memory (as in Catan).

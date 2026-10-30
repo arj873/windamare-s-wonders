@@ -1,38 +1,74 @@
 import { describe, expect, it } from 'vitest';
-import { GameSession } from './session';
-import {
-  fakeDeps,
-  LocalNet,
-  toyEngine,
-  TOY_ROUNDS,
-  type ToyState,
-  type ToyView,
-} from './testHarness';
+import type { DraftView } from '../engine';
+import { toy } from '../engine/core/testing/helpers';
+import type { ToySeat, ToyTable } from '../engine/core/testing/toy';
+import { GameSession, type SessionOptions } from './session';
+import { fakeDeps, LocalNet } from './testHarness';
 
-type Net = LocalNet<ToyState, ToyView, number>;
+type Net = LocalNet<ToySeat, ToyTable>;
+type View = DraftView<ToySeat, ToyTable>;
 
 /** Ann (host, seat 0) and Bob (seat 1) online, seat 2 is a bot. Lobby, nothing started. */
-function lobby(opts = {}) {
-  const { session, hostToken } = GameSession.create('ROOM01', 0, toyEngine, fakeDeps(), opts);
+function lobby(opts: Partial<SessionOptions> = {}, options?: Record<string, number | boolean>) {
+  const { session, hostToken } = GameSession.create('ROOM01', 0, toy, fakeDeps(), opts);
   const net: Net = new LocalNet(session);
   net.connect('c1');
   net.send('c1', { type: 'hello', token: hostToken, name: 'Ann' });
   net.connect('c2');
   net.send('c2', { type: 'hello', token: null, name: 'Bob' });
-  net.send('c1', { type: 'configure', config: { seatCount: 3, roundTimerSec: 60 } });
+  net.send('c1', {
+    type: 'configure',
+    config: { seatCount: 3, roundTimerSec: 60, ...(options ? { options } : {}) },
+  });
   const bobToken = net.last('c2', 'welcome')!.you.token;
   return { net, session, hostToken, bobToken };
 }
 
-function started(opts = {}) {
-  const t = lobby(opts);
+function started(opts: Partial<SessionOptions> = {}, options?: Record<string, number | boolean>) {
+  const t = lobby(opts, options);
   t.net.send('c1', { type: 'start' });
   return t;
 }
 
-const lastGame = (net: Net, c: string) => net.last(c, 'game')!;
-const view = (net: Net, c: string) => lastGame(net, c).view as ToyView;
-const texts = (net: Net, c: string) => (net.wire.get(c) ?? []).join('\n');
+const game = (net: Net, c: string) => net.last(c, 'game')!;
+const view = (net: Net, c: string) => game(net, c).view as View;
+const seatOf = (net: Net, c: string) => view(net, c).view.viewer!;
+const handOf = (net: Net, c: string) => view(net, c).seats[seatOf(net, c)]!.hand;
+const sell = (net: Net, c: string, i = 0) => ({ card: handOf(net, c)[i]!.id, use: 'sell' });
+const phase = (net: Net) => net.session.currentPhase;
+
+/** Seat `c` answers whatever the game asks of it; true if it acted. */
+function play(net: Net, c: string): boolean {
+  const g = game(net, c);
+  const a = g.waiting.includes(seatOf(net, c)) ? g.legal[0] : undefined;
+  if (!a) return false;
+  if (a.type === 'pick') net.send(c, { type: 'pick', pick: sell(net, c) });
+  else if (a.type === 'answer') {
+    net.send(c, { type: 'answer', prompt: a.prompt, answer: a.answer });
+  } else return false;
+  return true;
+}
+
+/** Both humans act until the game ends; bots follow on the clock. */
+function playOut(net: Net) {
+  for (let i = 0; i < 200 && phase(net) === 'playing'; i++) {
+    const acted = play(net, 'c1') || play(net, 'c2');
+    if (!acted) net.advance(900);
+  }
+}
+
+/** Every card id in a message that carries a real face (id >= 0). */
+function cardIds(x: unknown, out = new Set<number>()): Set<number> {
+  if (Array.isArray(x)) x.forEach((v) => cardIds(v, out));
+  else if (x && typeof x === 'object') {
+    const o = x as Record<string, unknown>;
+    if (typeof o['id'] === 'number' && typeof o['def'] === 'string' && o['id'] >= 0) {
+      out.add(o['id']);
+    }
+    Object.values(o).forEach((v) => cardIds(v, out));
+  }
+  return out;
+}
 
 describe('lobby', () => {
   it('auto-seats named members in order and the rest are bots', () => {
@@ -50,7 +86,14 @@ describe('lobby', () => {
     expect(net.last('c1', 'room')!.room.phase).toBe('playing');
   });
 
-  it('rejects frames before hello, bad JSON and wrong versions', () => {
+  it('refuses a config the engine rejects', () => {
+    const { net } = lobby({}, { rounds: -3 });
+    net.send('c1', { type: 'start' });
+    expect(net.last('c1', 'error')!.code).toBe('bad_config');
+    expect(phase(net)).toBe('lobby');
+  });
+
+  it('rejects frames before hello, bad JSON, wrong versions and unknown keys', () => {
     const { session } = lobby();
     const net: Net = new LocalNet(session);
     net.connect('x');
@@ -77,140 +120,161 @@ describe('lobby', () => {
   });
 });
 
-describe('simultaneous picks', () => {
-  it('hides picks until every seat is in, then reveals and rotates', () => {
+describe('simultaneous picks (real engine, toy ruleset)', () => {
+  it('hides a pick until the last seat is in, then reveals it', () => {
     const { net } = started();
-    expect(lastGame(net, 'c1').round).toBe(1);
-    expect(view(net, 'c1').hand).toEqual([1, 2, 3]);
-    expect(view(net, 'c2').hand).toEqual([101, 102, 103]);
+    expect(game(net, 'c1').waiting).toEqual([0, 1, 2]);
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
+    expect(view(net, 'c1').seats[0]!.pick).not.toBeNull(); // own pick, so a reconnect shows it
+    expect(view(net, 'c2').seats[0]!.pick).toBeNull();
+    expect(view(net, 'c2').view.submitted).toEqual([true, false, false]);
+    expect(game(net, 'c2').waiting).toEqual([1, 2]);
 
-    net.send('c1', { type: 'submit', round: 1, pick: 1 });
-    expect(lastGame(net, 'c1').myPick).toBe(1);
-    expect(lastGame(net, 'c2').submitted).toEqual([true, false, false]);
-    expect(lastGame(net, 'c2').myPick).toBeNull();
-    expect(view(net, 'c2').tableau).toEqual([[], [], []]);
-
-    net.send('c2', { type: 'submit', round: 1, pick: 101 });
-    expect(lastGame(net, 'c2').round).toBe(1); // bot has not picked yet
+    net.send('c2', { type: 'pick', pick: sell(net, 'c2') });
+    expect(view(net, 'c1').turn).toBe(0); // the bot has not acted yet
     net.advance(900);
-    expect(lastGame(net, 'c1').round).toBe(2);
-    expect(view(net, 'c1').tableau).toEqual([[1], [101], [201]]);
-    // Hands rotated: Ann now holds what Bob... seat 2's leftovers.
-    expect(view(net, 'c1').hand).toEqual([202, 203]);
+    expect(view(net, 'c1').turn).toBe(1);
+    expect(view(net, 'c1').lastReveal!.picks.map((p) => p.seat)).toEqual([0, 1, 2]);
   });
 
-  it('never sends one seat anything the others hold or picked, before the reveal', () => {
-    const { net } = started();
-    net.send('c1', { type: 'submit', round: 1, pick: 2 });
-    net.send('c2', { type: 'submit', round: 1, pick: 102 });
-    // Round 1 is still open (bot waits). Cards of other seats must not be on the wire.
-    expect(texts(net, 'c1')).not.toMatch(/\b(10[123]|20[123])\b/);
-    expect(texts(net, 'c2')).not.toMatch(/\b20[123]\b/);
-    const spectator = (() => {
-      net.connect('s');
-      net.send('s', { type: 'hello', token: null, name: 'Eve' });
-      return texts(net, 's');
-    })();
-    expect(spectator).not.toMatch(/\b(10[123]|20[123])\b/);
-    expect(lastGame(net, 's').legal).toEqual([]);
-    expect(view(net, 's').hand).toEqual([]);
-  });
-
-  it("keeps the whole-game wire free of a seat's unrevealed hand", () => {
-    const { net } = started();
-    // Ann plays all rounds; her hand cards must only reach others once passed (tableau/hands).
-    for (let r = 1; r <= TOY_ROUNDS; r++) {
-      const hand = view(net, 'c1').hand;
-      net.send('c1', { type: 'submit', round: r, pick: hand[0]! });
-      net.send('c2', { type: 'submit', round: r, pick: view(net, 'c2').hand[0]! });
-      net.advance(900);
+  it('never sends a seat anything it must not know, over a whole game', () => {
+    const { net, session } = started({}, { opening: true });
+    const connOf: Record<string, number> = { c1: 0, c2: 1 };
+    const check = () => {
+      const st = session.fullState!;
+      for (const [c, seat] of Object.entries(connOf)) {
+        const g = game(net, c);
+        const ids = cardIds(g);
+        expect(ids.size).toBeGreaterThan(0); // the scan does find faces
+        const secret = new Set<number>([
+          ...st.deck.map((x) => x.id),
+          ...st.seats.filter((s) => s.id !== seat).flatMap((s) => s.hand.map((x) => x.id)),
+          ...st.seats
+            .filter((s) => s.id !== seat)
+            .flatMap((s) => s.zones['stash'] ?? [])
+            .map((x) => x.id),
+        ]);
+        for (const id of ids) expect(secret.has(id), `${c} saw card ${id}`).toBe(false);
+        const v = g.view as View;
+        v.seats.forEach((s, i) => {
+          if (i !== seat) expect(s.pick).toBeNull();
+        });
+        expect(v.config.seed).not.toBe(st.config.seed);
+        expect(v.rng).toEqual([0, 0, 0, 0]);
+        // Only this seat's own moves are offered.
+        for (const a of g.legal) expect(a.seat).toBe(seat);
+        if (st.prompts[0] && st.prompts[0].seat !== seat) {
+          expect(v.prompts[0]!.data).toBeNull();
+        }
+      }
+    };
+    for (let i = 0; i < 200 && phase(net) === 'playing'; i++) {
+      check();
+      if (!(play(net, 'c1') || play(net, 'c2'))) net.advance(900);
     }
-    expect(lastGame(net, 'c1').view).toMatchObject({ round: TOY_ROUNDS + 1 });
-    expect(net.session.currentPhase).toBe('over');
+    expect(phase(net)).toBe('over');
+    // A spectator learns no more than an opponent.
+    net.connect('s');
+    net.send('s', { type: 'hello', token: null, name: 'Eve' });
+    const sv = game(net, 's');
+    expect(sv.legal).toEqual([]);
+    expect(sv.view.seats.every((s) => s.pick === null)).toBe(true);
+    expect(sv.view.deck.every((c) => c.id < 0)).toBe(true);
   });
 
-  it('rejects stale rounds, illegal picks, malformed picks and non-seated senders', () => {
+  it('refuses illegal, malformed and unauthorised picks', () => {
     const { net } = started();
-    net.send('c1', { type: 'submit', round: 2, pick: 1 });
-    expect(net.last('c1', 'error')!.code).toBe('stale_round');
-    net.send('c1', { type: 'submit', round: 1, pick: 101 });
-    expect(net.last('c1', 'error')!.code).toBe('illegal_pick');
-    net.send('c1', { type: 'submit', round: 1, pick: 'x' });
+    net.send('c1', { type: 'pick', pick: { card: 9999, use: 'sell' } });
+    expect(net.last('c1', 'error')!.code).toBe('illegal_action');
+    net.send('c1', { type: 'pick', pick: { card: 'x', use: 'sell' } as never });
+    expect(net.last('c1', 'error')!.code).toBe('bad_message');
+    net.sendRaw(
+      'c1',
+      JSON.stringify({ v: 1, type: 'pick', pick: { card: 1, use: 'sell', seat: 1 } }),
+    );
     expect(net.last('c1', 'error')!.code).toBe('bad_message');
     net.connect('s');
     net.send('s', { type: 'hello', token: null, name: 'Eve' });
-    net.send('s', { type: 'submit', round: 1, pick: 1 });
+    net.send('s', { type: 'pick', pick: { card: 0, use: 'sell' } });
     expect(net.last('s', 'error')!.code).toBe('not_seated');
   });
 
   it('lets a seat change or withdraw its pick before the reveal', () => {
     const { net } = started();
-    net.send('c1', { type: 'submit', round: 1, pick: 1 });
-    net.send('c1', { type: 'submit', round: 1, pick: 3 });
-    expect(lastGame(net, 'c1').myPick).toBe(3);
-    net.send('c1', { type: 'withdraw', round: 1 });
-    expect(lastGame(net, 'c1').myPick).toBeNull();
-    expect(lastGame(net, 'c2').submitted[0]).toBe(false);
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1', 0) });
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1', 1) });
+    expect(view(net, 'c1').seats[0]!.pick!.card).toBe(handOf(net, 'c1')[1]!.id);
+    net.send('c1', { type: 'unpick' });
+    expect(view(net, 'c1').seats[0]!.pick).toBeNull();
+    expect(view(net, 'c2').view.submitted[0]).toBe(false);
+  });
+
+  it('runs prompts: only the prompted seat sees the options and answers', () => {
+    const { net } = started({}, { opening: true });
+    const first = game(net, 'c1').waiting;
+    expect(first).toEqual([0]);
+    expect(view(net, 'c2').prompts[0]!.data).toBeNull();
+    net.send('c2', { type: 'answer', prompt: view(net, 'c1').prompts[0]!.id, answer: 'none' });
+    expect(net.last('c2', 'error')!.code).toBe('illegal_action');
+    net.send('c1', { type: 'answer', prompt: view(net, 'c1').prompts[0]!.id, answer: 'coins' });
+    expect(game(net, 'c1').waiting).toEqual([1]);
   });
 });
 
-describe('round clock', () => {
-  it('auto-picks for slow seats when the clock runs out', () => {
+describe('clock', () => {
+  it('plays the engine default for slow seats when the clock runs out', () => {
     const { net } = started();
-    net.send('c1', { type: 'submit', round: 1, pick: 2 });
-    expect(lastGame(net, 'c1').timer).toEqual({ remainingMs: 60_000, totalMs: 60_000 });
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
+    expect(game(net, 'c1').timer).toEqual({ remainingMs: 60_000, totalMs: 60_000 });
     net.advance(59_999);
-    expect(lastGame(net, 'c1').round).toBe(1);
+    expect(view(net, 'c1').turn).toBe(0);
     net.advance(1);
-    expect(lastGame(net, 'c1').round).toBe(2);
-    expect(view(net, 'c1').tableau).toEqual([[2], [101], [201]]); // Bob got his default pick
+    expect(view(net, 'c1').turn).toBe(1);
     expect(net.messages('c1', 'chat').some((c) => c.entry.text === 'Bob ran out of time')).toBe(
       true,
     );
-    expect(lastGame(net, 'c1').timer!.remainingMs).toBe(60_000); // fresh clock
+    expect(game(net, 'c1').timer!.remainingMs).toBe(60_000); // a fresh clock for the new turn
   });
 
-  it('waits forever for humans when the timer is off', () => {
+  it('waits for humans when the timer is off', () => {
     const { net } = lobby();
     net.send('c1', { type: 'configure', config: { seatCount: 3, roundTimerSec: null } });
     net.send('c1', { type: 'start' });
     net.advance(3_600_000);
-    expect(lastGame(net, 'c1').round).toBe(1);
-    expect(lastGame(net, 'c1').timer).toBeNull();
+    expect(view(net, 'c1').turn).toBe(0);
+    expect(game(net, 'c1').timer).toBeNull();
   });
 });
 
 describe('disconnects and reconnects', () => {
-  it('does not wait for an away seat once everyone else has picked', () => {
+  it('does not wait for an away seat once everyone else has acted', () => {
     const { net } = started();
     net.disconnect('c2');
-    net.send('c1', { type: 'submit', round: 1, pick: 1 });
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
     net.advance(900);
-    expect(lastGame(net, 'c1').round).toBe(2);
-    expect(view(net, 'c1').tableau[1]).toEqual([101]); // default pick for Bob
+    expect(view(net, 'c1').turn).toBe(1);
   });
 
-  it('can switch off early resolve: away seats then hold the round until the clock', () => {
+  it('can hold the table for an away seat until the clock (autoPickAway off)', () => {
     const { net } = started({ autoPickAway: false });
     net.disconnect('c2');
-    net.send('c1', { type: 'submit', round: 1, pick: 1 });
+    net.send('c1', { type: 'pick', pick: sell(net, 'c1') });
     net.advance(30_000);
-    expect(lastGame(net, 'c1').round).toBe(1);
+    expect(view(net, 'c1').turn).toBe(0);
     net.advance(30_000);
-    expect(lastGame(net, 'c1').round).toBe(2);
+    expect(view(net, 'c1').turn).toBe(1);
   });
 
   it('keeps a pick across a reconnect mid-round and shows it again', () => {
     const { net, bobToken } = started();
-    net.send('c2', { type: 'submit', round: 1, pick: 102 });
+    const pick = sell(net, 'c2');
+    net.send('c2', { type: 'pick', pick });
     net.disconnect('c2');
     net.connect('c2b');
     net.send('c2b', { type: 'hello', token: bobToken });
-    const g = lastGame(net, 'c2b');
-    expect(g.round).toBe(1);
-    expect(g.myPick).toBe(102);
-    expect(g.submitted[1]).toBe(true);
-    expect((g.view as ToyView).hand).toEqual([101, 102, 103]);
+    const v = view(net, 'c2b');
+    expect(v.seats[1]!.pick).toEqual(pick);
+    expect(v.view.submitted[1]).toBe(true);
     expect(net.last('c1', 'room')!.room.seats[1]!.status).toBe('human');
   });
 
@@ -240,13 +304,12 @@ describe('disconnects and reconnects', () => {
     net.advance(20_000);
     net.disconnect('c1');
     net.disconnect('c2');
-    expect(net.session.nextWakeAt()).toBe(net.now + 24 * 3_600_000 - 0);
     net.advance(3_600_000);
-    expect(net.session.currentPhase).toBe('playing');
+    expect(phase(net)).toBe('playing');
     net.connect('c1b');
     net.send('c1b', { type: 'hello', token: hostToken });
-    expect(lastGame(net, 'c1b').round).toBe(1);
-    expect(lastGame(net, 'c1b').timer!.remainingMs).toBe(40_000);
+    expect(view(net, 'c1b').turn).toBe(0);
+    expect(game(net, 'c1b').timer!.remainingMs).toBe(40_000);
   });
 
   it('expires an empty room after the idle period', () => {
@@ -264,36 +327,35 @@ describe('disconnects and reconnects', () => {
 });
 
 describe('snapshot', () => {
-  it('survives a JSON round trip mid-round with pending picks intact', () => {
-    const { net, session, bobToken } = started();
-    net.send('c2', { type: 'submit', round: 1, pick: 103 });
+  it('survives a JSON round trip mid-round with pending picks intact, and plays on', () => {
+    const { net, session, bobToken, hostToken } = started();
+    net.send('c2', { type: 'pick', pick: sell(net, 'c2') });
     const snap = JSON.parse(JSON.stringify(session.snapshot()));
-    const again = GameSession.restore(snap, toyEngine, fakeDeps('r'));
+    const again = GameSession.restore(snap, toy, fakeDeps('r'));
     const net2: Net = new LocalNet(again, net.now);
     net2.connect('n');
     net2.send('n', { type: 'hello', token: bobToken });
-    expect(lastGame(net2, 'n').myPick).toBe(103);
-    expect(again.currentSeq).toBe(session.currentSeq + 0);
-    net2.send('n', { type: 'sync' });
-    // The original host token still works after restore.
-    expect(again.currentPhase).toBe('playing');
+    expect(view(net2, 'n').seats[1]!.pick).not.toBeNull();
+    net2.connect('h');
+    net2.send('h', { type: 'hello', token: hostToken });
+    for (let i = 0; i < 200 && again.currentPhase === 'playing'; i++) {
+      if (!(play(net2, 'h') || play(net2, 'n'))) net2.advance(900);
+    }
+    expect(again.currentPhase).toBe('over');
   });
 });
 
 describe('game over and rematch', () => {
-  it('returns to the lobby on rematch and can start again', () => {
+  it('ends with a result, returns to the lobby on rematch and can start again', () => {
     const { net } = started();
-    for (let r = 1; r <= TOY_ROUNDS; r++) {
-      net.send('c1', { type: 'submit', round: r, pick: view(net, 'c1').hand[0]! });
-      net.send('c2', { type: 'submit', round: r, pick: view(net, 'c2').hand[0]! });
-      net.advance(900);
-    }
+    playOut(net);
     expect(net.last('c1', 'room')!.room.phase).toBe('over');
+    expect(view(net, 'c1').result!.winners.length).toBeGreaterThan(0);
     net.send('c2', { type: 'rematch' });
     expect(net.last('c2', 'error')!.code).toBe('not_host');
     net.send('c1', { type: 'rematch' });
     expect(net.last('c1', 'room')!.room.phase).toBe('lobby');
     net.send('c1', { type: 'start' });
-    expect(lastGame(net, 'c1').round).toBe(1);
+    expect(view(net, 'c1').round).toBe(0);
   });
 });
