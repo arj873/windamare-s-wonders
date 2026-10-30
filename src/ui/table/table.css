@@ -630,22 +630,6 @@
   flex-wrap: wrap;
   gap: 4px;
 }
-.dt-catalog ul {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-}
-.dt-catalog-copies {
-  display: inline-block;
-  min-width: 2.2em;
-  font-weight: 800;
-  color: var(--accent);
-}
-
 /* ---- R6 #4: the interaction in the Revealed panel; the Season-end card --- */
 .dt-happenings {
   margin-top: 6px !important;

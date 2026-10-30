@@ -173,6 +173,17 @@ describe('windamerePresenter', () => {
     expect(row.options[0]!.warn).toBe(false);
   });
 
+  it('marks numbers, goods, kinds and uses with tutorial glossary terms', () => {
+    const m = model(newGame());
+    const stats = m.me!.stats;
+    expect(stats.find((s) => s.id === 'guard')?.term).toBe('guard');
+    expect(stats.filter((s) => s.group === 'store').map((s) => s.term)).toEqual(rules.goods);
+    expect(present.kinds.every((k) => k.term === k.id)).toBe(true);
+    expect(present.uses.map((u) => u.term)).toEqual(['build', 'spend']);
+    expect(m.banner.find((b) => b.id === 'raid')?.term).toBe('raid');
+    for (const c of m.hand) for (const p of c.face.altParts ?? []) expect(p.term).toBeTruthy();
+  });
+
   it('badges each hand card with its Build before the tap (R6 #1)', () => {
     const spring = rules.tunables.marketPrice[0]!;
     const coins = rules.card(ONE_REED.id).cost.coins ?? 0;
@@ -221,15 +232,7 @@ describe('windamerePresenter', () => {
     ).toBe(true);
   });
 
-  it('lists every card by Season and keeps Recall of passed hands (R6 #8, R15.8)', () => {
-    const sections = present.catalog!(4);
-    expect(sections.map((x) => x.title)).toEqual(['Spring', 'Summer', 'Autumn', 'Winter']);
-    const all = sections.flatMap((x) => x.cards);
-    expect(all.every((c) => c.copies > 0 && c.face.name.length > 0)).toBe(true);
-    // Each Season deals 6 cards to each of 4 towns (R3.2): the copies add up to the deck.
-    for (const sec of sections) {
-      expect(sec.cards.reduce((n, c) => n + c.copies, 0)).toBe(rules.tunables.handSize * 4);
-    }
+  it('keeps Recall of the hands passed this Season (R15.8)', () => {
     expect(model(newGame()).recall).toEqual([]);
     const s = advance(newGame(), (x) => x.turn === 2);
     const recall = model(s, 0).recall;

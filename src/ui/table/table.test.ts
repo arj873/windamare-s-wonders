@@ -213,13 +213,13 @@ describe('DraftTable', () => {
     vi.useRealTimers();
   });
 
-  it('opens the card list and Recall from the hand header', () => {
+  it('opens the card list (tutorial’s, via the handler) and Recall from the hand header', () => {
     const state = newToyGame(3);
-    const { el, table } = mount(state);
+    const cards = vi.fn();
+    const { el, table } = mount(state, { cards });
     expect($(el, '[data-k="recall"]')).toBeNull(); // nothing passed yet
     $(el, '[data-k="catalog"]')!.click();
-    expect(document.querySelector('.ww-dialog h2')?.textContent).toBe('All cards');
-    document.querySelector<HTMLElement>('.ww-dialog-actions .btn')!.click();
+    expect(cards).toHaveBeenCalledOnce();
     const recall = [{ title: 'Pick 1: passed to P1', cards: [] }];
     table.update({ ...model(state), recall });
     $(el, '[data-k="recall"]')!.click();

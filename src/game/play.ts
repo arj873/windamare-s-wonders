@@ -4,7 +4,15 @@
  * game and re-renders on every change; the timer ring ticks between renders.
  */
 import { pickFor, type BotLevel as BotStrength } from '../bots';
-import type { DraftAction, DraftEngine, DraftState, GameConfig, Json, SeatId } from '../engine';
+import type {
+  DraftAction,
+  DraftEngine,
+  DraftState,
+  DraftView,
+  GameConfig,
+  Json,
+  SeatId,
+} from '../engine';
 import { motionOn, showToast, type NewGameConfig } from '../ui';
 import type { RevealHook } from './fx';
 import { clockScale, type BotLevel } from '../ui/setup/model';
@@ -29,6 +37,14 @@ export interface GameBinding<S, T> {
     seconds(state: DraftState<S, T>, scale: number): number;
     hint(scale: number): string;
   };
+  /**
+   * The tutorial lane's help (src/ui/help): tooltips for every `data-term` on the table, the
+   * '?' key and "How to play" open the rules, "All cards" opens the card list.
+   */
+  help?: {
+    attach(root: HTMLElement): { openRules(): void; destroy(): void };
+    openCards(view: DraftView<S, T>): void;
+  };
 }
 
 /** Without a game-specific clock: Normal is a flat 45 s per decision. */
@@ -52,6 +68,8 @@ export interface PlayHandle<S, T> {
   hide(): void;
   /** Back on screen: the clock runs again unless a pass cover is up. */
   show(): void;
+  /** "How to play" (the tutorial lane's rules overlay), when the game has one. */
+  openRules?(): void;
   dispose(): void;
 }
 
@@ -112,6 +130,7 @@ export function playLocal<S, T>(
     newGame: () => hooks.onNewGame(),
     rematch: () => hooks.onRematch(),
     skip: () => fx?.skip?.(),
+    ...(binding.help ? { cards: () => binding.help?.openCards(game.view()) } : {}),
     reveal: () => {
       shownTo = game.viewer;
       syncCover(game);
@@ -194,16 +213,20 @@ export function playLocal<S, T>(
 
   const ticker = setInterval(tick, TICK_MS);
   game.start();
+  // Tutorial's tooltips (delegated: they survive re-renders), '?' key and rules overlay.
+  const help = binding.help?.attach(table.element);
   return {
     element: table.element,
     game,
     table,
     hide: () => game.pause(),
     show: () => syncCover(game),
+    ...(help ? { openRules: () => help.openRules() } : {}),
     dispose: () => {
       clearInterval(ticker);
       game.dispose();
       fx?.dispose?.();
+      help?.destroy();
       table.destroy();
     },
   };

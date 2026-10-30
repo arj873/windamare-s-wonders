@@ -197,6 +197,30 @@ describe('boot', () => {
     expect(join).toHaveBeenCalledWith('K7QF', 'Ana', root);
   });
 
+  it('wires tutorial help: How to play, ?, All cards, tooltips on data-term', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    toSetup(root);
+    click(root, '[data-k="start"]');
+    vi.advanceTimersByTime(10);
+    click(root, '[data-k="answer-0"]');
+    expect(root.querySelector('.dt-town [data-term="guard"]')).not.toBeNull();
+    app.menu.setOpen(true);
+    const howTo = [...root.querySelectorAll<HTMLElement>('.ww-menu-item')].find((b) =>
+      b.textContent?.startsWith('How to play'),
+    );
+    expect(howTo).toBeDefined();
+    howTo!.click();
+    expect(document.querySelectorAll('.ww-dialog').length).toBeGreaterThan(0);
+    document.querySelectorAll('.ww-scrim').forEach((s) => s.remove());
+    click(root, '[data-k="catalog"]');
+    expect(document.querySelector('.ww-dialog h2')?.textContent).toBe('All cards');
+    app.play?.dispose();
+    document.querySelectorAll('.ww-scrim').forEach((s) => s.remove());
+  });
+
   it('refuses a setup the ruleset cannot seat, with a notice', () => {
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });

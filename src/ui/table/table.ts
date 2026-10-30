@@ -34,6 +34,8 @@ export interface DraftTableHandlers {
   answer(prompt: number, answer: Json): void;
   /** Final scores: "New game" (absent hides the button). */
   newGame?(): void;
+  /** "All cards" in the hand header (tutorial's card list; absent hides the button). */
+  cards?(): void;
   /** Any click or key on the table: skip the reveal animation (UX.md §8.3). */
   skip?(): void;
   /** Hotseat cover: the named player has the device and wants their hand shown. */
@@ -247,7 +249,7 @@ export class DraftTable {
         if (m) this.openRecall(m);
         break;
       case 'catalog':
-        if (m) this.openCatalog(m);
+        this.handlers.cards?.();
         break;
       case 'drawer':
         this.drawerOpen = !this.drawerOpen;
@@ -435,6 +437,7 @@ export class DraftTable {
           'aria-label': `${st.label}: ${st.value}`,
           'data-act': 'explain',
           'data-explain': `${st.label}: ${st.value}`,
+          ...(st.term ? { 'data-term': st.term } : {}),
         },
       },
       st.icon &&
@@ -662,40 +665,6 @@ export class DraftTable {
     });
   }
 
-  /** R6 #8: every card by round with its copies at this table size, faces as on the cards. */
-  private openCatalog(m: TableModel): void {
-    const sections = m.catalog();
-    openDialog({
-      title: 'All cards',
-      className: 'is-wide dt-list-dialog',
-      body: [
-        sections.length === 0 && h('p', { class: 'muted' }, 'No card list for this game.'),
-        ...sections.map((s) =>
-          h(
-            'section',
-            { class: 'dt-catalog' },
-            h('h3', {}, s.title),
-            h(
-              'ul',
-              {},
-              ...s.cards.map((c) =>
-                h(
-                  'li',
-                  { attrs: { 'data-def': c.def } },
-                  h('span', { class: 'dt-catalog-copies' }, `${c.copies}×`),
-                  h('b', {}, c.face.name),
-                  ` · ${c.face.cost || 'free'} · ${c.face.text}`,
-                  c.face.alt && h('span', { class: 'muted' }, ` · ${c.face.alt}`),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-      actions: [{ label: 'Close', primary: true }],
-    });
-  }
-
   private closeSeasonCard(): void {
     if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
     this.seasonTimer = null;
@@ -787,7 +756,7 @@ export class DraftTable {
     return parts.map((p) =>
       h(
         'span',
-        { class: 'dt-part', title: p.label },
+        { class: 'dt-part', title: p.label, attrs: p.term ? { 'data-term': p.term } : {} },
         p.icon &&
           h('img', { class: 'dt-icon', attrs: { src: p.icon, alt: '', 'aria-hidden': 'true' } }),
         p.text,
@@ -797,12 +766,13 @@ export class DraftTable {
 
   /** The kind's icon from art, or its text mark until there is one. Never colour alone. */
   private kindMark(kind: KindInfo): HTMLElement {
+    const term: Record<string, string> = kind.term ? { 'data-term': kind.term } : {};
     return kind.icon
       ? h('img', {
           class: 'dt-kind-icon',
-          attrs: { src: kind.icon, alt: '', 'aria-hidden': 'true' },
+          attrs: { src: kind.icon, alt: '', 'aria-hidden': 'true', ...term },
         })
-      : h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true' } }, kind.mark);
+      : h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true', ...term } }, kind.mark);
   }
 
   /** Inline SVG art; with `tiers`, the layers above that many completed tiers fade. */
@@ -851,11 +821,15 @@ export class DraftTable {
             { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'recall', 'data-k': 'recall' } },
             `Seen this Season (${m.recall.length})`,
           ),
-        h(
-          'button',
-          { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'catalog', 'data-k': 'catalog' } },
-          'All cards',
-        ),
+        this.handlers.cards &&
+          h(
+            'button',
+            {
+              class: 'btn btn-sm btn-ghost',
+              attrs: { 'data-act': 'catalog', 'data-k': 'catalog' },
+            },
+            'All cards',
+          ),
       ),
     );
     return h(
@@ -963,6 +937,7 @@ export class DraftTable {
                     'data-use': o.use.id,
                     'data-card': String(c.id),
                     'aria-keyshortcuts': o.use.key.toUpperCase(),
+                    ...(o.use.term ? { 'data-term': o.use.term } : {}),
                   },
                 },
                 h(

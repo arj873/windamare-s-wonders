@@ -36,7 +36,6 @@ import {
 } from '../../engine';
 import type {
   CardFace,
-  CatalogSection,
   FacePart,
   ChoiceOption,
   ChoiceRow,
@@ -172,20 +171,23 @@ export function windamerePresenter(
     const out: FacePart[] = [];
     for (const g of rules.goods) {
       const n = gains[g];
-      if (n) out.push({ icon: icon(g), text: String(n), label: `${n} ${goodName(rules, g)}` });
+      if (n) {
+        out.push({ icon: icon(g), text: String(n), label: `${n} ${goodName(rules, g)}`, term: g });
+      }
     }
-    const add = (key: string, iconName: string | null, word: string) => {
+    const add = (key: string, iconName: string | null, word: string, term: string) => {
       const n = gains[key];
       if (!n) return;
       out.push({
         ...(iconName ? { icon: icon(iconName) } : {}),
         text: iconName ? String(n) : `${n} ${word}`,
         label: `${n} ${word}`,
+        term,
       });
     };
-    add('coins', 'coin', 'coins');
-    add('labour', 'labour', 'labour');
-    add('any', null, 'any');
+    add('coins', 'coin', 'coins', 'coin');
+    add('labour', 'labour', 'labour', 'labour');
+    add('any', null, 'any', 'any');
     return out;
   }
 
@@ -455,18 +457,6 @@ export function windamerePresenter(
     };
   }
 
-  /** R6 #8: the catalog by Season with copies at this seat count (2 seats use the 3-seat column). */
-  function catalog(seats: number): CatalogSection[] {
-    const col = Math.max(0, Math.min(4, seats - 3));
-    return SEASONS.map((season) => ({
-      title: capitalize(season),
-      cards: rules.content.cards
-        .filter((c) => c.season === season)
-        .map((c) => ({ def: c.id, face: card(c.id), copies: c.counts[col] ?? 0 }))
-        .filter((c) => c.copies > 0),
-    }));
-  }
-
   /** R6 #1: a hand card's Build at a glance, from its default legal Build (null = illegal). */
   function badge(view: View, seat: SeatId, pick: Pick | null): HandBadge {
     if (!pick) return { text: '✗ Spend only', tone: 'no' };
@@ -518,6 +508,7 @@ export function windamerePresenter(
       label: l.one,
       mark: KIND_MARKS[id] ?? '◇',
       icon: art(`kinds/${id}`),
+      term: id, // tutorial's glossary uses the kind ids
     })),
     monument(view, seat): MonumentInfo | null {
       const d = view.seats[seat]?.data;
@@ -537,8 +528,8 @@ export function windamerePresenter(
       };
     },
     uses: [
-      { id: BUILD, label: 'Build', verb: 'built', key: 'b' },
-      { id: SPEND, label: 'Spend', verb: 'spent', key: 's' },
+      { id: BUILD, label: 'Build', verb: 'built', key: 'b', term: 'build' },
+      { id: SPEND, label: 'Spend', verb: 'spent', key: 's', term: 'spend' },
     ],
     card,
     seatStats(view, seat): SeatStat[] {
@@ -547,13 +538,21 @@ export function windamerePresenter(
       const d = s.data;
       const renown = Object.values(scoreTown(rules, view, seat)).reduce((a, b) => a + b, 0);
       return [
-        { id: 'coins', label: 'Coins', short: 'Coins', value: `${d.coins}`, icon: icon('coin') },
+        {
+          id: 'coins',
+          label: 'Coins',
+          short: 'Coins',
+          value: `${d.coins}`,
+          icon: icon('coin'),
+          term: 'coin',
+        },
         {
           id: 'score',
           label: 'Score (Renown estimate)',
           short: 'Score',
           value: `~${renown}`,
           icon: icon('renown'),
+          term: 'renown',
         },
         {
           id: 'guard',
@@ -561,6 +560,7 @@ export function windamerePresenter(
           short: 'Guard',
           value: `${guardOf(rules, view, seat)}`,
           icon: icon('guard'),
+          term: 'guard',
         },
         {
           id: 'labour',
@@ -568,6 +568,7 @@ export function windamerePresenter(
           short: 'Labour',
           value: `${d.labour}`,
           icon: icon('labour'),
+          term: 'labour',
         },
         ...rules.goods.map((g) => ({
           id: `good-${g}`,
@@ -576,6 +577,7 @@ export function windamerePresenter(
           group: 'store',
           dim: !d.store[g],
           icon: icon(g),
+          term: g,
         })),
       ];
     },
@@ -616,17 +618,20 @@ export function windamerePresenter(
           h.leaders.length ? h.leaders.map((l) => nameOf(view, l)).join(', ') : 'nobody yet'
         }`,
         group: 'side',
+        term: 'honour',
       }));
       return [
         {
           id: 'raid',
           label: 'This Season’s Raid',
           value: raid ? `${raid.name} · strength ${raid.strength}` : 'Raid not revealed',
+          term: 'raid',
         },
         {
           id: 'market',
           label: 'Price of a good from a neighbour',
           value: `Market ${marketPrice(rules, view)}g`,
+          term: 'price',
         },
         ...honours,
       ];
@@ -638,6 +643,5 @@ export function windamerePresenter(
     badge,
     happenings,
     seasonEnd,
-    catalog,
   };
 }
