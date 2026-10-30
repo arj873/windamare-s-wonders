@@ -31,8 +31,9 @@ export const LESSONS: readonly LessonDef[] = [
     title: 'Pick one card',
     text: () =>
       'Everyone picks one card at the same time, in secret. Choose one from your hand, then choose Build or Spend.',
-    after: ['greatwork'],
+    after: ['build'],
     when: mustPick,
+    stale: (c) => turnsDone(c) >= 1,
     doneWhen: picked,
     urgent: true,
     todo: (c) => (picked(c) ? null : 'Pick a card and a way to use it.'),
@@ -43,8 +44,10 @@ export const LESSONS: readonly LessonDef[] = [
     title: 'Spend gives fuel',
     text: () =>
       'Spend throws the card away for the goods, coins or labour on its Spend band. It is always allowed. Early on you have no goods, so Spending is how you start.',
-    after: ['pick'],
-    when: (c) => picking(c) && c.view.turn === 0 && c.view.round === 0,
+    after: ['greatwork'],
+    when: (c) => mustPick(c) && turnsDone(c) === 0,
+    stale: (c) => turnsDone(c) >= 1,
+    doneWhen: (c) => turnsDone(c) >= 1,
     focus: 'hand',
   },
   {
@@ -53,7 +56,9 @@ export const LESSONS: readonly LessonDef[] = [
     text: () =>
       'Build pays the card’s cost and puts it in your town for the rest of the game. A Holding pays out goods every turn; a Hall is worth Renown.',
     after: ['spend'],
-    when: (c) => picking(c) && c.view.round === 0,
+    when: (c) => mustPick(c) && turnsDone(c) === 0,
+    stale: (c) => turnsDone(c) >= 1,
+    doneWhen: (c) => turnsDone(c) >= 1,
     focus: 'town',
   },
   {
@@ -108,7 +113,8 @@ export const LESSONS: readonly LessonDef[] = [
     title: 'A new Season',
     text: (c) =>
       `Season ${c.view.round + 1} of 4. A new hand, a new direction to pass, and dearer goods to buy. Check the Raid.`,
-    when: (c) => picking(c) && c.view.round >= 1 && c.view.turn === 0,
+    when: (c) => picking(c) && c.view.round >= 1,
+    stale: (c) => c.view.round >= 2,
     focus: 'raid',
   },
   {
@@ -125,7 +131,7 @@ export const LESSONS: readonly LessonDef[] = [
     title: 'Winter: no Yield',
     text: () =>
       'Holdings stop paying. Spend what you stored, buy what you lack, and get your Guard up for the last Raid.',
-    when: (c) => picking(c) && c.view.round === 3 && c.view.turn === 0,
+    when: (c) => picking(c) && c.view.round === 3,
     focus: 'raid',
   },
   {

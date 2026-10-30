@@ -32,27 +32,34 @@ export function playTutorial(
   let run: TutorialRun = newRun(seed, 0);
   let picks = 0;
   const ctx = (): TutorialCtx => ({ view: engine.viewFor(state, 0) as WwView, me: 0 });
-  const coach = (press: boolean): void => {
+  /**
+   * A person reads each reading tip and presses Next, but acts at once when the coach says
+   * "pick" (they never press Next to get past it). `all` = the game is over and they click
+   * through what is left.
+   */
+  const coach = (read: 'none' | 'read' | 'all'): void => {
     run = advance(run, ctx());
-    // The learner reads the tip and presses Next, until nothing new shows.
-    for (let i = 0; press && run.current !== null && i < 10; i++) run = next(run, ctx());
+    const reads = read === 'all' ? 20 : read === 'read' ? 20 : 0;
+    for (let i = 0; i < reads && run.current !== null && run.current !== 'pick'; i++) {
+      run = next(run, ctx());
+    }
   };
 
   for (let guard = 0; state.phase.kind !== 'gameOver' && guard < 5000; guard++) {
     for (let seat = 0; seat < n; seat++) {
       const view = engine.viewFor(state, seat);
       const level = seat === 0 ? (opts.learner ?? 'medium') : (opts.others ?? 'easy');
-      if (seat === 0) coach(true);
+      if (seat === 0) coach('read');
       const action = pickFor(engine, view, seat, { level });
       if (!action) continue;
       if (seat === 0 && action.type === 'pick') picks++;
       const r = engine.applyAction(state, action);
       if (!r.ok) continue;
       state = r.state;
-      coach(false);
+      coach('none');
     }
   }
-  coach(true);
-  coach(true);
+  coach('all');
+  coach('all');
   return { shown: run.shown, recapped: run.recapped, over: state.phase.kind === 'gameOver', picks };
 }

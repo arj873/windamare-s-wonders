@@ -14,7 +14,9 @@ describe('the tutorial game, played headless', () => {
       expect(r.shown.filter((id) => !r.recapped.includes(id)).length).toBeGreaterThan(10);
       // Every lesson shows, the intro first and the wrap-up last.
       expect(new Set(r.shown)).toEqual(new Set(LESSONS.map((l) => l.id)));
-      expect(r.shown[0]).toBe('welcome');
+      expect(r.shown.slice(0, 5)).toEqual(['welcome', 'greatwork', 'spend', 'build', 'pick']);
+      expect(r.shown.indexOf('reveal')).toBeGreaterThan(4);
+      expect(r.shown.indexOf('glean')).toBeGreaterThan(r.shown.indexOf('buy'));
       expect(r.shown.at(-1)).toBe('finish');
     });
   }
