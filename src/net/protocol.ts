@@ -15,6 +15,7 @@ import {
   str,
   type Check,
 } from './guard';
+import type { DraftAction, DraftView, Json, Pick } from '../engine';
 
 export const PROTOCOL_VERSION = 1;
 
@@ -31,7 +32,7 @@ export const LIMITS = {
 export const RATE_LIMITS = {
   chat: { burst: 5, perSec: 0.5 },
   react: { burst: 6, perSec: 1 },
-  submit: { burst: 10, perSec: 5 },
+  pick: { burst: 10, perSec: 5 },
   lobby: { burst: 10, perSec: 2 },
 } as const;
 export type RateKind = keyof typeof RATE_LIMITS;
@@ -49,6 +50,8 @@ export interface RoomConfig {
   seatCount: number;
   /** Seconds per round; null = no clock. */
   roundTimerSec: number | null;
+  /** Ruleset options (variants); the engine's `validateConfig` judges them at start. */
+  options?: Record<string, Json>;
 }
 export const DEFAULT_ROOM_CONFIG: RoomConfig = { seatCount: 4, roundTimerSec: 60 };
 
@@ -91,9 +94,10 @@ export type ClientMessage =
   | { v: 1; type: 'kick'; member: string }
   | { v: 1; type: 'start' }
   | { v: 1; type: 'rematch' }
-  /** `round` guards against a pick for a round that has already resolved. */
-  | { v: 1; type: 'submit'; round: number; pick: unknown }
-  | { v: 1; type: 'withdraw'; round: number }
+  /** Hidden until the reveal; replaces an earlier pick. The sender's seat is implied. */
+  | { v: 1; type: 'pick'; pick: Pick }
+  | { v: 1; type: 'unpick' }
+  | { v: 1; type: 'answer'; prompt: number; answer: Json }
   | { v: 1; type: 'chat'; text: string }
   | { v: 1; type: 'react'; reaction: Reaction }
   | { v: 1; type: 'sync' };
@@ -112,8 +116,7 @@ export const ERROR_CODES = [
   'seat_taken',
   'not_seated',
   'bad_config',
-  'stale_round',
-  'illegal_pick',
+  'illegal_action',
   'kicked',
   'replaced',
   'room_expired',
@@ -147,19 +150,16 @@ export type ServerMessage =
   | {
       v: 1;
       type: 'game';
-      /** Bumps on every change visible to anyone, including "seat N submitted". */
+      /** The engine's `seq`: +1 per accepted action. */
       seq: number;
-      round: number;
-      /** Redacted for this member only. */
-      view: unknown;
-      legal: unknown[];
-      /** Who has a pick in; says nothing about what was picked. */
-      submitted: boolean[];
-      /** This member's own pending pick, so a reconnect shows it. */
-      myPick: unknown;
+      /** Engine `viewFor` for this member only. It carries their own pending pick and `submitted[]`. */
+      view: DraftView<unknown, unknown>;
+      /** Engine `legalActions` for this member's seat ([] for spectators). */
+      legal: DraftAction[];
+      /** Seats the game waits for now (picks or a prompt answer). */
+      waiting: number[];
       timer: TimerInfo | null;
     }
-  | { v: 1; type: 'ack'; ref: 'submit' | 'withdraw'; round: number }
   | { v: 1; type: 'chat'; entry: ChatEntry }
   | { v: 1; type: 'reaction'; member: string; seat: number | null; reaction: Reaction }
   | { v: 1; type: 'error'; code: ErrorCode; message: string; ref?: ClientMessageType };
@@ -180,10 +180,27 @@ const token: Check<string> = str(LIMITS.tokenMax, {
 const memberId: Check<string> = str(12, { min: 2, pattern: /^m\d+$/ });
 const rawText = (max: number): Check<string> => str(max * 2);
 
+const pickCheck: Check<Pick> = (x, path) => {
+  const o = record(x, path);
+  onlyKeys(o, ['card', 'use', 'args'], path);
+  const pick: Pick = {
+    card: field(o, 'card', int(0, 1_000_000), path),
+    use: field(o, 'use', str(32, { min: 1 }), path),
+  };
+  // `args` is ruleset vocabulary: any JSON, judged by the ruleset's validatePick.
+  if (o['args'] !== undefined) pick.args = o['args'] as Json;
+  return pick;
+};
+
 const configCheck: Check<RoomConfig> = (x, path) => {
   const o = record(x, path);
-  onlyKeys(o, ['seatCount', 'roundTimerSec'], path);
+  onlyKeys(o, ['seatCount', 'roundTimerSec', 'options'], path);
+  const options = o['options'];
+  if (options !== undefined && (!isRecord(options) || Object.keys(options).length > 16)) {
+    throw new Invalid(`${path}.options`, 'expected an object with at most 16 keys');
+  }
   return {
+    ...(options === undefined ? {} : { options: options as Record<string, Json> }),
     seatCount: field(o, 'seatCount', int(SEAT_RANGE.min, SEAT_RANGE.max), path),
     roundTimerSec: field(
       o,
@@ -223,20 +240,26 @@ export function parseClientMessage(raw: unknown): ClientMessage {
       keys('member');
       return { v: 1, type, member: field(o, 'member', memberId, p) };
     case 'leaveSeat':
+    case 'unpick':
     case 'start':
     case 'rematch':
     case 'sync':
       keys();
       return { v: 1, type };
-    case 'submit': {
-      keys('round', 'pick');
-      // The pick is opaque JSON here; size is bounded by messageChars, shape by the engine.
-      if (!('pick' in o)) throw new Invalid('message.pick', 'required');
-      return { v: 1, type, round: field(o, 'round', int(1, 10_000), p), pick: o['pick'] };
+    case 'pick':
+      keys('pick');
+      return { v: 1, type, pick: field(o, 'pick', pickCheck, p) };
+    case 'answer': {
+      keys('prompt', 'answer');
+      if (!('answer' in o)) throw new Invalid('message.answer', 'required');
+      // Any JSON; its size is bounded by messageChars and its meaning is the engine's to judge.
+      return {
+        v: 1,
+        type,
+        prompt: field(o, 'prompt', int(0, 1_000_000), p),
+        answer: o['answer'] as Json,
+      };
     }
-    case 'withdraw':
-      keys('round');
-      return { v: 1, type, round: field(o, 'round', int(1, 10_000), p) };
     case 'chat':
       keys('text');
       return { v: 1, type, text: field(o, 'text', rawText(LIMITS.chat), p) };

@@ -1,10 +1,7 @@
 /**
- * In-memory transport + a toy drafting engine for session tests (and for the client to test against
- * without a server). The toy engine is NOT the real game: it only has the same shape of secrets
- * (hidden hands that rotate, simultaneous picks).
+ * In-memory transport with a fake clock for session tests, and for the client to test against
+ * without a server. Records every frame per connection (as JSON text) for leak checks.
  */
-import type { DraftEngine, Viewer } from './engineApi';
-import { Invalid } from './guard';
 import type { ClientMessage, ServerMessage, ServerMessageType } from './protocol';
 import { PROTOCOL_VERSION } from './protocol';
 import type { ConnId, GameSession, Outbound, SessionDeps } from './session';
@@ -24,67 +21,9 @@ export function fakeDeps(prefix = 't'): SessionDeps {
   };
 }
 
-// ---- toy engine ------------------------------------------------------------
-
-export interface ToyState {
-  names: string[];
-  round: number;
-  hands: number[][];
-  tableau: number[][];
-}
-export interface ToyView {
-  viewer: Viewer;
-  round: number;
-  names: string[];
-  hand: number[];
-  handCounts: number[];
-  tableau: number[][];
-}
-export const TOY_ROUNDS = 3;
-export const TOY_HAND = TOY_ROUNDS;
-
-/** Card ids are unique per game (seat*100 + n) so leak tests can search the wire for them. */
-export const toyEngine: DraftEngine<ToyState, ToyView, number> = {
-  create(names) {
-    return {
-      names: [...names],
-      round: 1,
-      hands: names.map((_, s) => Array.from({ length: TOY_HAND }, (_, n) => s * 100 + n + 1)),
-      tableau: names.map(() => []),
-    };
-  },
-  round: (s) => s.round,
-  isOver: (s) => s.round > TOY_ROUNDS,
-  viewFor(s, viewer) {
-    return {
-      viewer,
-      round: s.round,
-      names: s.names,
-      hand: viewer === 'spectator' ? [] : [...(s.hands[viewer] ?? [])],
-      handCounts: s.hands.map((h) => h.length),
-      tableau: s.tableau,
-    };
-  },
-  legalPicks: (s, seat) => [...(s.hands[seat] ?? [])],
-  parsePick(raw) {
-    if (typeof raw !== 'number' || !Number.isInteger(raw)) throw new Invalid('pick', 'number');
-    return raw;
-  },
-  isLegal: (s, seat, pick) => (s.hands[seat] ?? []).includes(pick),
-  defaultPick: (s, seat) => (s.hands[seat] ?? [])[0] as number,
-  botPick: (v) => v.hand[0] as number,
-  resolveRound(s, picks) {
-    const hands = s.hands.map((h, i) => h.filter((c) => c !== picks[i]));
-    const tableau = s.tableau.map((t, i) => [...t, picks[i] as number]);
-    // Pass hands to the left.
-    const passed = hands.map((_, i) => hands[(i + hands.length - 1) % hands.length] as number[]);
-    return { ...s, round: s.round + 1, hands: passed, tableau };
-  },
-};
-
 // ---- transport -------------------------------------------------------------
 
-export class LocalNet<S, V, P> {
+export class LocalNet<S, T> {
   now: number;
   readonly inbox = new Map<ConnId, ServerMessage[]>();
   readonly closed = new Map<ConnId, number>();
@@ -92,7 +31,7 @@ export class LocalNet<S, V, P> {
   readonly wire = new Map<ConnId, string[]>();
 
   constructor(
-    public session: GameSession<S, V, P>,
+    public session: GameSession<S, T>,
     start = 0,
   ) {
     this.now = start;

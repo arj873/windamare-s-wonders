@@ -6,7 +6,7 @@
  * Hidden information: the full state, pending picks and tokens never leave this class except
  * through `engine.viewFor`, the owner's own `myPick`, and the owner's own `welcome`.
  */
-import type { DraftEngine } from './engineApi';
+import type { DraftAction, DraftEngine, DraftState } from '../engine';
 import { Invalid } from './guard';
 import {
   CLOSE,
@@ -42,7 +42,7 @@ export interface SessionDeps {
 export interface SessionOptions {
   /** A disconnected seat keeps its place (and its clock) this long, then a bot plays it. */
   graceMs: number;
-  /** Bots submit this long after a round opens. */
+  /** Bots act this long after a stage (turn, prompt) opens. */
   botDelayMs: number;
   /** An empty room (nobody connected) expires after this long. */
   idleExpiryMs: number;
@@ -73,7 +73,7 @@ interface Seat {
   bot: boolean;
 }
 
-export interface SessionSnapshot<S, P> {
+export interface SessionSnapshot<S, T> {
   version: 1;
   roomId: string;
   phase: RoomPhase;
@@ -81,14 +81,13 @@ export interface SessionSnapshot<S, P> {
   host: string;
   nextMember: number;
   nextChat: number;
-  seq: number;
   members: Member[];
   seats: Seat[];
   chat: ChatEntry[];
   game: {
-    state: S;
-    pending: (P | null)[];
-    roundStartedAt: number;
+    state: DraftState<S, T>;
+    stageKey: string;
+    stageStartedAt: number;
     deadline: number | null;
     pausedAt: number | null;
     timedOut: boolean[];
@@ -111,22 +110,21 @@ class Bucket {
   }
 }
 
-export class GameSession<S, V, P> {
+export class GameSession<S, T> {
   private phase: RoomPhase = 'lobby';
   private config: RoomConfig = { ...DEFAULT_ROOM_CONFIG };
   private host = '';
   private nextMember = 1;
   private nextChat = 1;
-  private seq = 0;
   private members: Member[] = [];
   private seats: Seat[] = [];
   private chat: ChatEntry[] = [];
   private emptySince: number | null;
 
   // Game (phase playing/over). `pending` is SECRET.
-  private state: S | null = null;
-  private pending: (P | null)[] = [];
-  private roundStartedAt = 0;
+  private state: DraftState<S, T> | null = null;
+  private stageKey = '';
+  private stageStartedAt = 0;
   private deadline: number | null = null;
   private pausedAt: number | null = null;
   private timedOut: boolean[] = [];
@@ -140,7 +138,7 @@ export class GameSession<S, V, P> {
 
   private constructor(
     readonly roomId: string,
-    private readonly engine: DraftEngine<S, V, P>,
+    private readonly engine: DraftEngine<S, T>,
     private readonly deps: SessionDeps,
     private readonly opts: SessionOptions,
     now: number,
@@ -149,25 +147,25 @@ export class GameSession<S, V, P> {
     this.resizeSeats();
   }
 
-  static create<S, V, P>(
+  static create<S, T>(
     roomId: string,
     now: number,
-    engine: DraftEngine<S, V, P>,
+    engine: DraftEngine<S, T>,
     deps: SessionDeps,
     opts: Partial<SessionOptions> = {},
-  ): { session: GameSession<S, V, P>; hostToken: string } {
+  ): { session: GameSession<S, T>; hostToken: string } {
     const s = new GameSession(roomId, engine, deps, { ...DEFAULT_SESSION_OPTIONS, ...opts }, now);
     const host = s.addMember(now);
     s.host = host.id;
     return { session: s, hostToken: host.token };
   }
 
-  static restore<S, V, P>(
-    snap: SessionSnapshot<S, P>,
-    engine: DraftEngine<S, V, P>,
+  static restore<S, T>(
+    snap: SessionSnapshot<S, T>,
+    engine: DraftEngine<S, T>,
     deps: SessionDeps,
     opts: Partial<SessionOptions> = {},
-  ): GameSession<S, V, P> {
+  ): GameSession<S, T> {
     if (snap.version !== 1) throw new Error(`unknown snapshot version ${String(snap.version)}`);
     const s = new GameSession(
       snap.roomId,
@@ -181,15 +179,14 @@ export class GameSession<S, V, P> {
     s.host = snap.host;
     s.nextMember = snap.nextMember;
     s.nextChat = snap.nextChat;
-    s.seq = snap.seq;
     s.members = snap.members.map((m) => ({ ...m, conn: null }));
     s.seats = snap.seats;
     s.chat = snap.chat;
     s.emptySince = snap.emptySince;
     if (snap.game) {
       s.state = snap.game.state;
-      s.pending = snap.game.pending;
-      s.roundStartedAt = snap.game.roundStartedAt;
+      s.stageKey = snap.game.stageKey;
+      s.stageStartedAt = snap.game.stageStartedAt;
       s.deadline = snap.game.deadline;
       s.pausedAt = snap.game.pausedAt;
       s.timedOut = snap.game.timedOut;
@@ -197,7 +194,7 @@ export class GameSession<S, V, P> {
     return s;
   }
 
-  snapshot(): SessionSnapshot<S, P> {
+  snapshot(): SessionSnapshot<S, T> {
     return structuredClone({
       version: 1 as const,
       roomId: this.roomId,
@@ -206,7 +203,6 @@ export class GameSession<S, V, P> {
       host: this.host,
       nextMember: this.nextMember,
       nextChat: this.nextChat,
-      seq: this.seq,
       members: this.members.map((m) => ({ ...m, conn: null })),
       seats: this.seats,
       chat: this.chat,
@@ -215,8 +211,8 @@ export class GameSession<S, V, P> {
           ? null
           : {
               state: this.state,
-              pending: this.pending,
-              roundStartedAt: this.roundStartedAt,
+              stageKey: this.stageKey,
+              stageStartedAt: this.stageStartedAt,
               deadline: this.deadline,
               pausedAt: this.pausedAt,
               timedOut: this.timedOut,
@@ -230,11 +226,8 @@ export class GameSession<S, V, P> {
   get currentPhase(): RoomPhase {
     return this.phase;
   }
-  get currentSeq(): number {
-    return this.seq;
-  }
   /** SECRET. Tests only. */
-  get fullState(): S | null {
+  get fullState(): DraftState<S, T> | null {
     return this.state;
   }
 
@@ -281,11 +274,11 @@ export class GameSession<S, V, P> {
     const due: number[] = [];
     if (this.phase === 'over') return null;
     if (this.phase === 'playing' && this.deadline !== null) due.push(this.deadline);
-    if (
-      this.phase === 'playing' &&
-      this.seats.some((s, i) => this.isBot(s) && this.pending[i] === null)
-    ) {
-      due.push(this.roundStartedAt + this.opts.botDelayMs);
+    if (this.phase === 'playing' && this.state !== null) {
+      const st = this.state;
+      if (this.engine.waitingOn(st).some((i) => this.isBot(this.seatAt(i)))) {
+        due.push(this.stageStartedAt + this.opts.botDelayMs);
+      }
     }
     for (const s of this.seats) if (s.away && !s.bot) due.push(s.awayAt + this.opts.graceMs);
     return due.length ? Math.min(...due) : null;
@@ -392,8 +385,8 @@ export class GameSession<S, V, P> {
         ? 'chat'
         : msg.type === 'react'
           ? 'react'
-          : msg.type === 'submit' || msg.type === 'withdraw'
-            ? 'submit'
+          : msg.type === 'pick' || msg.type === 'unpick' || msg.type === 'answer'
+            ? 'pick'
             : 'lobby';
     let b = this.buckets.get(`${m.id}:${kind}`);
     if (!b) {
@@ -459,20 +452,18 @@ export class GameSession<S, V, P> {
         if (!need(m.id === this.host, 'not_host', 'host only')) return;
         if (!need(this.phase === 'over', 'wrong_phase', 'game is not over')) return;
         return this.rematch(now);
-      case 'submit':
-        return this.submit(conn, m, msg.round, msg.pick, now);
-      case 'withdraw': {
-        if (!need(this.phase === 'playing', 'wrong_phase', 'no round open')) return;
-        if (!need(m.seat !== null, 'not_seated', 'you have no seat')) return;
-        if (!need(msg.round === this.round(), 'stale_round', 'that round is over')) return;
-        const i = m.seat as number;
-        if (this.pending[i] !== null) {
-          this.pending[i] = null;
-          this.touch();
-        }
-        this.send(conn, { v: PROTOCOL_VERSION, type: 'ack', ref: 'withdraw', round: msg.round });
-        return;
-      }
+      case 'pick':
+        return this.act(conn, m, (seat) => ({ type: 'pick', seat, pick: msg.pick }), msg.type, now);
+      case 'unpick':
+        return this.act(conn, m, (seat) => ({ type: 'unpick', seat }), msg.type, now);
+      case 'answer':
+        return this.act(
+          conn,
+          m,
+          (seat) => ({ type: 'answer', seat, prompt: msg.prompt, answer: msg.answer }),
+          msg.type,
+          now,
+        );
       case 'chat': {
         if (!need(m.name !== null, 'name_required', 'set a nickname first')) return;
         const text = cleanText(msg.text, LIMITS.chat);
@@ -535,7 +526,7 @@ export class GameSession<S, V, P> {
     if (this.pausedAt !== null) {
       // Nobody was here: the round clock stood still.
       const d = now - this.pausedAt;
-      this.roundStartedAt += d;
+      this.stageStartedAt += d;
       if (this.deadline !== null) this.deadline += d;
       this.pausedAt = null;
     }
@@ -642,11 +633,10 @@ export class GameSession<S, V, P> {
 
   // ---- game ----------------------------------------------------------------
 
-  private round(): number {
-    return this.state === null ? 0 : this.engine.round(this.state);
+  private seatAt(i: number): Seat {
+    return this.seats[i] as Seat;
   }
   private touch(): void {
-    this.seq++;
     this.gameDirty = true;
     this.roomDirty = true;
   }
@@ -656,30 +646,36 @@ export class GameSession<S, V, P> {
       const m = this.members.find((x) => x.id === s.occupant);
       return m?.name ?? `Bot ${i + 1}`;
     });
-    this.state = this.engine.create(names, this.deps.seed());
+    const config = {
+      seed: this.deps.seed(),
+      seats: names.map((name) => ({ name })),
+      ...(this.config.options ? { options: this.config.options } : {}),
+    };
+    const bad = this.engine.validateConfig(config);
+    if (bad !== null) {
+      this.error(
+        this.host ? (this.members.find((x) => x.id === this.host)?.conn ?? '') : '',
+        'bad_config',
+        bad,
+        'start',
+      );
+      return;
+    }
+    this.state = this.engine.createGame(config);
     for (const s of this.seats) {
       s.away = false;
       s.bot = false;
     }
     this.phase = 'playing';
-    this.beginRound(now);
+    this.stageKey = '';
+    this.pausedAt = null;
     this.sys('The game has started', now);
     this.touch();
-  }
-
-  private beginRound(now: number): void {
-    this.pending = this.seats.map(() => null);
-    this.timedOut = this.seats.map(() => false);
-    this.roundStartedAt = now;
-    this.deadline =
-      this.config.roundTimerSec === null ? null : now + this.config.roundTimerSec * 1000;
-    this.pausedAt = this.connectedCount() === 0 ? now : null;
   }
 
   private rematch(now: number): void {
     this.phase = 'lobby';
     this.state = null;
-    this.pending = [];
     for (const m of this.members) {
       // Members gone past the grace period lose their seat.
       if (m.conn === null && m.seat !== null && now - m.lastSeen >= this.opts.graceMs)
@@ -693,22 +689,34 @@ export class GameSession<S, V, P> {
     this.touch();
   }
 
-  private submit(conn: ConnId, m: Member, round: number, raw: unknown, _now: number): void {
-    const fail = (code: ErrorCode, why: string) => this.error(conn, code, why, 'submit');
-    if (this.phase !== 'playing' || this.state === null)
-      return fail('wrong_phase', 'no round open');
-    if (m.seat === null) return fail('not_seated', 'you have no seat');
-    if (round !== this.round()) return fail('stale_round', 'that round is over');
-    let pick: P;
-    try {
-      pick = this.engine.parsePick(raw);
-    } catch {
-      return fail('bad_message', 'malformed pick');
+  /** A seat's action from a client message: engine-validated, then the engine does the rest. */
+  private act(
+    conn: ConnId,
+    m: Member,
+    build: (seat: number) => DraftAction,
+    ref: ClientMessage['type'],
+    _now: number,
+  ): void {
+    if (this.phase !== 'playing' || this.state === null) {
+      return this.error(conn, 'wrong_phase', 'no game is running', ref);
     }
-    if (!this.engine.isLegal(this.state, m.seat, pick)) return fail('illegal_pick', 'not allowed');
-    this.pending[m.seat] = pick;
-    this.send(conn, { v: PROTOCOL_VERSION, type: 'ack', ref: 'submit', round });
+    if (m.seat === null) return this.error(conn, 'not_seated', 'you have no seat', ref);
+    const r = this.engine.applyAction(this.state, build(m.seat));
+    if (!r.ok) return this.error(conn, 'illegal_action', r.error, ref);
+    this.state = r.state;
     this.touch();
+  }
+
+  /** New engine stage (turn, prompt, round) -> fresh clock and "ran out of time" flags. */
+  private syncStage(st: DraftState<S, T>, now: number): void {
+    const key = `${st.round}:${st.turn}:${st.phase.kind}:${st.prompts[0]?.id ?? ''}`;
+    if (key === this.stageKey) return;
+    this.stageKey = key;
+    this.stageStartedAt = now;
+    this.timedOut = this.seats.map(() => false);
+    this.deadline =
+      this.config.roundTimerSec === null ? null : now + this.config.roundTimerSec * 1000;
+    this.gameDirty = true; // the timer changed
   }
 
   /** All due work, in order; loops because one step (a resolve) can make the next due. */
@@ -731,55 +739,50 @@ export class GameSession<S, V, P> {
         }
       }
       if (this.phase !== 'playing' || this.state === null) return;
-      if (this.connectedCount() === 0) return; // paused
-      const st = this.state;
-      let changed = false;
-
-      if (now >= this.roundStartedAt + this.opts.botDelayMs) {
-        this.seats.forEach((s, i) => {
-          if (this.isBot(s) && this.pending[i] === null) {
-            this.pending[i] = this.engine.botPick(this.engine.viewFor(st, i), i);
-            changed = true;
-          }
-        });
-      }
-      if (this.deadline !== null && now >= this.deadline) {
-        this.seats.forEach((s, i) => {
-          if (this.pending[i] === null) this.autoPick(s, i, st, now);
-        });
-        changed = true;
-      } else if (this.opts.autoPickAway) {
-        const humansIn = this.seats.every((s, i) => s.away || this.pending[i] !== null);
-        if (humansIn) {
-          this.seats.forEach((s, i) => {
-            if (s.away && this.pending[i] === null) {
-              this.autoPick(s, i, st, now);
-              changed = true;
-            }
-          });
-        }
-      }
-      if (changed) this.touch();
-
-      if (this.pending.some((p) => p === null)) return;
-      this.state = this.engine.resolveRound(st, this.pending as P[]);
-      if (this.engine.isOver(this.state)) {
+      if (this.state.phase.kind === 'gameOver') {
         this.phase = 'over';
         this.sys('The game is over', now);
         this.touch();
         return;
       }
-      this.beginRound(now);
+      if (this.connectedCount() === 0) return; // paused
+      this.syncStage(this.state, now);
+      const st = this.state;
+      const waiting = this.engine.waitingOn(st);
+      const due: number[] = [];
+      if (now >= this.stageStartedAt + this.opts.botDelayMs) {
+        due.push(...waiting.filter((i) => this.isBot(this.seatAt(i))));
+      }
+      if (this.deadline !== null && now >= this.deadline) {
+        due.push(...waiting);
+      } else if (
+        this.opts.autoPickAway &&
+        waiting.length > 0 &&
+        waiting.every((i) => this.seatAt(i).away)
+      ) {
+        // Everyone who is here has acted: do not hold the table for a dropped seat.
+        due.push(...waiting);
+      }
+      let next = st;
+      let acted = false;
+      for (const i of new Set(due)) {
+        // Bots and timeouts answer from the seat's own view, like a client would.
+        const a = this.engine.defaultAction(this.engine.viewFor(st, i), i);
+        if (a === null) continue;
+        const r = this.engine.applyAction(next, a);
+        if (!r.ok) throw new Error(`default action refused for seat ${i}: ${r.error}`);
+        next = r.state;
+        acted = true;
+        const seat = this.seatAt(i);
+        if (!this.isBot(seat) && !this.timedOut[i]) {
+          this.timedOut[i] = true;
+          const mm = this.members.find((x) => x.id === seat.occupant);
+          this.sys(`${mm?.name ?? 'A player'} ran out of time`, now);
+        }
+      }
+      if (!acted) return;
+      this.state = next;
       this.touch();
-    }
-  }
-
-  private autoPick(s: Seat, i: number, st: S, now: number): void {
-    this.pending[i] = this.engine.defaultPick(st, i);
-    if (!this.isBot(s) && !this.timedOut[i]) {
-      this.timedOut[i] = true;
-      const m = this.members.find((x) => x.id === s.occupant);
-      this.sys(`${m?.name ?? 'A player'} ran out of time`, now);
     }
   }
 
@@ -831,22 +834,19 @@ export class GameSession<S, V, P> {
     };
   }
 
-  /** One `game` message per connected member: their own view, legal picks and pending pick. */
+  /** One `game` message per connected member: their own view and legal actions. */
   private broadcastGame(now: number): void {
     const st = this.state;
     if (st === null) return;
-    const submitted = this.pending.map((p) => p !== null);
     for (const m of this.connected()) {
-      const seat = this.phase === 'lobby' ? null : m.seat;
+      const seat = m.seat;
       this.send(m.conn as string, {
         v: PROTOCOL_VERSION,
         type: 'game',
-        seq: this.seq,
-        round: this.round(),
+        seq: st.seq,
         view: this.engine.viewFor(st, seat ?? 'spectator'),
-        legal: seat !== null && this.phase === 'playing' ? this.engine.legalPicks(st, seat) : [],
-        submitted,
-        myPick: seat === null ? null : (this.pending[seat] ?? null),
+        legal: seat === null ? [] : this.engine.legalActions(st, seat),
+        waiting: this.engine.waitingOn(st),
         timer: this.timerFor(now),
       });
     }
