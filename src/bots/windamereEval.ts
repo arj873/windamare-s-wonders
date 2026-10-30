@@ -90,11 +90,21 @@ function expectedLore(rules: WwRules, state: WwState, seat: SeatId, scale: numbe
   return total;
 }
 
+/** How far Honour standings can be trusted: low at the start, 1 at the end. */
+function honourWeight(state: WwState, tune: EvalTune): number {
+  const progress = Math.max(0, Math.min(1, 1 - turnsLeft(state) / 20));
+  return tune.honourEarly + (1 - tune.honourEarly) * progress;
+}
+
 /** Renown without the purse (coins are priced separately, smoothly). */
 function endRenown(rules: WwRules, state: WwState, seat: SeatId, tune: EvalTune): number {
   const s = scoreTown(rules, state, seat);
   return (
-    s.town + s.greatWork + s.raids + expectedLore(rules, state, seat, tune.loreProject) + s.honours
+    s.town +
+    s.greatWork +
+    s.raids +
+    expectedLore(rules, state, seat, tune.loreProject) +
+    s.honours * honourWeight(state, tune)
   );
 }
 
@@ -227,8 +237,17 @@ export interface EvalTune {
   guardSmooth: number;
   /** Scale of the chance that a missing Lore rank turns up later (0 = Lore counts as it stands). */
   loreProject: number;
+  /** Weight of Honour standing at the game start (it rises to 1 by the end; 1 = as it stands). */
+  honourEarly: number;
+  /** Multiplier on the value of Guard. */
+  guardScale: number;
 }
-export const DEFAULT_TUNE: EvalTune = { guardSmooth: 0, loreProject: 1 };
+export const DEFAULT_TUNE: EvalTune = {
+  guardSmooth: 0,
+  loreProject: 1,
+  honourEarly: 1,
+  guardScale: 3,
+};
 
 /** Chance a Guard of `g` holds against strength `x` in a later Season (Guard grows by then). */
 const soft = (g: number, x: number) => 1 / (1 + Math.exp(-(g - x + 0.5) / 1.5));
@@ -380,7 +399,8 @@ export function valueOf(
   for (const g of rules.goods) res += ((data.store[g] ?? 0) - (before.store[g] ?? 0)) * GOOD * gf;
   // Labour that did not complete a tier is progress, priced at half (the tier itself is in dRenown).
   res += (data.labour - before.labour) * lp * 0.5;
-  const guard = guardValue(rules, state, beforeGuard, guardOf(rules, hyp, seat), tune);
+  const guard =
+    tune.guardScale * guardValue(rules, state, beforeGuard, guardOf(rules, hyp, seat), tune);
   return dRenown + res + econ + guard;
 }
 
