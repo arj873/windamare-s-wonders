@@ -18,6 +18,7 @@ export function makeCtx<S, T>(
     if (!s) throw new Error(`no seat ${seat}`);
     return s;
   };
+  const namedYou = (seat: SeatId) => draft.seats[seat]?.name.trim().toLowerCase() === 'you';
   /** Cards enter a list only from limbo: a card already somewhere must be `take`n first. */
   const loose = (card: Card) => {
     if (quiet) return card;
@@ -94,20 +95,25 @@ export function makeCtx<S, T>(
     },
     log(seat, kind, text, opts = {}) {
       if (quiet) return;
+      // E9: a seat named "You" (the tutorial's) reads its second person for everyone.
+      const pieces =
+        typeof text === 'string'
+          ? null
+          : text.map((p) =>
+              typeof p === 'string' ? p : { ...p, text: namedYou(p.seat) ? p.you : p.text },
+            );
       const entry: LogEntry = {
         seq: draft.seq,
         round: draft.round,
         turn: draft.turn,
         seat,
         kind,
-        text: typeof text === 'string' ? text : joinParts(text),
+        text: pieces ? joinParts(pieces) : (text as string),
       };
       if (opts.data !== undefined) entry.data = opts.data;
       if (opts.to !== undefined) entry.to = [...opts.to];
       if (opts.targets?.length) entry.targets = [...opts.targets];
-      if (typeof text !== 'string' && text.some((p) => typeof p !== 'string')) {
-        entry.parts = text.map((p) => (typeof p === 'string' ? p : { ...p }));
-      }
+      if (pieces?.some((p) => typeof p !== 'string')) entry.parts = pieces;
       draft.log.push(entry);
     },
     left: (seat) => leftOf(draft, seat),

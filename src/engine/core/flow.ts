@@ -109,7 +109,7 @@ export function reveal<S, T>(ctx: Ctx<S, T>): void {
       draft.discard.push(...left);
       ctx.log(s.id, 'leftovers', [
         named(s.id, `${s.name} discards`, 'You discard'),
-        ` ${left.length} leftover card(s).`,
+        ` ${left.length} leftover card${left.length === 1 ? '' : 's'}.`,
       ]);
     }
   }

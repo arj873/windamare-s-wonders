@@ -14,6 +14,9 @@ import {
   type WwTable,
 } from './types';
 
+/** "−1 coin", "−3 coins" (a true minus sign); a town with no coins loses none (R17.6). */
+const coinsLost = (n: number) => (n === 0 ? 'no coins to lose' : `−${n} coin${n === 1 ? '' : 's'}`);
+
 const drawRaid = (rules: WwRules, rng: Rng, season: number) =>
   rng.pick(rules.content.raids.filter((r) => r.season === SEASONS[season])).id;
 
@@ -81,7 +84,7 @@ export function resolveRaid(rules: WwRules, ctx: Ctx<WwSeat, WwTable>): RaidOutc
       town.data.coins -= lost;
       emit(ctx, { ...base, outcome: 'plundered', valour: 0, lost }, [
         named(s, `${town.name} is`, 'You are'),
-        ` plundered (Guard ${guard} vs ${def.strength}): -${lost} coins.`,
+        ` plundered (Guard ${guard} vs ${def.strength}): ${coinsLost(lost)}.`,
       ]);
     }
   }

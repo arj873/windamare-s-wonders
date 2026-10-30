@@ -63,9 +63,9 @@ describe('log lines a viewer reads as "You" (E8)', () => {
     const left = s.log.filter((e) => e.kind === 'leftovers');
     expect(left.length).toBeGreaterThan(0);
     for (const e of left) {
-      expect(e.text).toBe(`P${e.seat} discards 1 leftover card(s).`);
+      expect(e.text).toBe(`P${e.seat} discards 1 leftover card.`);
       expect(joinParts(e.parts!)).toBe(e.text);
-      expect(logText(e, e.seat)).toBe('You discard 1 leftover card(s).');
+      expect(logText(e, e.seat)).toBe('You discard 1 leftover card.');
       expect(e.targets).toBeUndefined();
     }
   });
@@ -97,5 +97,26 @@ describe('log lines a viewer reads as "You" (E8)', () => {
     for (const viewer of [0, 2, 'spectator'] as const) {
       expect(toy.viewFor(s, viewer).log).toEqual(s.log.filter((e) => !e.to));
     }
+  });
+
+  it('E9: a seat named "You" (the tutorial) reads its second person in `text` and for everyone', () => {
+    const top = createDraftEngine({ ...toyRuleset, score: (_s, seat) => ({ civic: -seat }) });
+    let s = top.createGame({
+      ...toyConfig(3),
+      seats: [{ name: 'You' }, { name: 'P1' }, { name: 'P2' }],
+    });
+    while (s.phase.kind !== 'gameOver') {
+      const r = top.applyAction(s, top.defaultAction(s, top.waitingOn(s)[0]!)!);
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+    const left = s.log.filter((e) => e.kind === 'leftovers');
+    const mine = left.find((e) => e.seat === 0)!;
+    for (const viewer of [0, 1, 'spectator', null] as const) {
+      expect(logText(mine, viewer)).toBe('You discard 1 leftover card.');
+    }
+    expect(mine.text).toBe('You discard 1 leftover card.');
+    expect(left.find((e) => e.seat === 1)!.text).toBe('P1 discards 1 leftover card.');
+    expect(s.log.at(-1)!.text).toBe('Game over: you win.');
   });
 });
