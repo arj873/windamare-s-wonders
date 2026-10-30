@@ -37,6 +37,7 @@ import {
 import type {
   CardFace,
   CatalogSection,
+  FacePart,
   ChoiceOption,
   ChoiceRow,
   HandBadge,
@@ -80,6 +81,52 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 /** A Raid's Season as a round index (Raids are drawn per Season, R2.6). */
 const raidSeason = (season: string): number =>
   Math.max(0, (SEASONS as readonly string[]).indexOf(season));
+
+/**
+ * Art A7's card illustrations: three per kind, a placeholder pool (ART.md). A card whose name
+ * matches a picture's subject gets it; any other card gets a stable pick from its kind's three.
+ */
+const ILLUSTRATIONS: Record<string, readonly [string, RegExp][]> = {
+  holding: [
+    ['reeds', /reed/i],
+    ['peat', /peat/i],
+    ['hives', /hive|honey|wax/i],
+  ],
+  hall: [
+    ['moot', /moot/i],
+    ['hearth', /hearth/i],
+    ['bell', /bell/i],
+  ],
+  market: [
+    ['stall', /stall|cart|row/i],
+    ['bridge', /bridge|toll/i],
+    ['fair', /fair|cross|inn/i],
+  ],
+  watch: [
+    ['beacon', /beacon/i],
+    ['fence', /fence|ditch/i],
+    ['gatehouse', /gate|tower|moat/i],
+  ],
+  lore: [
+    ['almanac', /almanac|archive|chronicle/i],
+    ['stars', /star|sky/i],
+    ['rune', /rune|tally/i],
+  ],
+  landmark: [
+    ['barrow', /barrow|stone/i],
+    ['highhall', /high hall|hall/i],
+    ['orrery', /orrery|wheel/i],
+  ],
+};
+
+export function illustration(id: string, name: string, kind: string): string | undefined {
+  const pool = ILLUSTRATIONS[kind];
+  if (!pool) return undefined;
+  let hash = 0;
+  for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const pick = pool.find(([, re]) => re.test(name)) ?? pool[hash % pool.length];
+  return pick ? art(`cards/${kind}-${pick[0]}`) : undefined;
+}
 const argsOf = (pick: Pick): WwPickArgs => (pick.args ?? {}) as WwPickArgs;
 const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
@@ -114,7 +161,32 @@ export function windamerePresenter(
       cost: costShort(rules, d.cost),
       text: effectsText(rules, d.effects) + upgrade,
       alt: `Spend: +${gainsText(rules, d.spend)}`,
+      costParts: parts(d.cost),
+      altParts: parts(d.spend),
+      art: illustration(d.id, d.name, d.kind),
     };
+  }
+
+  /** Gains or a cost as icon + number parts (R6 #5), in goods order, then coins, labour, any. */
+  function parts(gains: Gains): FacePart[] {
+    const out: FacePart[] = [];
+    for (const g of rules.goods) {
+      const n = gains[g];
+      if (n) out.push({ icon: icon(g), text: String(n), label: `${n} ${goodName(rules, g)}` });
+    }
+    const add = (key: string, iconName: string | null, word: string) => {
+      const n = gains[key];
+      if (!n) return;
+      out.push({
+        ...(iconName ? { icon: icon(iconName) } : {}),
+        text: iconName ? String(n) : `${n} ${word}`,
+        label: `${n} ${word}`,
+      });
+    };
+    add('coins', 'coin', 'coins');
+    add('labour', 'labour', 'labour');
+    add('any', null, 'any');
+    return out;
   }
 
   function paymentText(view: View, p: Payment): string {
@@ -475,15 +547,28 @@ export function windamerePresenter(
       const d = s.data;
       const renown = Object.values(scoreTown(rules, view, seat)).reduce((a, b) => a + b, 0);
       return [
-        { id: 'coins', label: 'Coins', value: `${d.coins}`, icon: icon('coin') },
-        { id: 'score', label: 'Renown estimate', value: `~${renown}`, icon: icon('renown') },
+        { id: 'coins', label: 'Coins', short: 'Coins', value: `${d.coins}`, icon: icon('coin') },
+        {
+          id: 'score',
+          label: 'Score (Renown estimate)',
+          short: 'Score',
+          value: `~${renown}`,
+          icon: icon('renown'),
+        },
         {
           id: 'guard',
-          label: 'Guard',
+          label: 'Guard (against the Raid)',
+          short: 'Guard',
           value: `${guardOf(rules, view, seat)}`,
           icon: icon('guard'),
         },
-        { id: 'labour', label: 'Labour', value: `${d.labour}`, icon: icon('labour') },
+        {
+          id: 'labour',
+          label: 'Labour (raises your Great Work)',
+          short: 'Labour',
+          value: `${d.labour}`,
+          icon: icon('labour'),
+        },
         ...rules.goods.map((g) => ({
           id: `good-${g}`,
           label: goodName(rules, g),

@@ -9,6 +9,7 @@
  */
 import type { CardId, Json, Pick } from '../../engine';
 import { openDialog } from '../dialog';
+import { showToast } from '../toast';
 import { h, patchChildren, type Child } from '../dom';
 import {
   primaryOption,
@@ -23,7 +24,7 @@ import {
 } from './model';
 import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
-import type { KindInfo, MonumentInfo, SeasonEndInfo, SeatStat } from './present';
+import type { FacePart, KindInfo, MonumentInfo, SeasonEndInfo, SeatStat } from './present';
 import '../shell.css';
 import './table.css';
 
@@ -86,6 +87,8 @@ export class DraftTable {
   private overridesFor = '';
   /** Hotseat pass cover (UX.md §9): while set, no hand is in the DOM at all. */
   private cover: CoverInfo | null = null;
+  /** Phones: the sidebar drawer is open (R6 #3). */
+  private drawerOpen = false;
   /** fx draws its reveal here: kept as the root's last child across renders. */
   private readonly fxLayer: HTMLElement;
   /** The Season-end card (UX.md §10.1): the action it was closed for, and its auto-close. */
@@ -188,7 +191,7 @@ export class DraftTable {
     this.skipEffects();
     const el = (e.target as Element | null)?.closest<HTMLElement>('[data-act]');
     if (!el || (el instanceof HTMLButtonElement && el.disabled)) return;
-    this.run(el.dataset.act ?? '');
+    this.run(el.dataset.act ?? '', el);
   }
 
   /** Double-click a hand card = its primary use (UX.md §8.1 fast path; never a bank-only Build). */
@@ -200,7 +203,7 @@ export class DraftTable {
     if (card && first) this.pickUse(card.id, first.use.id);
   }
 
-  private run(act: string): void {
+  private run(act: string, el?: HTMLElement): void {
     const [verb, a = '', b = '', c = '', d = ''] = act.split(':');
     const m = this.model;
     switch (verb) {
@@ -246,6 +249,16 @@ export class DraftTable {
       case 'catalog':
         if (m) this.openCatalog(m);
         break;
+      case 'drawer':
+        this.drawerOpen = !this.drawerOpen;
+        this.render();
+        break;
+      case 'explain': {
+        // R6 #7: a tap says what a number is (touch has no hover).
+        const text = el?.dataset.explain;
+        if (text) showToast(text, 'info', 2500);
+        break;
+      }
       case 'rematch':
         this.handlers.rematch?.();
         break;
@@ -337,6 +350,9 @@ export class DraftTable {
     ]);
     if (focused && !this.element.contains(document.activeElement)) this.focusKey(focused);
     this.placePopover();
+    // R6 #10: the newest log line is always in view.
+    const log = this.element.querySelector('.dt-log ol');
+    if (log) log.scrollTop = log.scrollHeight;
   }
 
   /**
@@ -366,6 +382,20 @@ export class DraftTable {
         .map((b) => h('div', { class: 'dt-banner' }, this.stat(b))),
       h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
       this.timerEl,
+      // R6 #3: on phones the Table list, reveal and log live in a drawer.
+      h(
+        'button',
+        {
+          class: 'btn btn-sm dt-drawer-btn',
+          attrs: {
+            'data-act': 'drawer',
+            'data-k': 'drawer',
+            'aria-expanded': String(this.drawerOpen),
+            'aria-controls': 'dt-side',
+          },
+        },
+        'Table & log',
+      ),
       h(
         'ol',
         { class: 'dt-chips', attrs: { 'aria-label': 'Pick status' } },
@@ -394,26 +424,40 @@ export class DraftTable {
     );
   }
 
-  private stat(st: SeatStat): HTMLElement {
+  /** One number with its icon. A tap explains it (R6 #7: touch has no hover titles). */
+  private stat(st: SeatStat, labelled = false): HTMLElement {
     return h(
       'span',
       {
         class: `dt-stat is-${st.id}${st.dim ? ' is-dim' : ''}`,
         title: st.label,
-        attrs: { 'aria-label': `${st.label}: ${st.value}` },
+        attrs: {
+          'aria-label': `${st.label}: ${st.value}`,
+          'data-act': 'explain',
+          'data-explain': `${st.label}: ${st.value}`,
+        },
       },
       st.icon &&
         h('img', { class: 'dt-icon', attrs: { src: st.icon, alt: '', 'aria-hidden': 'true' } }),
+      labelled && st.short && h('span', { class: 'dt-stat-label' }, st.short),
       st.value,
     );
   }
 
-  private stats(s: SeatModel): HTMLElement {
+  /**
+   * A seat's numbers. 'labelled' (your town) shows the short labels; 'compact' (you and your
+   * neighbours in the Table list, whose panels show everything) keeps only the first number.
+   */
+  private stats(s: SeatModel, mode: 'full' | 'labelled' | 'compact' = 'full'): HTMLElement {
+    if (mode === 'compact') {
+      const first = s.stats.find((st) => st.id === 'score') ?? s.stats[0];
+      return h('div', { class: 'dt-stats' }, first && this.stat(first));
+    }
     const store = s.stats.filter((st) => st.group === 'store');
     return h(
       'div',
       { class: 'dt-stats' },
-      ...s.stats.filter((st) => !st.group).map((st) => this.stat(st)),
+      ...s.stats.filter((st) => !st.group).map((st) => this.stat(st, mode === 'labelled')),
       store.length > 0 &&
         h(
           'div',
@@ -512,7 +556,7 @@ export class DraftTable {
         { class: 'dt-town-head' },
         h('h2', {}, 'Your town'),
         h('span', { class: 'dt-town-name' }, me.name),
-        this.stats(me),
+        this.stats(me, 'labelled'),
       ),
       this.monument(me.monument, 'large'),
       me.columns.length
@@ -738,6 +782,19 @@ export class DraftTable {
     );
   }
 
+  /** Amounts as icon + number (R6 #5); each carries its words for hover and screen readers. */
+  private parts(parts: readonly FacePart[]): HTMLElement[] {
+    return parts.map((p) =>
+      h(
+        'span',
+        { class: 'dt-part', title: p.label },
+        p.icon &&
+          h('img', { class: 'dt-icon', attrs: { src: p.icon, alt: '', 'aria-hidden': 'true' } }),
+        p.text,
+      ),
+    );
+  }
+
   /** The kind's icon from art, or its text mark until there is one. Never colour alone. */
   private kindMark(kind: KindInfo): HTMLElement {
     return kind.icon
@@ -842,9 +899,23 @@ export class DraftTable {
           this.kindMark(c.kind),
           h('span', { class: 'dt-card-name' }, c.face.name),
         ),
-        c.face.cost && h('span', { class: 'dt-card-cost' }, c.face.cost),
+        c.face.art &&
+          h('img', {
+            class: 'dt-card-art',
+            attrs: { src: c.face.art, alt: '', 'aria-hidden': 'true', loading: 'lazy' },
+          }),
+        c.face.costParts?.length
+          ? h('span', { class: 'dt-card-cost' }, ...this.parts(c.face.costParts))
+          : c.face.cost && h('span', { class: 'dt-card-cost' }, c.face.cost),
         h('span', { class: 'dt-card-text' }, c.face.text),
-        c.face.alt && h('span', { class: 'dt-card-alt' }, c.face.alt),
+        c.face.altParts?.length
+          ? h(
+              'span',
+              { class: 'dt-card-alt' },
+              h('span', { class: 'dt-card-alt-label' }, 'Spend'),
+              ...this.parts(c.face.altParts),
+            )
+          : c.face.alt && h('span', { class: 'dt-card-alt' }, c.face.alt),
         // R6 #1: can I build this, and what does it cost? Before the tap.
         c.badge &&
           !c.staged &&
@@ -1022,9 +1093,21 @@ export class DraftTable {
   private side(m: TableModel): HTMLElement {
     const neighbour = (s: SeatModel) =>
       s.seat === m.left?.seat ? '◀' : s.seat === m.right?.seat ? '▶' : '';
+    const shownElsewhere = (s: SeatModel) =>
+      s.you || s.seat === m.left?.seat || s.seat === m.right?.seat;
     return h(
       'aside',
-      { class: 'dt-side' },
+      { class: `dt-side${this.drawerOpen ? ' is-open' : ''}`, id: 'dt-side' },
+      // Phones only (CSS): the drawer closes from inside itself.
+      h(
+        'div',
+        { class: 'dt-drawer-head' },
+        h(
+          'button',
+          { class: 'btn btn-sm', attrs: { 'data-act': 'drawer', 'data-k': 'drawer-close' } },
+          'Close',
+        ),
+      ),
       h(
         'section',
         { class: 'dt-sum', attrs: { 'aria-label': 'Table' } },
@@ -1061,8 +1144,10 @@ export class DraftTable {
                 },
                 STATUS_MARK[s.status],
               ),
-              this.stats(s),
+              // R6 #7: your town and your neighbours' panels already show every number.
+              this.stats(s, shownElsewhere(s) ? 'compact' : 'full'),
               s.monument &&
+                !shownElsewhere(s) &&
                 h(
                   'span',
                   { class: 'dt-row-work', title: s.monument.name },

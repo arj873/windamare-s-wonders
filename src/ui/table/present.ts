@@ -47,6 +47,18 @@ export interface CardFace {
   text: string;
   /** What the card gives when used another way (Windamere's Spend band), '' = nothing. */
   alt?: string;
+  /** The cost and the Spend band as icon + number parts (R6 #5: icons, not spelled-out goods). */
+  costParts?: FacePart[];
+  altParts?: FacePart[];
+  /** The card's illustration (art window), a public/art URL. */
+  art?: string;
+}
+
+/** One amount on a card face: an icon and a number; `label` is the words for it ("2 Reed"). */
+export interface FacePart {
+  icon?: string;
+  text: string;
+  label: string;
 }
 
 /** A public number for a seat: coins, score estimate, ... The first one is shown everywhere. */
@@ -54,6 +66,8 @@ export interface SeatStat {
   id: string;
   label: string;
   value: string;
+  /** A visible one-word label where there is room (your own town): "Score", "Guard". */
+  short?: string;
   /** Stats of one group render on their own line ('store': a town's goods). */
   group?: string;
   /** Nothing there (0 of a good): drawn faded. */

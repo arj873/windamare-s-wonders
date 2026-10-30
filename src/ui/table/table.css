@@ -339,7 +339,8 @@
   overflow-x: auto;
   padding-top: 14px; /* room for the lifted card */
   margin-top: -10px;
-  min-height: 180px;
+  min-height: 240px;
+  align-items: flex-start;
 }
 .dt-slot {
   position: relative;
@@ -349,8 +350,9 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 118px;
-  height: 165px;
+  /* R6 #5 / #10: ~30% taller than before; the face grows instead of clipping text. */
+  width: 136px;
+  min-height: 224px;
   padding: 0;
   overflow: hidden;
   text-align: left;
@@ -358,7 +360,7 @@
   color: var(--ink-dark);
   background: linear-gradient(180deg, var(--card-paper), var(--card-paper-2));
   border: 2px solid var(--card-edge);
-  border-radius: calc(118px * var(--card-radius));
+  border-radius: calc(136px * var(--card-radius));
   box-shadow: var(--card-shadow);
   transition:
     transform 0.12s ease,
@@ -388,14 +390,33 @@
   color: var(--ink);
   background: var(--cobalt);
 }
+.dt-card-art {
+  display: block;
+  width: 100%;
+  height: 62px;
+  object-fit: cover;
+  border-bottom: 1.5px solid var(--card-edge);
+}
 .dt-card-cost {
   align-self: flex-start;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
   margin: 4px 6px 0;
   padding: 1px 6px;
   border-radius: 99px;
   font-size: 12px;
   font-weight: 800;
   background: var(--coin);
+}
+.dt-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.dt-part .dt-icon {
+  width: 15px;
+  height: 15px;
 }
 .dt-card-text {
   flex: 1;
@@ -568,9 +589,18 @@
 .dt-reveal li {
   font-size: 13px;
 }
+/* R6 #10: the log scrolls inside itself and keeps its newest line in view (table.ts). */
 .dt-log {
+  flex: 1 1 150px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.dt-log ol {
   flex: 1;
-  min-height: 120px;
+  min-height: 0;
+  overflow-y: auto;
 }
 .dt-log li {
   font-size: 12.5px;
@@ -807,6 +837,22 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  cursor: help;
+}
+/* Shown on phones only (the sidebar becomes a drawer there). */
+.dt-drawer-btn,
+.dt-drawer-head {
+  display: none;
+}
+@media (max-width: 720px) {
+  .dt-drawer-head {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+.dt-stat-label {
+  font-weight: 600;
+  color: var(--ink-dim);
 }
 .dt-icon {
   width: 18px;
@@ -822,12 +868,22 @@
   color: var(--ink-dim);
 }
 .dt-card-alt {
+  display: flex;
+  flex-wrap: wrap; /* R6 #5: up to two lines, never cut */
+  align-items: center;
+  gap: 2px 6px;
   margin: 0 6px 4px;
   padding: 2px 5px;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 700;
   background: rgba(31, 79, 160, 0.12);
+}
+.dt-card-alt-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  opacity: 0.8;
 }
 /* R6 #1: affordability on the card, before the tap. Glyph + text, never colour alone. */
 .dt-card-afford {
@@ -983,25 +1039,87 @@
   .dt-nb .dt-list {
     display: none;
   }
+  /*
+   * R6 #3: the hand is pinned to the bottom and the whole hand fits: compact cards in rows of
+   * three (name, cost, Spend band, Build badge). The popover sheet shows the full text.
+   */
+  .dt {
+    padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px);
+  }
   .dt-hand {
-    position: sticky;
+    position: fixed;
+    left: 0;
+    right: 0;
     bottom: 0;
-    z-index: 5;
+    z-index: 6;
+    max-height: 48vh;
+    overflow-y: auto;
+    padding: 6px 8px 8px;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+  }
+  .dt-hand-head {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .dt-hand-head h2 {
+    font-size: 13px;
   }
   .dt-cards {
-    scroll-snap-type: x mandatory;
-    min-height: 140px;
-  }
-  .dt-slot {
-    scroll-snap-align: start;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    min-height: 0;
+    padding-top: 2px;
+    margin-top: 0;
   }
   .dt-card {
-    width: 96px;
-    height: 134px;
-    border-radius: calc(96px * var(--card-radius));
+    width: auto;
+    min-height: 0;
+    border-radius: 8px;
   }
-  .dt-card-text {
-    font-size: 11px;
+  .dt-card-art,
+  .dt-card-text,
+  .dt-card-kind,
+  .dt-card-badge {
+    display: none; /* the sheet shows the full text; number keys mean nothing on touch */
+  }
+  .dt-monument.is-large .dt-monument-art {
+    width: 72px;
+  }
+  .dt-card-band {
+    font-size: 12px;
+    padding: 4px 5px;
+  }
+  .dt-slot.is-open .dt-card {
+    transform: none;
+  }
+  .dt-card:hover {
+    transform: none;
+  }
+  /* R6 #3: the Table list, reveal and log move into a drawer (☰-side button in the top bar). */
+  .dt-drawer-btn {
+    display: inline-flex;
+  }
+  .dt-side {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 22;
+    width: min(360px, 92vw);
+    padding: 8px;
+    flex-direction: column; /* not the tablet's row of panels */
+    flex-wrap: nowrap;
+    overflow-y: auto;
+    background: var(--page-bg);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.5);
+    transform: translateX(105%);
+    transition: transform 0.2s ease;
+  }
+  .dt-side.is-open {
+    transform: none;
   }
   /* The popover becomes a sheet at the bottom of the screen. */
   .dt-pop {
