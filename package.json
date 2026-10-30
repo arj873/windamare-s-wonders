@@ -18,6 +18,7 @@
     "e2e": "echo 'e2e: no scripts yet (qa/net fill this in)'",
     "pt": "tsx playtest/cli.ts",
     "pt:serve": "tsx playtest/serve.ts",
+    "e2e:server": "nice -n 19 tsx src/server/e2e/serverE2e.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
