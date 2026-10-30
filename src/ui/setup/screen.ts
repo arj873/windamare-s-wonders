@@ -27,6 +27,7 @@ import {
   setMode,
   setSeatName,
   setSeed,
+  withPlayerName,
   setTimerIdx,
   setupError,
   shuffleSeats,
@@ -43,8 +44,11 @@ import './setup.css';
 
 export interface SetupScreenOptions {
   onStart: (cfg: NewGameConfig) => void;
-  /** A game is running: a "Back to game" button in the footer. */
+  /** A button in the footer that leaves the screen ("Back to game" unless `backLabel`). */
   onBack?: () => void;
+  backLabel?: string;
+  /** The home screen's nickname: names the first human seat while it has a default name. */
+  playerName?: string;
   /** "Learn to play" in the header (UX.md §11.6); absent hides it. */
   onTutorial?: () => void;
   /** Where the draft is remembered (default localStorage; null = nowhere). */
@@ -65,7 +69,7 @@ export class SetupScreen {
 
   constructor(private readonly opts: SetupScreenOptions) {
     this.storage = opts.storage === undefined ? browserStorage() : opts.storage;
-    this.draft = loadSetup(this.storage);
+    this.draft = withPlayerName(loadSetup(this.storage), opts.playerName);
     this.inner = h('div', { class: 'su-inner' });
     this.summary = h('div', { class: 'su-summary', attrs: { 'data-k': 'summary' } });
     this.startBtn = h(
@@ -96,7 +100,7 @@ export class SetupScreen {
                 attrs: { 'data-k': 'back' },
                 on: { click: () => opts.onBack?.() },
               },
-              'Back to game',
+              opts.backLabel ?? 'Back to game',
             ),
           this.startBtn,
         ),

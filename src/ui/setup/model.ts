@@ -158,6 +158,17 @@ export function setSeatName(draft: SetupDraft, index: number, name: string): Set
   return withSeat(draft, index, { name: name.slice(0, NAME_MAX) });
 }
 
+const DEFAULT_HUMAN_NAME = /^(You|Player \d+)$/;
+
+/** The home screen's nickname on the first human seat, if that seat still has a default name. */
+export function withPlayerName(draft: SetupDraft, name: string | undefined): SetupDraft {
+  const nick = name?.trim().slice(0, NAME_MAX);
+  const i = draft.seats.findIndex((s) => s.controller === 'human');
+  const seat = draft.seats[i];
+  if (!nick || !seat || !DEFAULT_HUMAN_NAME.test(seat.name)) return draft;
+  return setSeatName(draft, i, nick);
+}
+
 /**
  * Human ⇄ bot. A seat whose name is still the default of the other kind gets this kind's
  * default ("Bot Red" ⇄ "Player 2"), so the list never shows a human called "Bot Red".

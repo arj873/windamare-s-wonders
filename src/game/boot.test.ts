@@ -22,14 +22,36 @@ function mount() {
 }
 
 const click = (root: ParentNode, sel: string) => root.querySelector<HTMLElement>(sel)!.click();
+/** Home → Play vs bots → the setup screen. */
+const toSetup = (root: ParentNode) => {
+  if (!root.querySelector('.setup')) click(root, '[data-k="play"]');
+};
 
 describe('boot', () => {
-  it('shows the setup screen and the menu, and hands Start to the caller', () => {
+  it('opens on the home screen; Play vs bots leads to setup, whose Back returns home', () => {
+    const root = mount();
+    const app = boot(root, { onStart: vi.fn() });
+    expect(root.querySelector('.home')).not.toBeNull();
+    expect(root.querySelector('.ww-menu-btn')).not.toBeNull();
+    expect(app.home).not.toBeNull();
+    // Online, join and tutorial have no handler yet: hidden, never dead buttons.
+    expect(root.querySelector('[data-k="online"]')).toBeNull();
+    expect(root.querySelector('[data-k="join"]')).toBeNull();
+    const nick = root.querySelector<HTMLInputElement>('[data-k="nickname"]')!;
+    nick.value = 'Arjun';
+    click(root, '[data-k="play"]');
+    expect(root.querySelector('.setup')).not.toBeNull();
+    expect(localStorage.getItem('ww.name')).toBe('Arjun');
+    expect(root.querySelector<HTMLInputElement>('[data-k="name-0"]')?.value).toBe('Arjun');
+    click(root, '[data-k="back"]');
+    expect(root.querySelector('.home')).not.toBeNull();
+  });
+
+  it('hands Start to the caller', () => {
     const root = mount();
     const onStart = vi.fn();
     boot(root, { onStart });
-    expect(root.querySelector('.setup')).not.toBeNull();
-    expect(root.querySelector('.ww-menu-btn')).not.toBeNull();
+    toSetup(root);
     click(root, '[data-k="start"]');
     expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ mode: 'standard' }));
   });
@@ -47,6 +69,7 @@ describe('boot', () => {
     vi.useFakeTimers();
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });
+    toSetup(root);
     click(root, '[data-k="start"]');
     expect(app.play).not.toBeNull();
     expect(app.setup).toBeNull();
@@ -66,6 +89,7 @@ describe('boot', () => {
     localStorage.setItem('ww.botSpeed', 'instant');
     const root = mount();
     const app = boot(root, { game: windamereBinding() });
+    toSetup(root);
     click(root, '[data-k="start"]');
     expect(root.querySelector('.dt-prompt h2')?.textContent).toBe('Choose your Great Work');
     expect(root.querySelectorAll('.dt-answer')).toHaveLength(2);
@@ -88,7 +112,9 @@ describe('boot', () => {
     localStorage.setItem('ww.botSpeed', 'instant');
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });
+    toSetup(root);
     click(root, '[data-k="ctl-1-human"]'); // seat 2 becomes a human
+    toSetup(root);
     click(root, '[data-k="start"]');
     const title = () => root.querySelector('#dt-cover-title')?.textContent ?? null;
     expect(title()).toContain('Pass to Player 1');
@@ -103,9 +129,65 @@ describe('boot', () => {
     app.play?.dispose();
   });
 
+  it('?debug=1 starts an all-human game with no covers and stable data-* hooks', () => {
+    const root = mount();
+    const app = boot(root, { game: windamereBinding(), debug: { seats: 3, seed: 'qa' } });
+    const table = root.querySelector<HTMLElement>('.dt')!;
+    expect(app.play?.game.humans).toEqual([0, 1, 2]);
+    expect(table.dataset.phase).toBe('prompt');
+    expect(root.querySelector('.dt-cover')).toBeNull();
+    // Each seat chooses its Great Work in turn; the screen moves on with no pass cover.
+    for (const seat of [0, 1, 2]) {
+      expect(table.dataset.viewer).toBe(String(seat));
+      const option = root.querySelector<HTMLElement>('[data-answer]')!;
+      expect(option.dataset.answer).toMatch(/^the-/);
+      option.click();
+    }
+    expect(table.dataset.phase).toBe('pick');
+    const card = root.querySelector<HTMLElement>('.dt-card[data-card][data-def]')!;
+    card.click();
+    expect(
+      root.querySelector(`[data-use="spend"][data-card="${card.dataset.card}"]`),
+    ).not.toBeNull();
+    expect(table.dataset.viewer).toBe('2'); // the last seat to choose keeps the screen
+    root.querySelector<HTMLElement>('[data-use="spend"]')!.click();
+    expect(table.dataset.viewer).toBe('0');
+    expect(root.querySelector('.dt-chip[data-seat="2"]')?.getAttribute('data-status')).toBe(
+      'picked',
+    );
+    app.play?.dispose();
+  });
+
+  it('hands each resolved action to the fx hook with anchors, instead of its own badges', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const onAction = vi.fn();
+    const skip = vi.fn();
+    const root = mount();
+    const app = boot(root, { game: windamereBinding(), fx: { onAction, skip } });
+    toSetup(root);
+    click(root, '[data-k="start"]');
+    expect(onAction).not.toHaveBeenCalled(); // never for the first render
+    vi.advanceTimersByTime(10); // the bots choose their Great Works
+    click(root, '[data-k="answer-0"]'); // the group completes: Great Works revealed, Spring dealt
+    expect(onAction).toHaveBeenCalledTimes(1);
+    const moment = onAction.mock.calls[0]![0];
+    expect(moment.key).toBe(moment.model.effectsKey);
+    expect(moment.view.view.viewer).toBe(0);
+    expect(moment.anchors.town(0)).toBe(root.querySelector('.dt-town'));
+    expect(moment.anchors.stat(0, 'coins')).not.toBeNull();
+    expect(moment.anchors.town(1)).toBe(root.querySelector('.dt-left'));
+    expect(moment.anchors.card(app.play!.game.state.seats[0]!.hand[0]!.id)).not.toBeNull();
+    expect(root.querySelector('.dt-fx')).toBeNull(); // the table's own badges are off
+    click(root, '.dt-town');
+    expect(skip).toHaveBeenCalled();
+    app.play?.dispose();
+  });
+
   it('refuses a setup the ruleset cannot seat, with a notice', () => {
     const root = mount();
     const app = boot(root, { game: { engine: toy, present: toyPresenter } });
+    toSetup(root);
     for (let i = 0; i < 3; i++) click(root, '[data-k="add-seat"]'); // 7 players; toy seats 2-5
     click(root, '[data-k="start"]');
     expect(app.play).toBeNull();

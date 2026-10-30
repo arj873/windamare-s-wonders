@@ -4,7 +4,7 @@ import { act, newToyGame, toy } from '../../engine/core/testing/helpers';
 import type { ToyState } from '../../engine/core/testing/toy';
 import type { Viewer } from '../../engine';
 import { tableModel } from './model';
-import { clockText, DraftTable, type DraftTableHandlers } from './table';
+import { clockText, DraftTable, FX_MS, type DraftTableHandlers } from './table';
 import { toyPresenter } from './testing/toy';
 
 const looks = [
@@ -168,6 +168,33 @@ describe('DraftTable', () => {
     expect(handlers.reveal).toHaveBeenCalled();
     table.setCover(null);
     expect(el.querySelectorAll('.dt-card')).toHaveLength(4);
+  });
+
+  it('shows reveal badges for a new action, never on the first render, and skips on click', () => {
+    vi.useFakeTimers();
+    const state = newToyGame(3);
+    const { el, table } = mount(state);
+    const base = model(state);
+    table.update({ ...base, effects: [{ seat: 0, text: '+2 coins', tone: 'gain' }] });
+    expect($(el, '.dt-fx')).toBeNull(); // same action as the first render: no replay
+    table.update({
+      ...base,
+      effectsKey: 'next',
+      effects: [
+        { seat: 0, text: '+2 coins', tone: 'gain' },
+        { seat: 1, text: '−1 coin', tone: 'loss' },
+      ],
+    });
+    expect($(el, '.dt-town .dt-fx-badge.is-gain')?.textContent).toBe('+2 coins');
+    expect($(el, '.dt-left .dt-fx-badge.is-loss')?.textContent).toBe('−1 coin');
+    expect(el.querySelectorAll('.dt-row .dt-fx')).toHaveLength(2);
+    el.querySelector<HTMLElement>('.dt-town')!.click();
+    expect($(el, '.dt-fx')).toBeNull();
+    table.update({ ...base, effectsKey: 'again', effects: [{ seat: 2, text: 'x', tone: 'info' }] });
+    expect($(el, '.dt-fx')).not.toBeNull();
+    vi.advanceTimersByTime(FX_MS);
+    expect($(el, '.dt-fx')).toBeNull();
+    vi.useRealTimers();
   });
 
   it('stops listening to keys once destroyed', () => {

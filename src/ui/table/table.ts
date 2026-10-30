@@ -7,7 +7,7 @@
  * delegated from the root through `data-act`, so re-renders can patch the DOM in place
  * (patchChildren) without stale listeners. Card faces are text placeholders until art A3.
  */
-import type { CardId, Json, Pick } from '../../engine';
+import type { CardId, Json, Pick, SeatId } from '../../engine';
 import { h, patchChildren, type Child } from '../dom';
 import type {
   HandCard,
@@ -19,8 +19,9 @@ import type {
   TableauCard,
   UseOption,
 } from './model';
+import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
-import type { KindInfo, MonumentInfo, SeatStat } from './present';
+import type { EffectBadge, KindInfo, MonumentInfo, SeatStat } from './present';
 import '../shell.css';
 import './table.css';
 
@@ -30,6 +31,8 @@ export interface DraftTableHandlers {
   answer(prompt: number, answer: Json): void;
   /** Final scores: "New game" (absent hides the button). */
   newGame?(): void;
+  /** Any click or key on the table: skip the reveal animation (UX.md §8.3). */
+  skip?(): void;
   /** Hotseat cover: the named player has the device and wants their hand shown. */
   reveal?(): void;
   /** Final scores: same seats, new seed. */
@@ -53,6 +56,8 @@ export interface TimerState {
 export const TIMER_WARN_SEC = 10;
 /** Matches `.dt-pop` width in table.css (used before the popover has a layout). */
 const POPOVER_W = 300;
+/** How long the reveal badges stay (UX.md §8.3: the reveal reads in ≤ 1.2 s, then lingers). */
+export const FX_MS = 2200;
 
 const STATUS_MARK: Record<SeatStatus, string> = { picked: '✓', thinking: '⋯', idle: '' };
 const STATUS_TEXT: Record<SeatStatus, string> = {
@@ -68,6 +73,13 @@ export function clockText(ms: number): string {
 
 export class DraftTable {
   readonly element: HTMLElement;
+  /** DOM lookups for the fx lane (hand, towns, coins, ...); see anchors.ts. */
+  readonly anchors: TableAnchors;
+  /**
+   * The table's own reveal badges (a fallback). Off once the fx lane's hook animates reveals
+   * (play.ts turns it off when a hook is given).
+   */
+  ownEffects = true;
   private model: TableModel | null = null;
   private selected: CardId | null = null;
   private readonly timerEl: HTMLElement;
@@ -77,6 +89,10 @@ export class DraftTable {
   private overridesFor = '';
   /** Hotseat pass cover (UX.md §9): while set, no hand is in the DOM at all. */
   private cover: CoverInfo | null = null;
+  /** The reveal badges on show (UX.md §8.3), the action they belong to, and their timer. */
+  private fx: EffectBadge[] = [];
+  private fxKey: string | null = null;
+  private fxTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly handlers: DraftTableHandlers) {
     this.timerEl = h('div', {
@@ -89,6 +105,7 @@ export class DraftTable {
       attrs: { role: 'main', 'aria-label': 'Draft table' },
       on: { click: (e) => this.onClick(e), dblclick: (e) => this.onDoubleClick(e) },
     });
+    this.anchors = tableAnchors(this.element);
     document.addEventListener('keydown', this.onKey);
     window.addEventListener('resize', this.placePopover);
   }
@@ -97,6 +114,7 @@ export class DraftTable {
   destroy(): void {
     document.removeEventListener('keydown', this.onKey);
     window.removeEventListener('resize', this.placePopover);
+    if (this.fxTimer !== null) clearTimeout(this.fxTimer);
     this.element.remove();
   }
 
@@ -109,6 +127,33 @@ export class DraftTable {
     if (this.selected !== null && !model.hand.some((c) => c.id === this.selected)) {
       this.selected = null;
     }
+    // A new action with effects: show its badges for a moment (never on the first render).
+    if (
+      this.ownEffects &&
+      this.fxKey !== null &&
+      model.effectsKey !== this.fxKey &&
+      model.effects.length > 0
+    ) {
+      this.fx = model.effects;
+      if (this.fxTimer !== null) clearTimeout(this.fxTimer);
+      this.fxTimer = setTimeout(() => this.skipEffects(), FX_MS);
+    }
+    this.fxKey = model.effectsKey;
+    this.render();
+  }
+
+  /** The reveal badges on show, for tests. */
+  get effects(): readonly EffectBadge[] {
+    return this.fx;
+  }
+
+  /** Any click or key skips the reveal (UX.md §8.3: skippable): fx's and the table's own. */
+  private skipEffects(): void {
+    this.handlers.skip?.();
+    if (this.fxTimer !== null) clearTimeout(this.fxTimer);
+    this.fxTimer = null;
+    if (this.fx.length === 0) return;
+    this.fx = [];
     this.render();
   }
 
@@ -162,6 +207,7 @@ export class DraftTable {
   // ---- intents -----------------------------------------------------------
 
   private onClick(e: MouseEvent): void {
+    this.skipEffects();
     const el = (e.target as Element | null)?.closest<HTMLElement>('[data-act]');
     if (!el || (el instanceof HTMLButtonElement && el.disabled)) return;
     this.run(el.dataset.act ?? '');
@@ -231,6 +277,7 @@ export class DraftTable {
     if (!m || !this.element.isConnected || e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target instanceof Element ? e.target : null;
     if (t?.closest('input, textarea, select, [contenteditable="true"], .ww-menu')) return;
+    this.skipEffects();
     if (document.querySelector('.ww-scrim')) return;
     const key = e.key.toLowerCase();
     const digit = /^[1-9]$/.test(key) ? Number(key) - 1 : -1;
@@ -281,6 +328,9 @@ export class DraftTable {
     const m = this.model;
     if (!m) return;
     const focused = document.activeElement?.getAttribute('data-k');
+    // Test hooks (UX.md §18): what the table shows, readable without parsing text.
+    this.element.dataset.phase = this.cover ? 'cover' : m.phase;
+    this.element.dataset.viewer = m.viewer === null ? '' : String(m.viewer);
     patchChildren(this.element, [
       this.top(m),
       this.neighbour(m.left, 'left', m),
@@ -330,7 +380,11 @@ export class DraftTable {
             {
               class: `dt-chip is-${s.status}${s.you ? ' is-you' : ''}`,
               style: { '--seat': s.color },
-              attrs: { 'aria-label': `${s.you ? 'You' : s.name}: ${STATUS_TEXT[s.status]}` },
+              attrs: {
+                'aria-label': `${s.you ? 'You' : s.name}: ${STATUS_TEXT[s.status]}`,
+                'data-seat': String(s.seat),
+                'data-status': s.status,
+              },
             },
             h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
             s.you ? 'You' : s.name,
@@ -415,7 +469,10 @@ export class DraftTable {
       {
         class: `${area} seat`,
         style: { '--seat': s.color },
-        attrs: { 'aria-label': `${side === 'left' ? 'Left' : 'Right'} neighbour: ${s.name}` },
+        attrs: {
+          'aria-label': `${side === 'left' ? 'Left' : 'Right'} neighbour: ${s.name}`,
+          'data-seat': String(s.seat),
+        },
       },
       h(
         'header',
@@ -438,6 +495,7 @@ export class DraftTable {
         ),
       ),
       this.stats(s),
+      this.fxFor(s.seat),
       this.monument(s.monument, 'small'),
       h(
         'ul',
@@ -454,7 +512,7 @@ export class DraftTable {
     if (!me) return h('section', { class: 'dt-town' }, h('p', { class: 'muted' }, 'Watching'));
     return h(
       'section',
-      { class: 'dt-town', attrs: { 'aria-label': 'Your town' } },
+      { class: 'dt-town', attrs: { 'aria-label': 'Your town', 'data-seat': String(me.seat) } },
       h(
         'header',
         { class: 'dt-town-head' },
@@ -462,6 +520,7 @@ export class DraftTable {
         h('span', { class: 'dt-town-name' }, me.name),
         this.stats(me),
       ),
+      this.fxFor(me.seat),
       this.monument(me.monument, 'large'),
       me.columns.length
         ? h(
@@ -568,9 +627,26 @@ export class DraftTable {
   private mini(c: TableauCard): HTMLElement {
     return h(
       'span',
-      { class: `dt-mini${c.fresh ? ' is-fresh' : ''}`, title: `${c.face.name}: ${c.face.text}` },
+      {
+        class: `dt-mini${c.fresh ? ' is-fresh' : ''}`,
+        title: `${c.face.name}: ${c.face.text}`,
+        attrs: { 'data-card': String(c.id) },
+      },
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
+    );
+  }
+
+  /** This seat's reveal badges while they show (UX.md §8.3), else nothing. */
+  private fxFor(seat: SeatId): Child {
+    const mine = this.fx.filter((b) => b.seat === seat);
+    if (mine.length === 0) return null;
+    return h(
+      'div',
+      { class: 'dt-fx', attrs: { 'aria-hidden': 'true', 'data-fx': this.fxKey ?? '' } },
+      ...mine.map((b, i) =>
+        h('span', { class: `dt-fx-badge is-${b.tone}`, style: { '--i': String(i) } }, b.text),
+      ),
     );
   }
 
@@ -647,6 +723,9 @@ export class DraftTable {
           attrs: {
             'data-act': `select:${c.id}`,
             'data-k': `card-${c.id}`,
+            'data-card': String(c.id),
+            'data-def': c.def,
+            'data-playable': String(c.playable),
             'aria-pressed': String(open),
             'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
             'aria-label': `${c.face.name}, ${c.kind.label}${c.face.cost ? `, costs ${c.face.cost}` : ''}: ${c.face.text}${c.face.alt ? `. ${c.face.alt}` : ''}${c.staged ? '. Your locked pick' : ''}`,
@@ -696,6 +775,8 @@ export class DraftTable {
                   attrs: {
                     'data-act': `pick:${c.id}:${o.use.id}`,
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-use': o.use.id,
+                    'data-card': String(c.id),
                     'aria-keyshortcuts': o.use.key.toUpperCase(),
                   },
                 },
@@ -719,6 +800,8 @@ export class DraftTable {
                   disabled: true,
                   attrs: {
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-use': o.use.id,
+                    'data-card': String(c.id),
                     'aria-describedby': `why-${c.id}-${o.use.id}`,
                   },
                 },
@@ -733,7 +816,10 @@ export class DraftTable {
   private choiceRow(c: HandCard, o: UseOption, row: UseOption['choices'][number], r: number) {
     return h(
       'div',
-      { class: 'dt-choice', attrs: { role: 'radiogroup', 'aria-label': row.label } },
+      {
+        class: 'dt-choice',
+        attrs: { role: 'radiogroup', 'aria-label': row.label, 'data-choice': row.key },
+      },
       h('span', { class: 'dt-choice-label' }, row.label),
       h(
         'span',
@@ -750,6 +836,7 @@ export class DraftTable {
                 'aria-checked': String(opt.selected),
                 'data-act': `choose:${c.id}:${o.use.id}:${r}:${k}`,
                 'data-k': `choice-${c.id}-${o.use.id}-${r}-${k}`,
+                'data-option': opt.key,
               },
             },
             opt.label,
@@ -793,6 +880,7 @@ export class DraftTable {
                 'aria-checked': String(a.chosen),
                 'data-act': `answer:${i}`,
                 'data-k': `answer-${i}`,
+                'data-answer': typeof a.answer === 'string' ? a.answer : JSON.stringify(a.answer),
                 'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
               },
             },
@@ -831,7 +919,11 @@ export class DraftTable {
           ...m.seats.map((s) =>
             h(
               'li',
-              { class: `dt-row${s.you ? ' is-you' : ''}`, style: { '--seat': s.color } },
+              {
+                class: `dt-row${s.you ? ' is-you' : ''}`,
+                style: { '--seat': s.color },
+                attrs: { 'data-seat': String(s.seat), 'data-status': s.status },
+              },
               h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
               h(
                 'span',
@@ -849,6 +941,7 @@ export class DraftTable {
                 STATUS_MARK[s.status],
               ),
               this.stats(s),
+              this.fxFor(s.seat),
               s.monument &&
                 h(
                   'span',
@@ -865,15 +958,19 @@ export class DraftTable {
       m.reveal &&
         h(
           'section',
-          { class: 'dt-reveal', attrs: { 'aria-label': 'Last reveal' } },
+          {
+            class: 'dt-reveal',
+            // A new key per reveal makes a new element, so the flip-in plays again.
+            attrs: { 'aria-label': 'Last reveal', 'data-reveal': m.effectsKey },
+          },
           h('h2', {}, m.reveal.title),
           h(
             'ul',
             {},
-            ...m.reveal.lines.map((l) =>
+            ...m.reveal.lines.map((l, i) =>
               h(
                 'li',
-                {},
+                { style: { '--i': String(i) } },
                 h('b', {}, l.you ? 'You' : l.name),
                 ` ${l.verb} `,
                 this.kindMark(l.kind),

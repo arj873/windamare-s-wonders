@@ -47,6 +47,21 @@ export function gainsText(rules: WwRules, gains: Gains): string {
   return parts.join(', ');
 }
 
+/** Signed items for a change, gains then losses: ["+2 Reed", "+1 coin"], ["−3 coins"]. */
+export function signedItems(rules: WwRules, change: Gains): { gains: string[]; losses: string[] } {
+  const keys = [...rules.goods, COINS, LABOUR];
+  const label = (k: string, n: number) =>
+    k === COINS ? `coin${n === 1 ? '' : 's'}` : k === LABOUR ? 'labour' : goodName(rules, k);
+  const gains: string[] = [];
+  const losses: string[] = [];
+  for (const k of keys) {
+    const v = change[k] ?? 0;
+    if (v > 0) gains.push(`+${v} ${label(k, v)}`);
+    if (v < 0) losses.push(`−${-v} ${label(k, -v)}`);
+  }
+  return { gains, losses };
+}
+
 const gainsOf = (spec: EffectSpec): Gains => (spec.gains ?? {}) as Gains;
 const num = (x: unknown): number => (typeof x === 'number' ? x : 0);
 const coins = (n: number): string => `${n} coin${n === 1 ? '' : 's'}`;

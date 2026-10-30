@@ -21,6 +21,7 @@ import {
   STORAGE_KEY,
   summaryLine,
   TIMER_STEPS,
+  withPlayerName,
   type SetupStorage,
 } from './model';
 
@@ -34,6 +35,17 @@ function memory(): SetupStorage & { data: Map<string, string> } {
 }
 
 const colours = (d: ReturnType<typeof defaultSetup>) => d.seats.map((s) => s.color);
+
+describe('withPlayerName', () => {
+  it('names the first human seat only while it has a default name', () => {
+    const d = defaultSetup();
+    expect(withPlayerName(d, ' Ana ').seats[0]!.name).toBe('Ana');
+    expect(withPlayerName(d, '').seats[0]!.name).toBe('Player 1');
+    const named = setSeatName(d, 0, 'Bea');
+    expect(withPlayerName(named, 'Ana').seats[0]!.name).toBe('Bea');
+    expect(withPlayerName(d, 'Ana').seats[1]!.name).toBe(d.seats[1]!.name); // bots untouched
+  });
+});
 
 describe('setup draft', () => {
   it('defaults to you + bots with unique colours', () => {

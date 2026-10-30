@@ -158,12 +158,35 @@ describe('windamerePresenter', () => {
       `Bank ${bankPrice}g`,
     ]);
     expect(row.options.map((o) => o.selected)).toEqual([true, false, false]);
+    expect(row.key).toBe('pay-0-reed');
+    expect(row.options.map((o) => o.key)).toEqual(['buy-1', 'buy-3', 'bank']);
     expect(row.options[1]!.why).toMatch(/Dee holds only 0 reed/);
     const bank = row.options[2]!;
     expect(bank.why).toBeNull();
     const refined = m.refine(bank.pick)!;
     expect(refined.pick).not.toBeNull();
     expect(refined.detail).toBe(`${pay}Reed from the bank (${bankPrice}g)`);
+  });
+
+  it('turns the latest events into reveal badges per town', () => {
+    // After the Great Work choice: each town's Great Work is announced.
+    const start = model(newGame());
+    expect(start.effects.filter((b) => b.tone === 'info')).toHaveLength(4);
+    expect(start.effectsKey).not.toBe('');
+    // Everyone Spends their first card: every town gains something from its Spend band.
+    let s = newGame();
+    for (const seat of engine.waitingOn(s)) {
+      const card = s.seats[seat]!.hand[0]!.id;
+      const r = engine.applyAction(s, { type: 'pick', seat, pick: { card, use: 'spend' } });
+      if (!r.ok) throw new Error(r.error);
+      s = r.state;
+    }
+    const m = model(s);
+    expect(m.effectsKey).not.toBe(start.effectsKey);
+    for (const seat of [0, 1, 2, 3]) {
+      const gain = m.effects.find((b) => b.seat === seat && b.tone === 'gain');
+      expect(gain?.text).toMatch(/^\+\d+ /);
+    }
   });
 
   it('explains a Build nobody can pay for', () => {

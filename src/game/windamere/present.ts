@@ -21,6 +21,7 @@ import {
   SEASONS,
   SPEND,
   spendGains,
+  latestEvents,
   type DraftEngine,
   type DraftView,
   type Gains,
@@ -37,11 +38,12 @@ import type {
   CardFace,
   ChoiceOption,
   ChoiceRow,
+  EffectBadge,
   MonumentInfo,
   Presenter,
   SeatStat,
 } from '../../ui/table/present';
-import { effectsText, gainsText, goodName, KIND_LABELS } from './text';
+import { effectsText, gainsText, goodName, KIND_LABELS, signedItems } from './text';
 
 type View = DraftView<WwSeat, WwTable>;
 
@@ -179,15 +181,95 @@ export function windamerePresenter(
     return capitalize(msg.replace(/ \(R[\d.a-z]+\)$/, ''));
   }
 
+  /**
+   * The reveal badges (UX.md §8.3) from E3's latest events: each town's net change in goods,
+   * coins and labour, plus notes for Great Work tiers, Raids, bounties and Honour leads.
+   */
+  function effects(view: View): EffectBadge[] {
+    const net = new Map<SeatId, Gains>();
+    const notes: EffectBadge[] = [];
+    const add = (seat: SeatId, change: Gains, sign = 1) => {
+      const g = net.get(seat) ?? {};
+      for (const [k, v] of Object.entries(change)) g[k] = (g[k] ?? 0) + sign * v;
+      net.set(seat, g);
+    };
+    const rate = rules.tunables.exchangeRate;
+    for (const { event: e } of latestEvents(view)) {
+      switch (e.type) {
+        case 'spend':
+        case 'glean':
+        case 'build':
+        case 'yield':
+        case 'heldBonus':
+        case 'seasonEnd':
+          add(e.seat, e.gains);
+          break;
+        case 'pay':
+          add(e.seat, e.goods, -1);
+          add(e.seat, { coins: -e.coins });
+          for (const x of e.exchanges) add(e.seat, { [x.give]: -rate });
+          break;
+        case 'trade':
+          if (e.filled) add(e.seller, { coins: e.price + e.bonus, [e.good]: -1 });
+          break;
+        case 'tier':
+          add(e.seat, e.gains);
+          notes.push({
+            seat: e.seat,
+            text: `Great Work tier ${ROMAN[e.tier - 1] ?? e.tier}`,
+            tone: 'info',
+          });
+          break;
+        case 'toll':
+          add(e.seat, { coins: e.coins });
+          break;
+        case 'raid':
+          if (e.outcome === 'held') {
+            notes.push({ seat: e.seat, text: `Held the Raid: +${e.valour} Valour`, tone: 'gain' });
+          } else {
+            add(e.seat, { coins: -e.lost });
+            notes.push({
+              seat: e.seat,
+              text: `Plundered (Guard ${e.guard} of ${e.strength})`,
+              tone: 'loss',
+            });
+          }
+          break;
+        case 'bounty':
+          add(e.from, { coins: -e.coins });
+          add(e.to, { coins: e.coins });
+          break;
+        case 'greatWork':
+          notes.push({ seat: e.seat, text: rules.greatWork(e.greatWork).name, tone: 'info' });
+          break;
+        case 'honour':
+          for (const s of e.leaders.filter((l) => !e.was.includes(l))) {
+            notes.push({ seat: s, text: `Leads ${rules.honour(e.honour).name}`, tone: 'gain' });
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    const out: EffectBadge[] = [];
+    for (const [seat, change] of net) {
+      const { gains, losses } = signedItems(rules, change);
+      if (gains.length) out.push({ seat, text: gains.join(', '), tone: 'gain' });
+      if (losses.length) out.push({ seat, text: losses.join(', '), tone: 'loss' });
+    }
+    return [...out, ...notes];
+  }
+
   function option(
     view: View,
     seat: SeatId,
+    key: string,
     label: string,
     pick: Pick,
     selected: boolean,
   ): ChoiceOption {
     const err = check(view, seat, pick);
-    return { label, pick, selected, why: err ? whyNot(view, seat, pick, err) : null };
+    return { key, label, pick, selected, why: err ? whyNot(view, seat, pick, err) : null };
   }
 
   function choices(view: View, seat: SeatId, pick: Pick): ChoiceRow[] {
@@ -205,6 +287,7 @@ export function windamerePresenter(
         option(
           view,
           seat,
+          `cover-${t.id}`,
           `Upgrade ${rules.card(t.def).name} (${costShort(rules, def.upgrade?.cost ?? {}) || 'free'})`,
           normalize(view, seat, { card: c.id, use: BUILD, args: { cover: t.id } }),
           args.cover === t.id,
@@ -214,36 +297,45 @@ export function windamerePresenter(
         option(
           view,
           seat,
+          'full',
           `Full cost (${costShort(rules, def.cost) || 'free'})`,
           normalize(view, seat, { card: c.id, use: BUILD, args: { cover: null } }),
           args.cover == null,
         ),
       );
-      rows.push({ label: 'Upgrade', options: opts });
+      rows.push({ key: 'cover', label: 'Upgrade', options: opts });
     }
 
     const pay = args.pay ?? [];
     const price = marketPrice(rules, view);
     pay.forEach((p, i) => {
-      const alternatives: { label: string; pay: Payment }[] = [
+      const alternatives: { key: string; label: string; pay: Payment }[] = [
         ...neighboursOf(view, seat).map((n) => ({
+          key: `buy-${n}`,
           label: `${nameOf(view, n)} ${price}g`,
           pay: { good: p.good, via: 'buy', from: n } as Payment,
         })),
         ...exchangeGoods(rules, view, seat)
           .filter((x) => x !== p.good)
           .map((x) => ({
+            key: `exchange-${x}`,
             label: `${rules.tunables.exchangeRate} ${goodName(rules, x)}`,
             pay: { good: p.good, via: 'exchange', give: x } as Payment,
           })),
-        { label: `Bank ${rules.tunables.bankPrice}g`, pay: { good: p.good, via: 'bank' } },
+        {
+          key: 'bank',
+          label: `Bank ${rules.tunables.bankPrice}g`,
+          pay: { good: p.good, via: 'bank' },
+        },
       ];
       rows.push({
+        key: `pay-${i}-${p.good}`,
         label: `Get ${goodName(rules, p.good)}`,
         options: alternatives.map((a) =>
           option(
             view,
             seat,
+            a.key,
             a.label,
             {
               ...pick,
@@ -366,5 +458,6 @@ export function windamerePresenter(
     describe,
     choices,
     whyNot,
+    effects,
   };
 }

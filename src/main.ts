@@ -19,5 +19,21 @@ if (!document.querySelector('link[rel="icon"]')) {
 const root = document.getElementById('app');
 if (root) {
   document.body.style.margin = '0';
-  boot(root, { game: windamereBinding() });
+  // ?debug=1[&seats=N][&seed=S]: the playtest harness's all-human start (UX.md §18).
+  const params = new URLSearchParams(location.search);
+  const debug = params.get('debug') === '1';
+  const app = boot(root, {
+    game: windamereBinding(),
+    homeArt: `${import.meta.env.BASE_URL}art/table/title-key-art.svg`,
+    ...(debug
+      ? {
+          debug: {
+            seats: Number(params.get('seats') ?? 4),
+            ...(params.get('seed') ? { seed: params.get('seed') ?? '' } : {}),
+          },
+        }
+      : {}),
+  });
+  // Debug only: the harness may read the full state (`ww.play.game.state`). Never in a normal game.
+  if (debug) Object.assign(window, { ww: app });
 }

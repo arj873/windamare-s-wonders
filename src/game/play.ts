@@ -5,7 +5,8 @@
  */
 import { pickFor, type BotLevel as BotStrength } from '../bots';
 import type { DraftAction, DraftEngine, GameConfig, Json, SeatId } from '../engine';
-import { showToast, type NewGameConfig } from '../ui';
+import { motionOn, showToast, type NewGameConfig } from '../ui';
+import type { RevealHook } from './fx';
 import type { BotLevel } from '../ui/setup/model';
 import { tableModel, type SeatLook } from '../ui/table/model';
 import type { Presenter } from '../ui/table/present';
@@ -20,10 +21,14 @@ export interface GameBinding<S, T> {
   options?: Record<string, Json>;
 }
 
-export interface PlayHooks {
+export interface PlayHooks<S = unknown, T = unknown> {
   botDelayMs: () => number;
   onNewGame(): void;
   onRematch(): void;
+  /** Hotseat pass covers between humans (default on; the playtest harness turns them off). */
+  covers?: boolean;
+  /** The fx lane's reveal animation and sound (src/game/fx.ts); replaces the table's badges. */
+  fx?: RevealHook<S, T>;
 }
 
 export interface PlayHandle<S, T> {
@@ -61,7 +66,7 @@ export function gameConfig(cfg: NewGameConfig, options?: Record<string, Json>): 
 export function playLocal<S, T>(
   binding: GameBinding<S, T>,
   cfg: NewGameConfig,
-  hooks: PlayHooks,
+  hooks: PlayHooks<S, T>,
 ): PlayHandle<S, T> | string {
   const { engine, present } = binding;
   const config = gameConfig(cfg, binding.options);
@@ -75,6 +80,8 @@ export function playLocal<S, T>(
   const bots = cfg.players.flatMap((p, i) => (p.controller === 'bot' ? [i] : []));
   const botSalt = crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
   let locked = false;
+  /** The last action handed to the fx hook (null until the first render). */
+  let fxKey: string | null = null;
 
   const send = (make: (seat: SeatId) => DraftAction) => {
     const seat = game.viewer;
@@ -89,11 +96,14 @@ export function playLocal<S, T>(
     answer: (prompt, answer) => send((seat) => ({ type: 'answer', seat, prompt, answer })),
     newGame: () => hooks.onNewGame(),
     rematch: () => hooks.onRematch(),
+    skip: () => hooks.fx?.skip?.(),
     reveal: () => {
       shownTo = game.viewer;
       syncCover(game);
     },
   });
+  // With the fx lane's hook, fx animates reveals; the table's own badges step aside.
+  table.ownEffects = !hooks.fx;
 
   /**
    * Hotseat (UX.md §9): with 2+ humans the hand on screen belongs to `shownTo`. When the game
@@ -101,7 +111,8 @@ export function playLocal<S, T>(
    */
   let shownTo: SeatId | null = null;
   const syncCover = (g: LocalGame<S, T>) => {
-    const next = g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
+    const covers = hooks.covers ?? true;
+    const next = covers && g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
     if (next === null) {
       g.resume();
       table.setCover(null);
@@ -137,7 +148,19 @@ export function playLocal<S, T>(
       locked = viewer !== null && view.view.submitted[viewer] === true;
       // Cover first, so the next human's hand is never rendered before the cover is up.
       syncCover(g);
-      table.update(tableModel({ view, engine, present, looks }));
+      const model = tableModel({ view, engine, present, looks });
+      table.update(model);
+      // The fx lane animates each new action once the table shows it (never the first render).
+      if (fxKey !== null && model.effectsKey !== fxKey && !table.covered) {
+        hooks.fx?.onAction({
+          key: model.effectsKey,
+          view,
+          model,
+          anchors: table.anchors,
+          reducedMotion: !motionOn(),
+        });
+      }
+      fxKey = model.effectsKey;
       tick();
     },
     onTimeout: (seat, action) => {
@@ -163,6 +186,7 @@ export function playLocal<S, T>(
     dispose: () => {
       clearInterval(ticker);
       game.dispose();
+      hooks.fx?.dispose?.();
       table.destroy();
     },
   };
