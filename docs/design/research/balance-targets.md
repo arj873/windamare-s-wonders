@@ -121,6 +121,57 @@ against the targets above; and the seed range used, so design can rerun a flagge
 
 ---
 
+## 5. First sim report vs these targets (research read of B3)
+
+Read: `docs/BALANCE.md` on `agent/bots` `4503209` (1000 games a row, greedy level 1 and random
+bots, no Great Works, no 2-seat variant). Numbers below are bots' unless marked "our arithmetic".
+
+### 5.1 What each miss means
+
+| Target         | B3 result                                    | Mostly a sign of...       | Research read                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------- | -------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1 seats       | max 0.5-3.3 points off fair                  | Rules: pass               | Real pass: lockstep (R4.8) and alternating passes leave no seat edge at 3-7 seats                                                                                                                                                                                                                                                                                                 |
+| S1 categories  | Town is the winner's largest in 82-90%       | **Metric**, then cards    | **Our metric problem.** R12.2a folds Halls, Landmarks and every card `score…` into one "Town" group (design did this on our O12 advice), and Great Works score 0 until the engine has them. A six-group sheet will always show Town on top. Fix S1 to measure finer **sources**: Hall Renown, Landmark scores, other card Renown, Great Work, Valour, Lore, Honours, Purse (§5.2) |
+| S3 Lore        | runs ≥ 3 in 16-20%; ≥ 5 in 1-2%              | Cards (moderate evidence) | Three signals agree: our arithmetic (originality-review §6: ~3 Renown a Build vs 4-9 for late Halls), Lore focus bots at 0.04-0.32× fair, and greedy's low run rate. Each is weak alone (bots don't plan runs). Together they say Lore is under-paid                                                                                                                              |
+| S2 strategies  | Hall focus 1.9-2.5×; others 0.04-0.39×       | **Test design**           | Our §2.2 named plans as engine + payoff ("Holdings → Halls", "Watch / Valour"). B3's focus bots build only one kind and Spend the rest, so Holdings, Markets and Watches (support kinds that make goods, coins or Guard, not Renown) can never win alone. Re-run with the plans in §5.2. The Hall result itself is a real signal: Halls are a complete plan on their own          |
+| R3 margins     | median 16-25%; blowouts 32-53%               | Bot + scale               | Scores are small (winner median 31-33), so a 9-point gap is 25%. A full Great Work track is worth about 13-21 Renown (CARDS §7), so Great Works will raise scores and shrink percentages. Judge R3 again after Great Works and bot level 2; also report the margin in Renown                                                                                                      |
+| I1 neighbours  | 28-32% (bots: an upper bound)                | **Metric**                | Counting every sale coin received as Renown overstates it; purchases also save the buyer coins. Use a net measure (§5.2). Even so, design's 15-30% estimate and B3 agree that neighbour stakes are no longer thin: D1 is no longer the top risk                                                                                                                                   |
+| I3 Spring Raid | 34-40% hold Spring                           | Bot                       | Greedy never builds Guard on purpose. The data property (one Watch a Season holds all but Fen Thieves) is tested in content; re-check with a Guard-aware bot                                                                                                                                                                                                                      |
+| P3 Spends      | 24-45% of picks are Spends; Spring 35-39%    | Bot + Spring costs        | Greedy Spends when nothing affordable scores. Spring Holdings now cost 3c of 5 starting coins, so turn 2 is often a Spend. Worth a per-turn breakdown before tuning                                                                                                                                                                                                               |
+| K1 skill       | greedy 54% at 3 seats (1.6× fair); 1.8× at 5 | Bot (not yet a game read) | Level 1 ignores Honours, Lore runs and Guard. The test that matters: if level 2 is still under ~70% at 3 seats vs random, luck dominates and that is a design problem (deal variance, Honour ties)                                                                                                                                                                                |
+
+### 5.2 Metric changes we propose (for bots' next report)
+
+1. **S1 by source, not by score-sheet group.** Same eight sources as in §5.1. Keep the six-group
+   sheet for players; the metric is for tuning.
+2. **I1 as net transfer.** Per town: coins received from neighbours (sales, bounty, Tolls) minus
+   coins paid to neighbours, ÷ 4 (R12.2f), plus `scoreBeat` Renown, as a share of the town's
+   Renown. Also report the share of Builds that needed a purchase, and the share of purchases
+   filled from the bank because the seller ran out (B3: 7-12 bank-filled next to 23-45 sales a game; 27-31% if the first is part of the second).
+3. **S2 as two-step plans**, each with a payoff: Holdings → Halls, Markets → Purse + Merchant /
+   Treasurer Honours, Watch → Valour + Hall of Banners / Warden, Lore → Lore run + Sage, and Halls
+   only. Compare each with fair × 0.6-1.5.
+4. **R3 in Renown as well as %,** and only after Great Works.
+5. **Score scale (R4).** Winner median 31-33 without Great Works. Design's note in RULES.md
+   (neighbour share) assumed a winning score of 60-65; at 32, the 5-Renown Honour is about 15% of
+   a winning score and a Lore run of 6 (18) would be over half. Re-check Honour and Purse sizes
+   once Great Works land.
+
+### 5.3 What this means for design (research view)
+
+- **Lore payoff** is the one card-level change with support from both the arithmetic and the
+  sim. Options: raise the run table (e.g. 1, 3, 6, 10, 15, 21), give every Lore card 1 printed
+  Renown, or cut Lore costs further. Measure with a run-planning bot before choosing.
+- **Halls as a complete plan** is fine (it's the genre's civic-points backbone), but if nothing
+  else is a complete plan, the game narrows to "build Halls". S2 with two-step plans will show
+  whether Holdings → Halls and Watch → Valour actually compete.
+- **Trade often doesn't move goods.** Up to about 30% of purchases are filled from the bank at the
+  market price (R6.7) because the seller ran out. That is cheaper than the bank's 5, so a bare
+  "a neighbour held it at turn start" acts as a discount. Not an originality issue; a balance
+  one to watch alongside N1 (forced sales).
+- **Tunables mismatch** (bots §0): the content and engine use different keys, so a re-tune in
+  `src/content` won't reach the sim. Engine and design should share one table before D7.
+
 ## Sources
 
 - [ZeusAI: Learning to Play 7 Wonders Duel Without Human Supervision (arXiv 2406.00741)](https://arxiv.org/html/2406.00741v1)
