@@ -109,6 +109,25 @@ Not tested: online (one page per seat), 2-seat Burn flow and `--any`/`--glean`/`
 (no hooks), the pass-cover hotseat flow (debug has no covers), visual quality (screenshots are for
 a human), headed mode.
 
+## Q4 — online layer: one browser per seat against `wrangler dev` (main c252cd5; run by hand)
+
+`playtest/online.ts`, 3 seats (Ann, Bob, Cy), Fast clock, all through the UI. **Result: passed, no
+open findings.** 2796 UI clicks to the final scores; each tab received 71-72 `game` frames and none
+failed net's canary or my extra checks (seed and rng are the masks, other seats' prompt data and
+glean zone hidden, later Raids and other towns' Great Work hidden before the reveal, `seq` never
+backwards, every frame parses). Mid-game, Bob's network was cut for 6 s and restored: views resumed,
+same seat; then Bob's tab was reloaded: same member id, same seat, views resumed. All three tabs ended
+on the same `seq` (84) and the same result JSON.
+
+Method note: my first run "failed" on `seed`/`rng` keys in every frame. Those are the documented
+masks (`HIDDEN_SEED`, zeroed rng in `view.ts`), so the check was wrong and now tests the values.
+That the audit saw every frame is shown by that run; I did not seed a real leak to see the other new
+checks fail (untested that way).
+
+Not tested: more than 3 seats online, a host leaving (succession is covered at session level, Q0-N3),
+a kick, chat, Rematch (net's e2e covers it), bots in a room, a deployed Worker (only local `wrangler
+dev`), real-network latency, two tabs for one seat.
+
 ## Checked and fine (tests pass, keep them green)
 
 Engine (`src/engine/core/engine.audit.test.ts`):
