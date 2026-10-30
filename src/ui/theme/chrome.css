@@ -36,6 +36,51 @@
   background: var(--seat);
   border: 2px solid var(--card-edge);
 }
+/*
+ * Seat marker shape by seat index (UX.md: seat identity is never colour alone). Any element
+ * with data-seat sets --seat-shape; its .seat-mark / .dt-dot descendants are clipped to it.
+ * 0 circle, 1 square, 2 triangle, 3 diamond, 4 hexagon, 5 plus, 6 pentagon.
+ */
+[data-seat='0'] {
+  --seat-shape: circle(50%);
+}
+[data-seat='1'] {
+  --seat-shape: inset(8%);
+}
+[data-seat='2'] {
+  --seat-shape: polygon(50% 0, 100% 100%, 0 100%);
+}
+[data-seat='3'] {
+  --seat-shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+[data-seat='4'] {
+  --seat-shape: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+}
+[data-seat='5'] {
+  --seat-shape: polygon(
+    33% 0,
+    66% 0,
+    66% 33%,
+    100% 33%,
+    100% 66%,
+    66% 66%,
+    66% 100%,
+    33% 100%,
+    33% 66%,
+    0 66%,
+    0 33%,
+    33% 33%
+  );
+}
+[data-seat='6'] {
+  --seat-shape: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+}
+[data-seat] :is(.seat-mark, .dt-dot) {
+  clip-path: var(--seat-shape, none);
+  border-radius: 0;
+  width: 14px;
+  height: 14px;
+}
 .neighbour {
   display: flex;
   align-items: center;

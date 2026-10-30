@@ -94,7 +94,7 @@ carry a word or icon (e.g. "Bank: 3 coins"), never colour alone. That is a ui jo
 ## Season marker
 
 `public/art/seasons/{spring,summer,autumn,winter}.svg` (32×32): a cream tile whose shape differs
-per season (round, square, squircle, circle-ish) with a glyph (sprout, sun, leaf, snowflake). The
+per season (circle, square, squircle, hexagon) with a glyph (sprout, sun, leaf, snowflake). The
 card frame has a `season` slot at the right end of the kind band (x=156, y=240, 24×24).
 
 ## Goods and counters (`public/art/goods/`, 32×32)
