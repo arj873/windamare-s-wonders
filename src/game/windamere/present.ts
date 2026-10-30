@@ -224,8 +224,12 @@ export function windamerePresenter(
     if (!s || !c) return '';
     const def = rules.card(c.def);
     const args = argsOf(pick);
+    // R14.2: with 2 towns the pick also burns another card from the hand.
+    const burned = args.burn === undefined ? undefined : s.hand.find((x) => x.id === args.burn);
+    const burn = burned ? ` · burn ${rules.card(burned.def).name}` : '';
     if (pick.use === SPEND) {
-      return `+${gainsText(rules, spendGains(rules, view, seat, def, args.any ?? [])) || 'nothing'}`;
+      const gains = gainsText(rules, spendGains(rules, view, seat, def, args.any ?? []));
+      return `+${gains || 'nothing'}${burn}`;
     }
     const cost = buildCostAfterDiscount(
       rules,
@@ -249,7 +253,7 @@ export function windamerePresenter(
     if (parts.length === 0) parts.push('free');
     const covered = args.cover != null ? s.tableau.find((x) => x.id === args.cover) : undefined;
     if (covered) parts.push(`covers ${rules.card(covered.def).name}`);
-    return parts.join(' · ');
+    return parts.join(' · ') + burn;
   }
 
   function whyNot(view: View, seat: SeatId, pick: Pick, error: string): string {
@@ -291,6 +295,41 @@ export function windamerePresenter(
   }
 
   function choices(view: View, seat: SeatId, pick: Pick): ChoiceRow[] {
+    return [
+      ...(pick.use === BUILD ? buildChoices(view, seat, pick) : []),
+      ...burnChoice(view, seat, pick),
+    ];
+  }
+
+  /**
+   * R14.2: with 2 towns, every turn but the last (R14.4) a pick also burns one other card from
+   * the hand; the engine fills in the first one (R15.6) and this row changes it.
+   */
+  function burnChoice(view: View, seat: SeatId, pick: Pick): ChoiceRow[] {
+    const s = view.seats[seat];
+    if (!s || view.seats.length !== 2 || view.turn >= view.roundPicks - 1) return [];
+    const args = argsOf(pick);
+    const others = s.hand.filter((c) => c.id !== pick.card);
+    if (others.length === 0) return [];
+    return [
+      {
+        key: 'burn',
+        label: 'Burn (face down, no effect)',
+        options: others.map((c) =>
+          option(
+            view,
+            seat,
+            `burn-${c.id}`,
+            rules.card(c.def).name,
+            { ...pick, args: { ...args, burn: c.id } as unknown as Json },
+            args.burn === c.id,
+          ),
+        ),
+      },
+    ];
+  }
+
+  function buildChoices(view: View, seat: SeatId, pick: Pick): ChoiceRow[] {
     if (pick.use !== BUILD) return [];
     const s = view.seats[seat];
     const c = s?.hand.find((x) => x.id === pick.card);

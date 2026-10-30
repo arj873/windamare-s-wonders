@@ -509,6 +509,9 @@
   flex-direction: column;
   gap: 6px;
   width: 300px;
+  /* Long choice rows (a 2-town Burn lists 9 cards) scroll inside rather than leave the screen. */
+  max-height: calc(100vh - var(--pop-y, 220px) - 8px);
+  overflow-y: auto;
   padding: 10px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -1277,8 +1280,9 @@
   .dt-pop {
     left: 8px;
     right: 8px;
-    bottom: 8px;
+    bottom: calc(8px + var(--dt-bottom-inset, 0px));
     width: auto;
+    max-height: 80vh;
   }
   .dt-nb .dt-tag {
     display: none;

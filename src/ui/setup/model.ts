@@ -5,13 +5,10 @@
  * docs/RULES.md exists.
  */
 
-/**
- * Seat range. PROVISIONAL: ww-design fixes the real range in docs/RULES.md (UX.md §14.1
- * ⟨player range⟩); the layout is built for 3–7 and must not break at 2 or 8.
- */
 export const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 
-export const MIN_PLAYERS = 3;
+/** Seat range, RULES.md R1.1 / R15.1: 2 to 7 towns (2 play the R14 variant, with a Burn). */
+export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 7;
 export const DEFAULT_PLAYERS = 4;
 export const NAME_MAX = 16;

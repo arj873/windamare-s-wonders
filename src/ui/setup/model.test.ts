@@ -197,10 +197,12 @@ describe('setup storage', () => {
     expect(d.clock).toBe('normal');
     expect(sanitizeSetup({ clock: 'fast' }).clock).toBe('fast');
     expect(sanitizeSetup({ clock: 'warp' }).clock).toBe('off');
-    expect(d.seats).toHaveLength(MIN_PLAYERS);
-    expect(new Set(d.seats.map((s) => s.color)).size).toBe(MIN_PLAYERS);
+    expect(d.seats).toHaveLength(3); // the junk entry becomes a fresh seat
+    expect(new Set(d.seats.map((s) => s.color)).size).toBe(3);
     expect(d.seats[0]).not.toHaveProperty('botLevel');
     expect(d.seats[1]!.controller).toBe('bot');
+    const lone = sanitizeSetup({ seats: [{ name: 'A', color: red, controller: 'human' }] });
+    expect(lone.seats).toHaveLength(MIN_PLAYERS); // padded up to 2 towns (R1.1)
   });
 
   it('survives a storage that throws', () => {
