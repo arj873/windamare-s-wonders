@@ -10,7 +10,6 @@ import {
   HONOURS,
   KINDS,
   MEASURES,
-  OTHER_TUNABLES,
   RAIDS,
   SEASONS,
   SPRING,
@@ -109,26 +108,17 @@ describe('Season decks (R3.2, R14.1)', () => {
   });
 
   it('2 seats deal 10 each from the 4-seat deck', () => {
-    const i = OTHER_TUNABLES.twoSeatCountsIndex;
+    const i = SEAT_COUNTS.indexOf(TUNABLES.twoSeat.deckCounts);
+    expect(i).toBeGreaterThanOrEqual(0);
     for (const season of SEASONS) {
       const deck = BY_SEASON[season].reduce((n, c) => n + c.counts[i]!, 0);
-      expect(2 * OTHER_TUNABLES.twoSeatHandSize).toBeLessThanOrEqual(deck);
+      expect(2 * TUNABLES.twoSeat.handSize).toBeLessThanOrEqual(deck);
     }
   });
 
   it('the cadence leaves exactly one card to glean (R3.5)', () => {
     expect(TUNABLES.handSize - TUNABLES.turnsPerSeason).toBe(1);
-    expect(OTHER_TUNABLES.twoSeatHandSize - 2 * (TUNABLES.turnsPerSeason - 1)).toBe(2);
-  });
-});
-
-describe('prices (R6.3, R6.6c)', () => {
-  it('market price rises every Season, never costs 2, and stays below the bank', () => {
-    const p = TUNABLES.marketPrice;
-    expect(p).toHaveLength(SEASONS.length);
-    for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThan(p[i - 1]!);
-    expect(p).not.toContain(2);
-    expect(Math.max(...p)).toBeLessThan(TUNABLES.bankPrice);
+    expect(TUNABLES.twoSeat.handSize - 2 * (TUNABLES.turnsPerSeason - 1)).toBe(2);
   });
 
   it('kind totals at 4 seats match CARDS.md §2', () => {
@@ -149,6 +139,15 @@ describe('prices (R6.3, R6.6c)', () => {
       for (let i = 1; i < 5; i++)
         expect(c.counts[i]!, c.id).toBeGreaterThanOrEqual(c.counts[i - 1]!);
     }
+  });
+});
+
+describe('prices (R6.3, R6.6c)', () => {
+  it('market price rises every Season, never costs 2, and stays below the bank', () => {
+    const p = SEASONS.map((s) => TUNABLES.marketPrice[s]);
+    for (let i = 1; i < p.length; i++) expect(p[i]!).toBeGreaterThan(p[i - 1]!);
+    expect(p).not.toContain(2);
+    expect(Math.max(...p)).toBeLessThan(TUNABLES.bankPrice);
   });
 });
 

@@ -7,8 +7,8 @@ pass: **untested**, not simulated. Bots (B1) will tune it; the re-tune plan for 
 §9 item 8.
 
 - **The data is the source of truth**: `src/content/windamere/cards.ts` (cards), `extras.ts`
-  (Great Works, Raids, Honours), `tunables.ts` (RULES.md R16, keyed like the engine's
-  `WwTunables`). The tables below were generated from that data; regenerated and compared row by
+  (Great Works, Raids, Honours), `tunables.ts` (RULES.md R16; the engine maps it in
+  `src/engine/game/shipped.ts`, so keys and shapes stay put, values may change). The tables below were generated from that data; regenerated and compared row by
   row on 2026-10-30 (D8): no difference. If they ever disagree, the data wins. **Older copies of
   this file (9 cards per seat, goods L/B/W/G/O, `palisade`, `caravan`) are pre-D5: discard them.**
 - Rules: `docs/RULES.md` (R-numbers below). Line: `docs/design/ORIGINALITY.md`.
