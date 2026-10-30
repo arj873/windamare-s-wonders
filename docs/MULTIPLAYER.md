@@ -301,8 +301,8 @@ yet changed). `RoomCore` gets the engine through `RoomPlatform.engine`.
   stage. Lengths live in `CLOCK_SECONDS` (`protocol.ts`); R15.3 marks them provisional (†).
 - **Timeout pick (R15.6)** and bot seats use `pickFor(engine, view, seat, {level:'easy', salt})`
   from `src/bots`, from the seat's own view; the engine's `defaultAction` is the fallback.
-- **Pick shape (C1)**: the parser accepts `{card, use, args?}` (the core today) and
-  `{cards: [...]}` (E1b, up to 4); the engine decides which it takes. Drop the first when E1b lands.
+- **Pick shape**: `{ card, use, args? }` only (single pick, ENGINE.md §15); the multi-card form
+  was dropped again.
 - **Prompt groups (C3)**: a group is one stage (`prompts[0].group`), one 60 s clock, `answer`
   relayed per seat; `waiting` already lists every seat in the group. Untested until the engine
   implements groups (only sequential prompts exist today).

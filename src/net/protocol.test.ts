@@ -4,28 +4,22 @@ import { clockMs, parseClientMessage } from './protocol';
 const msg = (m: Record<string, unknown>) => parseClientMessage({ v: 1, ...m });
 
 describe('picks on the wire', () => {
-  it('accepts a single card and a multi-card pick, rebuilt from known fields', () => {
-    expect(msg({ type: 'pick', pick: { card: 3, use: 'spend' } })).toMatchObject({
+  it('accepts { card, use } and { card, use, args }, rebuilt from known fields', () => {
+    expect(msg({ type: 'pick', pick: { card: 3, use: 'spend' } })).toEqual({
+      v: 1,
+      type: 'pick',
       pick: { card: 3, use: 'spend' },
     });
-    const many = msg({
-      type: 'pick',
-      pick: {
-        cards: [
-          { card: 1, use: 'build', args: { pay: [1] } },
-          { card: 2, use: 'spend' },
-        ],
-      },
-    });
-    expect(many).toMatchObject({ pick: { cards: [{ card: 1 }, { card: 2 }] } });
+    expect(
+      msg({ type: 'pick', pick: { card: 1, use: 'build', args: { pay: [1] } } }),
+    ).toMatchObject({ pick: { args: { pay: [1] } } });
   });
 
-  it('rejects extra keys, bad cards and oversized card lists', () => {
+  it('rejects extra keys, bad cards and the old multi-card shape', () => {
     expect(() => msg({ type: 'pick', pick: { card: 1, use: 'x', seat: 2 } })).toThrow();
-    expect(() => msg({ type: 'pick', pick: { cards: [{ card: -1, use: 'x' }] } })).toThrow();
-    expect(() => msg({ type: 'pick', pick: { cards: [], seat: 1 } })).toThrow();
-    const five = Array.from({ length: 5 }, (_, i) => ({ card: i, use: 'spend' }));
-    expect(() => msg({ type: 'pick', pick: { cards: five } })).toThrow();
+    expect(() => msg({ type: 'pick', pick: { card: -1, use: 'x' } })).toThrow();
+    expect(() => msg({ type: 'pick', pick: { card: 1, use: '' } })).toThrow();
+    expect(() => msg({ type: 'pick', pick: { cards: [{ card: 1, use: 'x' }] } })).toThrow();
   });
 });
 

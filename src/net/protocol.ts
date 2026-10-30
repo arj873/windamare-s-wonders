@@ -5,7 +5,6 @@
  */
 import {
   field,
-  arrayOf,
   int,
   Invalid,
   isRecord,
@@ -201,29 +200,17 @@ const token: Check<string> = str(LIMITS.tokenMax, {
 const memberId: Check<string> = str(12, { min: 2, pattern: /^m\d+$/ });
 const rawText = (max: number): Check<string> => str(max * 2);
 
-const pickedCard = (x: unknown, path: string) => {
+/** Engine `Pick`: `{ card, use, args? }`; `{ card, use }` alone is complete (ENGINE.md §15). */
+const pickCheck: Check<Pick> = (x, path) => {
   const o = record(x, path);
   onlyKeys(o, ['card', 'use', 'args'], path);
-  const c: { card: number; use: string; args?: Json } = {
+  const pick: Pick = {
     card: field(o, 'card', int(0, 1_000_000), path),
     use: field(o, 'use', str(32, { min: 1 }), path),
   };
   // `args` is ruleset vocabulary: any JSON, judged by the ruleset's validatePick.
-  if (o['args'] !== undefined) c.args = o['args'] as Json;
-  return c;
-};
-
-/**
- * One card (`{card, use, args?}`, the core today) or several (`{cards: [...]}`, engine change C1,
- * docs/ENGINE.md §14). Both are rebuilt from known fields; the engine says which it accepts.
- */
-const pickCheck: Check<Pick> = (x, path) => {
-  const o = record(x, path);
-  if ('cards' in o) {
-    onlyKeys(o, ['cards'], path);
-    return { cards: field(o, 'cards', arrayOf(pickedCard, 4), path) } as unknown as Pick;
-  }
-  return pickedCard(o, path) as Pick;
+  if (o['args'] !== undefined) pick.args = o['args'] as Json;
+  return pick;
 };
 
 const configCheck: Check<RoomConfig> = (x, path) => {
