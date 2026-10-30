@@ -8,6 +8,8 @@ describe('the tutorial game, played headless', () => {
     it(`shows every lesson in order to a ${learner} learner`, () => {
       const r = playTutorial(TUTORIAL_SEED, { learner });
       expect(r.over).toBe(true);
+      // Event lessons (Lore, buying) fire live for a learner who plays them, not as recaps.
+      if (learner === 'easy') expect(r.recapped).toEqual([]);
       expect(r.picks).toBe(20);
       expect(r.shown.filter((id) => !r.recapped.includes(id)).length).toBeGreaterThan(10);
       // Every lesson shows, the intro first and the wrap-up last.
@@ -19,7 +21,7 @@ describe('the tutorial game, played headless', () => {
   // Seed search: SEEDS=30 pnpm exec vitest run src/ui/tutorial/seeds
   it.skipIf(!process.env.SEEDS)('seed search', () => {
     for (let i = 1; i <= Number(process.env.SEEDS); i++) {
-      const r = playTutorial(`learn-${i}`);
+      const r = playTutorial(`learn-${i}`, { learner: 'easy' });
       console.log(`learn-${i}`, 'recap:', r.recapped.join(',') || '-');
     }
   });
