@@ -370,3 +370,19 @@ src/server/e2e/serverE2e.ts` (about 1 minute; builds `dist/` if missing; state i
   receives is leak-checked; Ann's Rematch returns both to the lobby. Passed (64 game frames per tab).
   Shared helpers (wrangler lifecycle, leak canary) are in `e2e/support.ts`. Not checked: that the
   Fast clock really applied, phone layout, reconnect in a browser.
+
+## 13. N6: room storage size
+
+- Saved session text at game end (JSON chars, mostly ASCII): **3 towns about 70 KB, 7 towns about
+  141 KB** (measured 2026-10-30 on main with E8; every save writes the whole value).
+- Limit: SQLite-backed Durable Objects, "Key and value combined cannot exceed 2 MB"
+  (https://developers.cloudflare.com/durable-objects/platform/limits/, page updated 2026-10-29).
+  KV-backed classes allow only 128 KiB, which a 7-town game would exceed, so `wrangler.jsonc` must
+  keep `new_sqlite_classes` (tested). 141 KB is about 7% of 2 MB: **no split needed**.
+- `src/server/measure.test.ts` fails if any save of a 3- or 7-town game passes 512 KB (a quarter of
+  the limit). If the log keeps growing, split state and log into two keys then.
+- Not measured: Durable Object write volume per game (each state change rewrites the value).
+- Default bot level stays **easy**: online's O3 test asserts it (`src/game/online/online.test.ts`),
+  and I may not edit that. To get Normal like hotseat, the lobby can send `botLevels` of `medium`
+  (online), or online changes the test and net flips `botLevel()`'s default (one line, session.ts).
+  Timeout picks stay Easy (R15.6).
