@@ -39,6 +39,7 @@ import type {
   ChoiceRow,
   MonumentInfo,
   Presenter,
+  PurseInfo,
   SeatStat,
 } from '../../ui/table/present';
 import { effectsText, gainsText, goodName, KIND_LABELS } from './text';
@@ -250,8 +251,8 @@ export function windamerePresenter(
       rows.push({
         key: `pay-${i}-${p.good}`,
         label: `Get ${goodName(rules, p.good)}`,
-        options: alternatives.map((a) =>
-          option(
+        options: alternatives.map((a) => ({
+          ...option(
             view,
             seat,
             a.key,
@@ -262,10 +263,45 @@ export function windamerePresenter(
             },
             sameJson(a.pay, p),
           ),
-        ),
+          // R6 #2: the bank charges far more than a neighbour.
+          warn: a.pay.via === 'bank',
+        })),
       });
     });
     return rows;
+  }
+
+  /** R6 #2: coins before → after a pick; a Build that pays the bank is flagged. */
+  function purse(view: View, seat: SeatId, pick: Pick): PurseInfo | null {
+    const s = view.seats[seat];
+    const c = s?.hand.find((x) => x.id === pick.card);
+    if (!s || !c) return null;
+    const def = rules.card(c.def);
+    const args = argsOf(pick);
+    const before = s.data.coins;
+    if (pick.use === SPEND) {
+      const coins = spendGains(rules, view, seat, def, args.any ?? []).coins ?? 0;
+      return { before, after: before + coins, warn: false };
+    }
+    const cost = buildCostAfterDiscount(
+      rules,
+      view,
+      seat,
+      def,
+      args.cover ?? null,
+      args.discount ?? [],
+    );
+    if (typeof cost === 'string') return null;
+    const t = rules.tunables;
+    const pay = args.pay ?? [];
+    const spent =
+      (cost.coins ?? 0) +
+      pay.reduce(
+        (n, p) =>
+          n + (p.via === 'buy' ? marketPrice(rules, view) : p.via === 'bank' ? t.bankPrice : 0),
+        0,
+      );
+    return { before, after: before - spent, warn: pay.some((p) => p.via === 'bank') };
   }
 
   return {
@@ -377,5 +413,6 @@ export function windamerePresenter(
     describe,
     choices,
     whyNot,
+    purse,
   };
 }

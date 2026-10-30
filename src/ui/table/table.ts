@@ -9,15 +9,16 @@
  */
 import type { CardId, Json, Pick } from '../../engine';
 import { h, patchChildren, type Child } from '../dom';
-import type {
-  HandCard,
-  PromptModel,
-  ResultModel,
-  SeatModel,
-  SeatStatus,
-  TableModel,
-  TableauCard,
-  UseOption,
+import {
+  primaryOption,
+  type HandCard,
+  type PromptModel,
+  type ResultModel,
+  type SeatModel,
+  type SeatStatus,
+  type TableModel,
+  type TableauCard,
+  type UseOption,
 } from './model';
 import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
@@ -182,11 +183,12 @@ export class DraftTable {
     this.run(el.dataset.act ?? '');
   }
 
-  /** Double-click a hand card = its first legal use (UX.md §8.1 fast path). */
+  /** Double-click a hand card = its primary use (UX.md §8.1 fast path; never a bank-only Build). */
   private onDoubleClick(e: MouseEvent): void {
     const el = (e.target as Element | null)?.closest<HTMLElement>('[data-act^="select:"]');
     const card = this.model?.hand.find((c) => `select:${c.id}` === el?.dataset.act);
-    const first = card?.options.find((o) => o.pick);
+    const first =
+      card && primaryOption(card.options.map((o) => this.optionFor(card, o.use.id) ?? o));
     if (card && first) this.pickUse(card.id, first.use.id);
   }
 
@@ -712,7 +714,8 @@ export class DraftTable {
    */
   private popover(c: HandCard): HTMLElement {
     const options = c.options.map((o) => this.optionFor(c, o.use.id) ?? o);
-    const primary = options.findIndex((x) => x.pick);
+    const best = primaryOption(options);
+    const primary = best ? options.indexOf(best) : -1;
     return h(
       'div',
       { class: 'dt-pop', attrs: { role: 'group', 'aria-label': `${c.face.name}: choose a use` } },
@@ -740,6 +743,13 @@ export class DraftTable {
                   { class: 'dt-use-main' },
                   h('span', { class: 'dt-use-label' }, o.use.label),
                   o.detail && h('span', { class: 'dt-use-detail' }, o.detail),
+                  o.purse &&
+                    h(
+                      'span',
+                      { class: `dt-use-purse${o.purse.warn ? ' is-warn' : ''}` },
+                      `Coins ${o.purse.before} → ${o.purse.after}`,
+                      o.purse.warn ? ' · bank' : '',
+                    ),
                 ),
                 h('kbd', {}, o.use.key.toUpperCase()),
               ),
@@ -783,7 +793,7 @@ export class DraftTable {
           h(
             'button',
             {
-              class: `seg-btn${opt.selected ? ' is-on' : ''}`,
+              class: `seg-btn${opt.selected ? ' is-on' : ''}${opt.warn ? ' is-warn' : ''}`,
               disabled: opt.why !== null,
               title: opt.why ?? '',
               attrs: {

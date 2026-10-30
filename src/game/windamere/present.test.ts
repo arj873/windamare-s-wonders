@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WwState } from '../../engine';
-import { tableModel } from '../../ui/table/model';
+import { primaryOption, tableModel } from '../../ui/table/model';
 import { windamere } from './content';
 import { windamerePresenter } from './present';
 
@@ -166,6 +166,23 @@ describe('windamerePresenter', () => {
     const refined = m.refine(bank.pick)!;
     expect(refined.pick).not.toBeNull();
     expect(refined.detail).toBe(`${pay}Reed from the bank (${bankPrice}g)`);
+    // R6 #2: coins before → after, and the bank flagged.
+    expect(build.purse).toEqual({ before: 20, after: 20 - coins - spring, warn: false });
+    expect(refined.purse).toEqual({ before: 20, after: 20 - coins - bankPrice, warn: true });
+    expect(bank.warn).toBe(true);
+    expect(row.options[0]!.warn).toBe(false);
+  });
+
+  it('never highlights a Build that can only pay the bank (R6 #2)', () => {
+    const m = model(pastureState(20, 0, 0)); // nobody sells Reed: the bank is the only way
+    const card = m.hand[0]!;
+    const build = card.options.find((o) => o.use.id === 'build')!;
+    expect(build.pick).not.toBeNull();
+    expect(build.purse?.warn).toBe(true);
+    expect(primaryOption(card.options)?.use.id).toBe('spend');
+    const spend = card.options.find((o) => o.use.id === 'spend')!;
+    expect(spend.purse?.warn).toBe(false);
+    expect(spend.purse!.after).toBeGreaterThanOrEqual(20);
   });
 
   it('explains a Build nobody can pay for', () => {

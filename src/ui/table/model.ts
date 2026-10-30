@@ -22,6 +22,7 @@ import type {
   ChoiceRow,
   KindInfo,
   MonumentInfo,
+  PurseInfo,
   Presenter,
   SeatStat,
   UseInfo,
@@ -87,6 +88,8 @@ export interface UseOption {
   detail: string;
   /** Choices inside the pick the player may change (sellers, upgrade or not). */
   choices: ChoiceRow[];
+  /** Coins before → after (R6 #2), or null when the presenter does not say. */
+  purse: PurseInfo | null;
 }
 
 export interface HandCard {
@@ -333,21 +336,27 @@ function useOption<S, T>(input: TableInput<S, T>, viewer: SeatId, raw: Pick): Us
   const { view, engine, present } = input;
   const use = present.uses.find((u) => u.id === raw.use);
   if (!use) return null;
-  if (view.phase.kind !== 'pick')
-    return { use, pick: null, why: 'Not the pick phase', detail: '', choices: [] };
+  const none = { use, pick: null, detail: '', choices: [], purse: null };
+  if (view.phase.kind !== 'pick') return { ...none, why: 'Not the pick phase' };
   const pick = engine.ruleset.normalizePick?.(view, viewer, raw) ?? raw;
   const err = engine.ruleset.validatePick(view, viewer, pick);
-  if (err) {
-    const why = present.whyNot?.(view, viewer, pick, err) ?? capitalize(err);
-    return { use, pick: null, why, detail: '', choices: [] };
-  }
+  if (err) return { ...none, why: present.whyNot?.(view, viewer, pick, err) ?? capitalize(err) };
   return {
     use,
     pick,
     why: null,
     detail: present.describe?.(view, viewer, pick) ?? '',
     choices: present.choices?.(view, viewer, pick) ?? [],
+    purse: present.purse?.(view, viewer, pick) ?? null,
   };
+}
+
+/**
+ * The option a quick action (double-click, Enter) and the highlight should take: the first
+ * legal use that does not pay the bank, else the first legal use (R6 #2).
+ */
+export function primaryOption(options: readonly UseOption[]): UseOption | undefined {
+  return options.find((o) => o.pick && !o.purse?.warn) ?? options.find((o) => o.pick);
 }
 
 function handCards<S, T>(
@@ -363,7 +372,7 @@ function handCards<S, T>(
   return seat.hand.map((c) => {
     const face = present.card(c.def);
     const options = present.uses.map((use): UseOption => {
-      const none = { use, pick: null, detail: '', choices: [] };
+      const none = { use, pick: null, detail: '', choices: [], purse: null };
       if (!picking) return { ...none, why: 'Not the pick phase' };
       const pick = legal.find((p) => p.card === c.id && p.use === use.id);
       const option = useOption(input, viewer, pick ?? { card: c.id, use: use.id });

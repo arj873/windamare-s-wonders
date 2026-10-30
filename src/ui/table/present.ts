@@ -72,6 +72,16 @@ export interface ChoiceOption {
   selected: boolean;
   /** Why this alternative is not possible, or null. */
   why: string | null;
+  /** A costly way to pay (the bank): drawn in a warning colour. */
+  warn?: boolean;
+}
+
+/** What a pick does to the player's coins (R6 #2: never spend the purse unawares). */
+export interface PurseInfo {
+  before: number;
+  after: number;
+  /** Paid at the bank (dear): warning colour, and the pick is not the highlighted default. */
+  warn: boolean;
 }
 
 export interface ChoiceRow {
@@ -113,6 +123,8 @@ export interface Presenter<S = unknown, T = unknown> {
   describe?(view: DraftView<S, T>, seat: SeatId, pick: Pick): string;
   /** The choices inside a legal pick the player may change (sellers, upgrade or not). */
   choices?(view: DraftView<S, T>, seat: SeatId, pick: Pick): ChoiceRow[];
+  /** Coins before → after a legal pick, and whether it pays the bank. */
+  purse?(view: DraftView<S, T>, seat: SeatId, pick: Pick): PurseInfo | null;
   /** A player-facing reason for the engine's refusal `error` of `pick`. */
   whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
 }
