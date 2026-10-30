@@ -35,11 +35,15 @@ export const clockScale = (id: ClockId): number => CLOCKS.find((c) => c.id === i
 export type Controller = 'human' | 'bot';
 export type BotLevel = 'easy' | 'normal' | 'hard';
 
-/** UI-side until the bots lane exports its own list (src/bots). */
+/** The bots lane's levels (src/bots pickFor: easy, level 2, level 3), in players' words. */
 export const BOT_LEVELS: readonly { id: BotLevel; label: string; hint: string }[] = [
-  { id: 'easy', label: 'Easy', hint: 'Picks a random legal card' },
-  { id: 'normal', label: 'Normal', hint: 'Plays a reasonable game' },
-  { id: 'hard', label: 'Hard', hint: 'Plans ahead, watches its neighbours' },
+  { id: 'easy', label: 'Easy', hint: 'Picks any legal card at random' },
+  { id: 'normal', label: 'Normal', hint: 'Weighs every card it holds for this turn' },
+  {
+    id: 'hard',
+    label: 'Hard',
+    hint: 'Like Normal, and also takes cards its neighbours want (a small step up)',
+  },
 ];
 export const DEFAULT_BOT_LEVEL: BotLevel = 'normal';
 

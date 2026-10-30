@@ -213,18 +213,30 @@ describe('DraftTable', () => {
     vi.useRealTimers();
   });
 
-  it('opens the card list and Recall from the hand header', () => {
+  it('opens the card list (tutorial’s, via the handler) and Recall from the hand header', () => {
     const state = newToyGame(3);
-    const { el, table } = mount(state);
+    const cards = vi.fn();
+    const { el, table } = mount(state, { cards });
     expect($(el, '[data-k="recall"]')).toBeNull(); // nothing passed yet
     $(el, '[data-k="catalog"]')!.click();
-    expect(document.querySelector('.ww-dialog h2')?.textContent).toBe('All cards');
-    document.querySelector<HTMLElement>('.ww-dialog-actions .btn')!.click();
+    expect(cards).toHaveBeenCalledOnce();
     const recall = [{ title: 'Pick 1: passed to P1', cards: [] }];
     table.update({ ...model(state), recall });
     $(el, '[data-k="recall"]')!.click();
     expect(document.querySelector('.ww-dialog h2')?.textContent).toBe('Seen this Season');
     expect(document.querySelector('.dt-recall h3')?.textContent).toBe('Pick 1: passed to P1');
+  });
+
+  it('marks every card and chip with its kind for art A8 (colour band + shape badge)', () => {
+    const state = structuredClone(newToyGame(3));
+    state.seats[0]!.tableau = [{ id: 900, def: 'toy-statue' }];
+    const { el } = mount(state);
+    const card = el.querySelector('.dt-card')!;
+    expect(card.querySelector('.dt-card-band.kind-head[data-kind]')).not.toBeNull();
+    expect(card.querySelector('.dt-card-kind .kind-badge[data-kind]')).not.toBeNull();
+    const chip = el.querySelector('.dt-town .dt-mini[data-kind="civic"]')!;
+    expect(chip.querySelector('.kind-badge[data-kind="civic"]')).not.toBeNull();
+    expect(el.querySelector('.dt-mark')).toBeNull(); // no text glyphs left
   });
 
   it('stops listening to keys once destroyed', () => {

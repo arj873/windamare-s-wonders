@@ -25,7 +25,6 @@ import type {
   MonumentInfo,
   PurseInfo,
   SeasonEndInfo,
-  CatalogSection,
   Presenter,
   SeatStat,
   UseInfo,
@@ -183,8 +182,6 @@ export interface TableModel {
    * view, cleared at round end).
    */
   recall: { title: string; cards: TableauCard[] }[];
-  /** R6 #8: every card by round, with copies at this table size (computed when opened). */
-  catalog(): CatalogSection[];
   log: { key: string; text: string }[];
   result: ResultModel | null;
   /** Changes with every action that logged anything: a new key = something for fx to reveal. */
@@ -347,7 +344,6 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
             title: `Pick ${r.turn + 1}: passed to ${nameOf(r.to)}`,
             cards: r.cards.map((c) => ({ ...tableauCard(c), fresh: false })),
           })),
-    catalog: () => present.catalog?.(view.seats.length) ?? [],
     log: view.log.slice(-LOG_LINES).map((e, i) => ({ key: `${e.seq}-${i}`, text: e.text })),
     result: resultModel(input, seats),
     banner: present.banner?.(view) ?? [],

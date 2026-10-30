@@ -11,6 +11,8 @@ export interface KindInfo {
   label: string;
   mark: string;
   icon?: string;
+  /** Glossary id for the tutorial lane's tooltips (`data-term`, src/ui/help/terms.ts). */
+  term?: string;
 }
 
 /** A town's personal monument (Windamere: its Great Work). */
@@ -35,6 +37,8 @@ export interface UseInfo {
   verb: string;
   /** Keyboard shortcut (one lower-case letter). */
   key: string;
+  /** Glossary id (`data-term`). */
+  term?: string;
 }
 
 /** A card face as text, until art A3 draws real faces. */
@@ -59,6 +63,8 @@ export interface FacePart {
   icon?: string;
   text: string;
   label: string;
+  /** Glossary id (`data-term`). */
+  term?: string;
 }
 
 /** A public number for a seat: coins, score estimate, ... The first one is shown everywhere. */
@@ -74,6 +80,8 @@ export interface SeatStat {
   dim?: boolean;
   /** Icon URL drawn before the value (the label stays the accessible name). */
   icon?: string;
+  /** Glossary id (`data-term`): hovering or focusing explains it. */
+  term?: string;
 }
 
 /** One alternative for a choice inside a pick (who to buy a good from, an upgrade or not). */
@@ -88,12 +96,6 @@ export interface ChoiceOption {
   why: string | null;
   /** A costly way to pay (the bank): drawn in a warning colour. */
   warn?: boolean;
-}
-
-export interface CatalogSection {
-  /** "Spring". */
-  title: string;
-  cards: { def: CardDefId; face: CardFace; copies: number }[];
 }
 
 export interface SeasonEndInfo {
@@ -173,8 +175,6 @@ export interface Presenter<S = unknown, T = unknown> {
   happenings?(view: DraftView<S, T>): string[];
   /** UX.md §10.1: the Season-end summary when the latest action ended a Season, else null. */
   seasonEnd?(view: DraftView<S, T>): SeasonEndInfo | null;
-  /** R6 #8: every card in the game by round (Season), with copies at this table size. */
-  catalog?(seats: number): CatalogSection[];
   /** A player-facing reason for the engine's refusal `error` of `pick`. */
   whyNot?(view: DraftView<S, T>, seat: SeatId, pick: Pick, error: string): string;
 }

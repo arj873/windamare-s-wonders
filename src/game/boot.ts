@@ -154,8 +154,19 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     if (!play) return;
     setup = null;
     home = null;
+    const rules = play.openRules;
     menu.setItems([
       { kind: 'action', label: 'New game', hint: 'Back to the setup screen', onClick: showSetup },
+      ...(rules
+        ? [
+            {
+              kind: 'action' as const,
+              label: 'How to play',
+              hint: 'Rules (or press ?)',
+              onClick: rules,
+            },
+          ]
+        : []),
       ...prefs,
     ]);
     root.replaceChildren(play.element, corner);

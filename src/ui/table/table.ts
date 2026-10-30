@@ -26,6 +26,7 @@ import { tableAnchors, type TableAnchors } from './anchors';
 import { fillSvg, svgText } from './art';
 import type { FacePart, KindInfo, MonumentInfo, SeasonEndInfo, SeatStat } from './present';
 import '../shell.css';
+import '../theme/kinds.css';
 import './table.css';
 
 export interface DraftTableHandlers {
@@ -34,6 +35,8 @@ export interface DraftTableHandlers {
   answer(prompt: number, answer: Json): void;
   /** Final scores: "New game" (absent hides the button). */
   newGame?(): void;
+  /** "All cards" in the hand header (tutorial's card list; absent hides the button). */
+  cards?(): void;
   /** Any click or key on the table: skip the reveal animation (UX.md §8.3). */
   skip?(): void;
   /** Hotseat cover: the named player has the device and wants their hand shown. */
@@ -247,7 +250,7 @@ export class DraftTable {
         if (m) this.openRecall(m);
         break;
       case 'catalog':
-        if (m) this.openCatalog(m);
+        this.handlers.cards?.();
         break;
       case 'drawer':
         this.drawerOpen = !this.drawerOpen;
@@ -435,6 +438,7 @@ export class DraftTable {
           'aria-label': `${st.label}: ${st.value}`,
           'data-act': 'explain',
           'data-explain': `${st.label}: ${st.value}`,
+          ...(st.term ? { 'data-term': st.term } : {}),
         },
       },
       st.icon &&
@@ -662,40 +666,6 @@ export class DraftTable {
     });
   }
 
-  /** R6 #8: every card by round with its copies at this table size, faces as on the cards. */
-  private openCatalog(m: TableModel): void {
-    const sections = m.catalog();
-    openDialog({
-      title: 'All cards',
-      className: 'is-wide dt-list-dialog',
-      body: [
-        sections.length === 0 && h('p', { class: 'muted' }, 'No card list for this game.'),
-        ...sections.map((s) =>
-          h(
-            'section',
-            { class: 'dt-catalog' },
-            h('h3', {}, s.title),
-            h(
-              'ul',
-              {},
-              ...s.cards.map((c) =>
-                h(
-                  'li',
-                  { attrs: { 'data-def': c.def } },
-                  h('span', { class: 'dt-catalog-copies' }, `${c.copies}×`),
-                  h('b', {}, c.face.name),
-                  ` · ${c.face.cost || 'free'} · ${c.face.text}`,
-                  c.face.alt && h('span', { class: 'muted' }, ` · ${c.face.alt}`),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-      actions: [{ label: 'Close', primary: true }],
-    });
-  }
-
   private closeSeasonCard(): void {
     if (this.seasonTimer !== null) clearTimeout(this.seasonTimer);
     this.seasonTimer = null;
@@ -775,7 +745,7 @@ export class DraftTable {
       {
         class: `dt-mini${c.fresh ? ' is-fresh' : ''}`,
         title: `${c.face.name}: ${c.face.text}`,
-        attrs: { 'data-card': String(c.id) },
+        attrs: { 'data-card': String(c.id), 'data-kind': c.kind.id },
       },
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
@@ -787,7 +757,7 @@ export class DraftTable {
     return parts.map((p) =>
       h(
         'span',
-        { class: 'dt-part', title: p.label },
+        { class: 'dt-part', title: p.label, attrs: p.term ? { 'data-term': p.term } : {} },
         p.icon &&
           h('img', { class: 'dt-icon', attrs: { src: p.icon, alt: '', 'aria-hidden': 'true' } }),
         p.text,
@@ -795,14 +765,19 @@ export class DraftTable {
     );
   }
 
-  /** The kind's icon from art, or its text mark until there is one. Never colour alone. */
+  /**
+   * Art A8's kind badge: a CSS shape in the kind's colour (kinds.css), so kinds differ by
+   * silhouette at 12-14 px; the kind's name is always printed nearby. Never colour alone.
+   */
   private kindMark(kind: KindInfo): HTMLElement {
-    return kind.icon
-      ? h('img', {
-          class: 'dt-kind-icon',
-          attrs: { src: kind.icon, alt: '', 'aria-hidden': 'true' },
-        })
-      : h('span', { class: 'dt-mark', attrs: { 'aria-hidden': 'true' } }, kind.mark);
+    return h('span', {
+      class: 'kind-badge dt-kind',
+      attrs: {
+        'data-kind': kind.id,
+        'aria-hidden': 'true',
+        ...(kind.term ? { 'data-term': kind.term } : {}),
+      },
+    });
   }
 
   /** Inline SVG art; with `tiers`, the layers above that many completed tiers fade. */
@@ -851,11 +826,15 @@ export class DraftTable {
             { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'recall', 'data-k': 'recall' } },
             `Seen this Season (${m.recall.length})`,
           ),
-        h(
-          'button',
-          { class: 'btn btn-sm btn-ghost', attrs: { 'data-act': 'catalog', 'data-k': 'catalog' } },
-          'All cards',
-        ),
+        this.handlers.cards &&
+          h(
+            'button',
+            {
+              class: 'btn btn-sm btn-ghost',
+              attrs: { 'data-act': 'catalog', 'data-k': 'catalog' },
+            },
+            'All cards',
+          ),
       ),
     );
     return h(
@@ -895,8 +874,8 @@ export class DraftTable {
         },
         h(
           'span',
-          { class: 'dt-card-band' },
-          this.kindMark(c.kind),
+          // Art A8: the header band takes the kind's colour.
+          { class: 'dt-card-band kind-head', attrs: { 'data-kind': c.kind.id } },
           h('span', { class: 'dt-card-name' }, c.face.name),
         ),
         c.face.art &&
@@ -924,7 +903,7 @@ export class DraftTable {
             { class: `dt-card-afford is-${c.badge.tone}`, attrs: { 'aria-hidden': 'true' } },
             c.badge.text,
           ),
-        h('span', { class: 'dt-card-kind' }, c.kind.label),
+        h('span', { class: 'dt-card-kind' }, this.kindMark(c.kind), ` ${c.kind.label}`),
         h(
           'span',
           { class: 'dt-card-badge', attrs: { 'aria-hidden': 'true' } },
@@ -963,6 +942,7 @@ export class DraftTable {
                     'data-use': o.use.id,
                     'data-card': String(c.id),
                     'aria-keyshortcuts': o.use.key.toUpperCase(),
+                    ...(o.use.term ? { 'data-term': o.use.term } : {}),
                   },
                 },
                 h(
@@ -1216,7 +1196,10 @@ export class DraftTable {
               {
                 class: `dt-band-card${c.winner ? ' is-winner' : ''}`,
                 style: { '--seat': c.color },
-                attrs: { 'aria-label': `${c.rank}. ${c.you ? 'You' : c.name}: ${c.total}` },
+                attrs: {
+                  'aria-label': `${c.rank}. ${c.you ? 'You' : c.name}: ${c.total}`,
+                  'data-seat': String(c.seat),
+                },
               },
               h(
                 'div',
