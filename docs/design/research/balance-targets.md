@@ -54,13 +54,14 @@ inside, not outside.
 
 ### 2.2 Strategy diversity
 
-| ID  | Metric                                                                                                            | Target                                                                            | Why                                                           |
-| --- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| S1  | Winner's largest Renown category (R12.2 a-g)                                                                      | no category is the largest for > 55% of winners; at least 4 categories ≥ 10% each | Duel's split (~55 / 25 / 20) is the reference band            |
-| S2  | Specialist bots (one per plan: Holdings→Halls, Lore, Watch/Valour, Markets/Caravans, Great Work) in a mixed field | each wins fair × 0.6-1.5                                                          | No plan should be dead (R4 originality review D4) or dominant |
-| S3  | Share of towns with a Lore run ≥ 3; ≥ 5                                                                           | ≥ 25%; 5-15%                                                                      | CARDS.md §9.4: runs of 5-6 "reachable but not routine"        |
-| S4  | Share of towns completing Great Work tier IV                                                                      | 20-50%                                                                            | CARDS.md §9.2: raise thresholds if most finish                |
-| S5  | Build rate of each card when seen; Spend rate                                                                     | flag cards built < 5% or > 60% of the times they are picked                       | Finds dominated cards (e.g. Spring Halls) and auto-picks      |
+| ID  | Metric                                                                                                            | Target                                                                       | Why                                                           |
+| --- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| S1  | Winner's largest Renown **source** (8: Hall, Landmark, other card, Great Work, Valour, Lore, Honours, Purse; §6)  | no source is the largest for > 55% of winners; at least 4 sources ≥ 10% each | Duel's split (~55 / 25 / 20) is the reference band            |
+| S1g | Winner's largest R12.2 **group** (the six on the score sheet)                                                     | report; flag if one group is the largest for > 75% of winners (§6)           | What players see; catches "Town is the whole game"            |
+| S2  | Specialist bots (one per plan: Holdings→Halls, Lore, Watch/Valour, Markets/Caravans, Great Work) in a mixed field | each wins fair × 0.6-1.5                                                     | No plan should be dead (R4 originality review D4) or dominant |
+| S3  | Share of towns with a Lore run ≥ 3; ≥ 5                                                                           | ≥ 25%; 5-15%                                                                 | CARDS.md §9.4: runs of 5-6 "reachable but not routine"        |
+| S4  | Share of towns completing Great Work tier IV                                                                      | 20-50%                                                                       | CARDS.md §9.2: raise thresholds if most finish                |
+| S5  | Build rate of each card when seen; Spend rate                                                                     | flag cards built < 5% or > 60% of the times they are picked                  | Finds dominated cards (e.g. Spring Halls) and auto-picks      |
 
 ### 2.3 Snowball and comeback
 
@@ -171,6 +172,52 @@ bots, no Great Works, no 2-seat variant). Numbers below are bots' unless marked 
   one to watch alongside N1 (forced sales).
 - **Tunables mismatch** (bots §0): the content and engine use different keys, so a re-tune in
   `src/content` won't reach the sim. Engine and design should share one table before D7.
+
+## 6. What S1 means (answer to balance, card R9)
+
+Balance asked (`docs/BALANCE.md`, "S1 definition, for research"): is S1 the winner's top source
+of the 8, or the top R12.2 group, where Town is 3 sources added together? Level 2 passes by
+sources on the package (Great Work 39-46%) and fails by group (Town 58-76%).
+
+**Answer: S1 is by the 8 sources.** That is what §5.2 item 1 already proposed; the §2.2 row
+still said "R12.2 a-g" and is now fixed. The group view stays as a report line, S1g, with a
+looser flag.
+
+Why sources:
+
+1. **S1 asks whether winners win in different ways.** A way to win is a plan: Halls, Landmark
+   conditions, the Great Work, Raids, Lore, money. The Town group adds three of those (Hall
+   Renown, Landmark scores, other card scores), so it measures the score sheet's layout, not
+   the plans. With 3 of about 6 live sources inside it, Town tops an evenly spread field about
+   half the time with no plan dominating. A 55% cap on that sum is far stricter than the same
+   cap on one source.
+2. **The 55% was set for single categories.** It came from Duel's victory split. That
+   reference is loose either way, since Duel's 55% "civilian" victory is itself a sum of point
+   sources. The cap makes sense for one source and no sense for a sum of three.
+3. **The breadth clause already guards against a narrow game.** "At least 4 sources ≥ 10% of
+   winners" fails when winners lean on two sources, which is balance's actual worry at level 2
+   (Town and Great Work).
+
+Why keep a group line (S1g, flag over 75%): players see the six groups, not the 8 sources. If
+three in four winners take most of their Renown from Town, the game reads as "build scoring
+cards" whatever the split inside. 75% is a judgement number, not derived; it means "at least
+a quarter of winners win mainly elsewhere".
+
+Caveat: sources are a proxy for plans, not plans. A Watch plan's Watchers' Cairn Renown counts
+as Landmark, not Valour. S2 (specialist plans) is the direct test.
+
+**What this means for L3** (balance's question, research view):
+
+- **S1's cap does not need L3.** Level 2 passes it on the l2-final-2 package (top source Great
+  Work at 37-47% in BALANCE.md's l2-final-2 row; Hall no longer top). S1g: Town at 58-76% sits
+  under the 75% flag except at the top of that range.
+- **The breadth clause decides.** At level 2 before the package, 2-4 sources reached 10% of
+  winners. If the package gives 4 or more at every seat count, S1 passes in full and L3 isn't
+  needed for S1. If it gives 2-3, S1 still fails, and the fix is the one balance names: a third
+  group that pays a level-2 player (Raids, Lore or Purse). That is a design or bots question
+  (bots: level 2 can't see a Lore run's future value), not a tunables one.
+- Ask for one more number from balance: sources at ≥ 10% of level-2 winners on l2-final-2, per
+  seat count.
 
 ## Sources
 
