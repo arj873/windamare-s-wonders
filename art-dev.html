@@ -135,6 +135,10 @@
       <div class="row" id="gw"></div>
     </section>
     <section>
+      <h2>Card art-window illustrations (136×100, three per kind)</h2>
+      <div class="row" id="ca"></div>
+    </section>
+    <section>
       <h2>Sample cards (frame is inline SVG, kind colour via CSS vars)</h2>
       <div class="row" id="cards"></div>
     </section>
@@ -220,6 +224,30 @@
       ];
       $('gw').innerHTML = GW.map((g) =>
         cell(`/art/great-works/${g}.svg`, g.replace('the-', ''), 160),
+      ).join('');
+      const CA = [
+        'hall-bell',
+        'hall-hearth',
+        'hall-moot',
+        'holding-hives',
+        'holding-peat',
+        'holding-reeds',
+        'landmark-barrow',
+        'landmark-highhall',
+        'landmark-orrery',
+        'lore-almanac',
+        'lore-rune',
+        'lore-stars',
+        'market-bridge',
+        'market-fair',
+        'market-stall',
+        'watch-beacon',
+        'watch-fence',
+        'watch-gatehouse',
+      ];
+      $('ca').innerHTML = CA.map(
+        (c) =>
+          `<div class="cell"><img src="/art/cards/${c}.svg" width="136" height="100" alt="${c}" />${c}</div>`,
       ).join('');
       // Sample content is placeholder text, not final card data (CARDS.md owns that).
       const SAMPLES = [
