@@ -101,7 +101,12 @@
 .dt-timer.timer-low {
   animation: dt-pulse 1s ease-in-out infinite;
 }
+/* Chips + status: one row on phones (below); here the wrapper vanishes and the chips go last. */
+.dt-top-row {
+  display: contents;
+}
 .dt-chips {
+  order: 2;
   display: flex;
   gap: 6px;
   margin: 0;
@@ -1093,14 +1098,16 @@
   /*
    * R7 #3: three short rows instead of ~250 px. Season · pick · arrow, clock, drawer; seat dots
    * with ✓ and the status; then the Raid and Market facts (a tap explains each).
+   * R8 #2: chips + status are one flex row of their own (.dt-top-row), so the clock ring in the
+   * first row can never push the bar past the screen; 5+ seats wrap inside the row.
    */
   .dt-top {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      'round round timer drawer'
-      'chips status status status'
-      'banners banners banners banners';
+      'round timer drawer'
+      'row row row'
+      'banners banners banners';
     gap: 5px 8px;
     min-height: 0;
     padding: 5px 8px 6px 60px;
@@ -1124,21 +1131,29 @@
     font-size: 12px;
     white-space: nowrap;
   }
+  .dt-top-row {
+    grid-area: row;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
   .dt-chips {
-    grid-area: chips;
-    flex-wrap: wrap;
-    max-width: 62vw; /* 6-7 seats wrap here rather than squeeze the status to nothing */
-    gap: 4px;
+    order: 0;
+    flex: 0 1 auto;
+    flex-wrap: wrap; /* 5+ seats wrap in the row rather than widen the page */
+    min-width: 0;
+    gap: 3px;
   }
   .dt-chip {
-    gap: 3px;
-    padding: 2px 6px;
+    gap: 2px;
+    padding: 2px 4px;
   }
   .dt-chip-name {
     display: none; /* the label says who; neighbours' names are on their panels */
   }
   .dt-status {
-    grid-area: status;
+    flex: 1 1 60px;
     min-width: 0;
     font-size: 13px;
   }
