@@ -22,7 +22,7 @@ import {
 import type { WwSeat, WwTable } from '../engine';
 import { windamere, windamereRules } from './windamere';
 import { rateGreatWork } from './windamereAdapter';
-import { bestUse, townValue, valueOf } from './windamereEval';
+import { bestUse, DEFAULT_TUNE, townValue, valueOf, type EvalTune } from './windamereEval';
 import type { Bot } from './types';
 
 const DENIAL_WEIGHT = 0.7;
@@ -53,6 +53,7 @@ export function createWindamereBot(
   name?: string,
   denialWeight = DENIAL_WEIGHT,
   search: SearchOptions | null = null,
+  tune: EvalTune = DEFAULT_TUNE,
 ): Bot<WwSeat, WwTable> {
   const rules = windamereRules;
   const la = createLookahead(windamere.ruleset);
@@ -64,7 +65,7 @@ export function createWindamereBot(
     for (const c of hand) {
       const def = rules.card(c.def);
       for (const role of ['spend', 'build'] as const) {
-        const v = valueOf(rules, state, s, { def, role, cardId: c.id });
+        const v = valueOf(rules, state, s, { def, role, cardId: c.id }, tune);
         if (v !== null && v > bv) {
           bv = v;
           best = { card: c.id, use: role };
@@ -94,7 +95,8 @@ export function createWindamereBot(
       if (level === 3 && view.turn < view.roundPicks - 1 && view.seats.length > 1) {
         const to = passTarget(view, seat);
         neighbourValue = new Map();
-        for (const c of hand) neighbourValue.set(c.id, bestUse(rules, view, to, rules.card(c.def)));
+        for (const c of hand)
+          neighbourValue.set(c.id, bestUse(rules, view, to, rules.card(c.def), tune));
       }
 
       let best: DraftAction | null = null;
@@ -104,14 +106,20 @@ export function createWindamereBot(
         const def = defOf(a.pick.card);
         if (!def) continue;
         const glean = gleanOf(view, seat, a.pick.card);
-        const v = valueOf(rules, view, seat, {
-          def,
-          role: a.pick.use === 'build' ? 'build' : 'spend',
-          cover: (a.pick.args as WwPickArgs | undefined)?.cover ?? null,
-          cardId: a.pick.card,
-          args: a.pick.args as WwPickArgs | undefined,
-          glean: glean ? rules.card(glean.def) : null,
-        });
+        const v = valueOf(
+          rules,
+          view,
+          seat,
+          {
+            def,
+            role: a.pick.use === 'build' ? 'build' : 'spend',
+            cover: (a.pick.args as WwPickArgs | undefined)?.cover ?? null,
+            cardId: a.pick.card,
+            args: a.pick.args as WwPickArgs | undefined,
+            glean: glean ? rules.card(glean.def) : null,
+          },
+          tune,
+        );
         if (v === null) continue;
         let score = v;
         if (neighbourValue) {
