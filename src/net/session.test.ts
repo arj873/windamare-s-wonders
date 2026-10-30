@@ -359,3 +359,61 @@ describe('game over and rematch', () => {
     expect(view(net, 'c1').round).toBe(0);
   });
 });
+
+describe('hardening (audit Q0-N1..N4)', () => {
+  it('one socket cannot fill the room with throwaway members (N1)', () => {
+    const { net } = lobby();
+    net.connect('flood');
+    for (let i = 0; i < 50; i++) net.send('flood', { type: 'hello', token: null, name: `F${i}` });
+    expect(net.session.room().members.length).toBeLessThanOrEqual(4); // Ann, Bob, one flooder
+    net.connect('late');
+    net.send('late', { type: 'hello', token: null, name: 'Late' });
+    expect(net.last('late', 'welcome')).toBeDefined();
+  });
+
+  it('a second hello on a bound socket needs the same token (N2)', () => {
+    const { net, bobToken } = lobby();
+    net.send('c2', { type: 'hello', token: null, name: 'Eli' });
+    expect(net.last('c2', 'error')!.code).toBe('bad_message');
+    net.send('c2', { type: 'hello', token: bobToken });
+    expect(net.last('c2', 'welcome')).toBeDefined();
+    net.disconnect('c2');
+    const members = net.session.room().members;
+    expect(members.filter((m) => m.connected).map((m) => m.name)).toEqual(['Ann']);
+  });
+
+  it('passes the host on after the grace period (N3)', () => {
+    const { net } = lobby();
+    net.disconnect('c1');
+    net.advance(59_999);
+    expect(net.session.room().host).toBe('m1');
+    net.advance(1);
+    expect(net.session.room().host).toBe('m2');
+    net.send('c2', { type: 'start' });
+    expect(net.last('c2', 'room')!.room.phase).toBe('playing');
+  });
+
+  it('turns an engine that throws or a bad seat count into bad_config (N4)', () => {
+    const { net, session } = lobby();
+    net.send('c1', { type: 'configure', config: { seatCount: 9, roundTimerSec: null } });
+    expect(net.last('c1', 'error')!.code).toBe('bad_message'); // protocol bound
+    net.send('c1', { type: 'configure', config: { seatCount: 8, roundTimerSec: null } });
+    expect(net.last('c1', 'error')!.code).toBe('bad_config'); // toy ruleset seats 2..5
+    expect(session.room().config.seatCount).toBe(3);
+
+    const throwing = {
+      ...toy,
+      createGame: () => {
+        throw new Error('boom');
+      },
+      ruleset: toy.ruleset,
+    };
+    const t = GameSession.create('R2', 0, throwing as typeof toy, fakeDeps());
+    const n2: Net = new LocalNet(t.session);
+    n2.connect('a');
+    n2.send('a', { type: 'hello', token: t.hostToken, name: 'Ann' });
+    expect(() => n2.send('a', { type: 'start' })).not.toThrow();
+    expect(n2.last('a', 'error')!.code).toBe('bad_config');
+    expect(t.session.currentPhase).toBe('lobby');
+  });
+});
