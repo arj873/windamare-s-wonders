@@ -92,6 +92,47 @@ filled by labour, never by a card; the 2-player Build/Spend/Burn variant; the ti
 cards / 4 turns / pairs cadence; the blocklist terms in RULES.md (none found: Age, stage,
 shield, science, guild and chain do not appear as mechanics).
 
+---
+
+## 5. D2c check: single pick, neighbour trade, new goods
+
+The human changed three things after this review (inbox 2026-10-29 23:15): new goods, a
+**single pick** instead of the pair, and **neighbour trade** "closest to the original". The
+pair-pick findings above (D3, D7, and the "pairs cadence" in §4) no longer apply once D2c lands.
+This section is the yardstick; §5.3 holds the verdict on D2c.
+
+### 5.1 What 7 Wonders does (from memory; the things to not match)
+
+- **Cadence:** 3 rounds; deal 7; take 1 card a turn; 6 turns; the 7th card is discarded; pass
+  left, right, left; 18 plays a game. Each card has three uses: build it, put it under the
+  wonder (paying the stage cost), or discard it for a flat 3 coins.
+- **Trade:** buy a good that a neighbour **produces** for **2 coins a unit, paid to that
+  neighbour**. The neighbour can't refuse and **loses nothing**: production is capacity, and the
+  same unit can be sold to both neighbours and used by its owner in the same turn. Goods from
+  "one of X or Y" commerce cards can't be bought. Discount cards cut the price to **1 coin**:
+  two cut raw goods from **one side only** (left or right), one cuts crafted goods from both
+  sides. Coins received arrive too late to spend that turn.
+- **Duel's trade:** buy from the bank at **2 + the number of that good the opponent's brown or
+  grey cards make**; some cards fix a good's price at 1.
+- **Goods:** wood, stone, clay, ore (raw) and glass, cloth, papyrus (crafted): 4 + 3.
+
+### 5.2 Too close if
+
+| Item                | Too close if D2c has...                                                                               | Plays differently if...                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Cadence             | 3 rounds; or hand 7 with 6 plays; or 18 plays; or pass left, right, left                              | Our 4 Seasons and left/right/left/right already differ. Discarding the last card is genre-common. Keep hand ≠ 7 and plays per round ≠ 6 |
+| Uses of a card      | Exactly three uses: build, feed the monument with the card, discard for a flat amount (esp. 3 coins)  | Build or Spend for the card's own printed band (no flat floor); the Great Work stays fed by labour, never by a card                     |
+| Trade source        | Buying from what the neighbour **produces** (their yield or Holdings) without them losing it          | Buying from the neighbour's **store**: the good moves from their store to yours, so selling has a cost and a store can be drained       |
+| Trade price         | A flat 2 coins a unit; or a formula "base + how much the seller makes" (Duel)                         | e.g. a price that rises per unit bought this turn, a price tied to the seller's stock, or a seller-posted price                         |
+| Discounts           | Cards that make buying cheaper (to 1 coin), especially split by side (left / right) or by good family | Commerce rewards **selling** (e.g. a bonus when a neighbour buys from you) or converting, not cheaper buying                            |
+| Limits and refusals | Unlimited buying of the same units from both neighbours                                               | A per-turn limit, or units that are actually used up                                                                                    |
+| Goods               | Any of wood, stone, clay, ore, glass, cloth/loom, papyrus; or a 4 raw + 3 crafted split; or 7 goods   | Our own names and count; no raw/crafted split (we have none today)                                                                      |
+| 2-player            | Bank purchase priced by the opponent's production (Duel)                                              | The same neighbour-trade rule with one neighbour, or a separate rule that isn't Duel's formula                                          |
+
+### 5.3 Verdict on D2c
+
+_Pending: D2c not yet on `agent/design` (tip `0573351`, D2b) at 2026-10-29 23:14._
+
 ## Sources
 
 - Duel Palisade upgrades into Fortifications: [officialgamerules.org Duel rules](https://officialgamerules.org/game-rules/7-wonders-duel-rules/),
