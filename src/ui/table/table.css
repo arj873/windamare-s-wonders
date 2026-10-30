@@ -943,9 +943,19 @@
   min-height: 32px;
   font-size: 12px;
 }
-.dt-choice .seg-btn:disabled {
-  opacity: 0.45;
+/* R7 #5: closed options stay readable (ink-dim on the popover is ~6:1), struck through. */
+.dt-choice .seg-btn:disabled,
+.dt-choice .seg-btn.is-warn:disabled {
+  opacity: 1;
+  color: var(--ink-dim);
+  background: transparent;
+  text-decoration: line-through;
   cursor: not-allowed;
+}
+.dt-choice-why {
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--ink-dim);
 }
 .dt-headline {
   margin: 14px 0 0;

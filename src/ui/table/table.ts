@@ -1027,6 +1027,7 @@ export class DraftTable {
   }
 
   private choiceRow(c: HandCard, o: UseOption, row: UseOption['choices'][number], r: number) {
+    const whyId = (k: number) => `why-${c.id}-${o.use.id}-${r}-${k}`;
     return h(
       'div',
       {
@@ -1050,11 +1051,18 @@ export class DraftTable {
                 'data-act': `choose:${c.id}:${o.use.id}:${r}:${k}`,
                 'data-k': `choice-${c.id}-${o.use.id}-${r}-${k}`,
                 'data-option': opt.key,
+                ...(opt.why === null ? {} : { 'aria-describedby': whyId(k) }),
               },
             },
             opt.label,
           ),
         ),
+      ),
+      // R7 #5: touch has no hover titles, so each closed option says why under the row.
+      ...row.options.flatMap((opt, k) =>
+        opt.why === null
+          ? []
+          : [h('span', { class: 'dt-choice-why', id: whyId(k) }, `${opt.label}: ${opt.why}`)],
       ),
     );
   }
