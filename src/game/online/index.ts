@@ -1,10 +1,14 @@
 /**
- * Entry points for the online game, for the app shell (ui's boot: the home screen's Play online
- * and Join buttons, and `?room=CODE` invite links) and the online dev page (dev.ts).
+ * Entry points for the online game, for the app shell and the online dev page (dev.ts).
  *
- *   const online = onlineLauncher({ engine, present, mount, goHome, ... });
- *   home: onOnline: (name) => online.create(name)   onJoin: (code, name) => online.join(code, name)
- *   load: const code = roomFromUrl(location.search); if (code) online.join(code)
+ * App shell (ui's boot, src/game/boot.ts `BootOptions.online`):
+ *
+ *   const online = bootOnline(windamereBinding());
+ *   boot(root, { game, online, ... });
+ *   const code = roomFromUrl(location.search);   // an invite link
+ *   if (code) online.join(code, '', root);         // join card (or straight in with a token)
+ *
+ * The lower-level `onlineLauncher` (mount anywhere, results as promises) is what dev.ts uses.
  */
 import type { DraftEngine } from '../../engine';
 import { parseRoomCode } from '../../net/transport';
@@ -13,6 +17,7 @@ import { browserStorage, loadPref, savePref } from '../../ui/prefs';
 import { NAME_KEY } from '../../ui/home/screen';
 import type { Presenter } from '../../ui/table/present';
 import type { RevealHook } from '../fx';
+import type { GameBinding } from '../play';
 import { OnlineApp, type OnlineEnv } from './app';
 import { pickBackend, realClock, tokenStoreFor, type Backend } from './backend';
 
@@ -117,6 +122,57 @@ export function onlineLauncher<S, T>(opts: OnlineLaunchOptions<S, T>): OnlineLau
       } catch (e) {
         return `Could not reach the room server: ${e instanceof Error ? e.message : String(e)}`;
       }
+    },
+  };
+}
+
+/** What ui's `boot({ online })` takes (src/game/boot.ts). */
+export interface BootOnline {
+  create(name: string, root: HTMLElement): void;
+  join(code: string, name: string, root: HTMLElement): void;
+}
+
+export interface BootOnlineOptions<S, T> {
+  /**
+   * Leaving a room. Default: reload this page without `?room=`, which lands on the home screen
+   * (boot has no "show home" callback for us yet).
+   */
+  goHome?(): void;
+  backend?: OnlineLaunchOptions<S, T>['backend'];
+  toast?: (message: string, kind?: ToastKind) => void;
+}
+
+/**
+ * The app shell's adapter: the binding's engine, presenter and reveal (fx) for the online table,
+ * the visit mounted into boot's `root`, and errors as toasts (the home screen stays up).
+ */
+export function bootOnline<S, T>(
+  binding: GameBinding<S, T>,
+  opts: BootOnlineOptions<S, T> = {},
+): BootOnline & { launcher: OnlineLauncher<S, T> } {
+  let target: HTMLElement | null = null;
+  const toast = opts.toast ?? ((m: string, k?: ToastKind) => void showToast(m, k));
+  const launcher = onlineLauncher<S, T>({
+    engine: binding.engine,
+    present: binding.present,
+    ...(binding.fx ? { fx: binding.fx } : {}),
+    ...(opts.backend ? { backend: opts.backend } : {}),
+    toast,
+    mount: (el) => target?.replaceChildren(el),
+    goHome: opts.goHome ?? (() => location.assign(location.pathname)),
+  });
+  const report = (r: OnlineApp<S, T> | string) => {
+    if (typeof r === 'string') toast(r, 'error');
+  };
+  return {
+    launcher,
+    create(name, root) {
+      target = root;
+      void launcher.create(name).then(report);
+    },
+    join(code, name, root) {
+      target = root;
+      void launcher.join(code, name || undefined).then(report);
     },
   };
 }

@@ -19,12 +19,14 @@ import { onlineLauncher, roomFromUrl } from '.';
 
 const root = document.getElementById('app');
 if (root) {
-  const { engine, present } = windamereBinding();
+  // The same reveal (fx) as the hotseat table: src/game/windamere/fx.ts through the binding.
+  const { engine, present, fx } = windamereBinding();
   const here = () =>
     `${location.pathname}${location.search.includes('server=remote') ? '?server=remote' : ''}`;
   const online = onlineLauncher({
     engine,
     present,
+    ...(fx ? { fx } : {}),
     mount: (el) => root.replaceChildren(el),
     goHome: () => {
       history.replaceState(null, '', here());

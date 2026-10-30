@@ -8,11 +8,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HIDDEN_CARD } from '../../engine';
 import { FakeClock } from '../../net/loopback';
+import { clockMs } from '../../net/protocol';
+import { clockText } from '../../ui/table/table';
 import type { KeyStore } from '../../net/transport';
 import { windamereBinding } from '../windamere';
 import { OnlineApp, type OnlineEnv } from './app';
 import { inPageBackend } from './devBackend';
 import { DevServer } from './devServer';
+import { bootOnline } from './index';
 import { presence } from './netPlay';
 import type { WwSeat, WwTable } from '../../engine';
 
@@ -54,12 +57,17 @@ function world() {
   const backend = inPageBackend(server, clock);
   const { engine, present } = windamereBinding();
   const toasts: string[] = [];
+  /** One reveal hook spy per env (per "tab"), in creation order. */
+  const fxs: { onAction: ReturnType<typeof vi.fn>; skip: ReturnType<typeof vi.fn> }[] = [];
   const env = (nick = ''): OnlineEnv<WwSeat, WwTable> & { tokens: ReturnType<typeof memStore> } => {
     let name = nick;
+    const fx = { onAction: vi.fn(), skip: vi.fn() };
+    fxs.push(fx);
     return {
       backend,
       engine,
       present,
+      fx,
       tokens: memStore(),
       clock,
       name: () => name,
@@ -92,7 +100,7 @@ function world() {
     }
     clock.flush();
   };
-  return { clock, server, backend, env, mount, settle, tick, toasts };
+  return { clock, server, backend, env, mount, settle, tick, toasts, fxs };
 }
 
 const q = (app: App, sel: string) => app.element.querySelector<HTMLElement>(sel);
@@ -161,17 +169,20 @@ describe('online room visit (O1)', () => {
 
     k(ann, 'lobby-start')?.click();
     await w.settle();
-    // Fast clock: the opening Great Work choice is a prompt (60 s x 0.5), then the first pick
-    // gets 90 s x 0.5 (RULES.md R15.3), counted down from the server's number.
+    // Fast clock: the opening Great Work choice is a prompt, then the first pick (RULES.md
+    // R15.3; lengths from net's clockMs so a retune does not break this), counted down from the
+    // server's number between messages.
+    const promptMs = clockMs('fast', 'prompt', 0) ?? 0;
+    const pickMs = clockMs('fast', 'pick', 0) ?? 0;
     expect(k(ann, 'online-table')).not.toBeNull();
     expect(ann.roomClient?.game?.view.phase.kind).toBe('prompt');
-    expect(q(ann, '.dt-timer')?.textContent).toBe('0:30');
+    expect(q(ann, '.dt-timer')?.textContent).toBe(clockText(promptMs));
     w.clock.advance(10_000);
     w.tick();
-    expect(q(ann, '.dt-timer')?.textContent).toBe('0:20');
+    expect(q(ann, '.dt-timer')?.textContent).toBe(clockText(promptMs - 10_000));
     await toPicks(w, ann, bob);
     expect(ann.roomClient?.game?.view.phase.kind).toBe('pick');
-    expect(q(ann, '.dt-timer')?.textContent).toBe('0:45');
+    expect(q(ann, '.dt-timer')?.textContent).toBe(clockText(pickMs));
 
     for (const [app, seat] of [
       [ann, 0],
@@ -223,11 +234,36 @@ describe('online room visit (O1)', () => {
     expect(bobView?.seats[0]?.pick).toBeNull();
     expect(JSON.stringify(bobView)).not.toContain(`"card":${annPick?.card},"use"`);
     expect(k(bob, 'waiting-line')?.textContent).toBe('Your pick: everyone else is ready');
+    const annFx = w.fxs[0];
+    if (!annFx) throw new Error('no fx spy');
+    const before = annFx.onAction.mock.calls.length;
     pickFirst(bob);
     await w.settle();
     // Everyone picked: revealed, next turn, both hands one card smaller.
     expect(ann.roomClient?.game?.view.turn).toBe((turn ?? 0) + 1);
     expect(bob.roomClient?.game?.view.lastReveal?.picks.length).toBe(4);
+    // The reveal goes to the binding's fx hook (same seam as play.ts), keyed by actionKey, with
+    // Ann's own view and the table's anchors.
+    expect(annFx.onAction.mock.calls.length).toBeGreaterThan(before);
+    const moment = annFx.onAction.mock.calls.at(-1)?.[0] as {
+      key: string;
+      view: { view: { viewer: number | null } };
+      anchors: { root: HTMLElement };
+    };
+    expect(moment.key).toBe(ann.netPlay?.current?.actionKey);
+    expect(moment.view.view.viewer).toBe(0);
+    expect(moment.anchors.root.isConnected).toBe(true);
+    // Never twice for the same action.
+    const keys = annFx.onAction.mock.calls.map((c) => (c[0] as { key: string }).key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('the first render of a table is not a reveal', async () => {
+    const { w, ann } = await lobbyOfTwo();
+    k(ann, 'lobby-start')?.click();
+    await w.settle();
+    expect(ann.netPlay?.current).not.toBeNull();
+    expect(w.fxs[0]?.onAction).not.toHaveBeenCalled();
   });
 
   it('reconnect: banner while the link is down, same seat and view after', async () => {
@@ -313,5 +349,36 @@ describe('presence', () => {
     };
     expect(presence(game, away, 0).absent.map((s) => s.name)).toEqual(['Bob']);
     void bob;
+  });
+});
+
+describe('bootOnline (ui boot({ online }) adapter)', () => {
+  it('create mounts the lobby into boot root; a bad code is a toast', async () => {
+    const server = new DevServer({ bytes: seededBytes(3) });
+    const toast = vi.fn();
+    const online = bootOnline(windamereBinding(), {
+      backend: inPageBackend(server),
+      goHome: vi.fn(),
+      toast,
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    try {
+      online.create('Ann', root);
+      await vi.waitFor(() => expect(root.querySelector('[data-k="room-code"]')).not.toBeNull());
+      const code = root.querySelector('[data-k="room-code"]')?.textContent ?? '';
+      expect(online.launcher.current?.roomId).toBe(code);
+      await vi.waitFor(() =>
+        expect(root.querySelector('.ol-seat .ol-seat-label')?.textContent).toBe('Ann'),
+      );
+      online.join('not a code', '', root);
+      await vi.waitFor(() => expect(toast).toHaveBeenCalled());
+      expect(String(toast.mock.calls[0]?.[0])).toMatch(/not a room code/);
+      // The lobby stays up after a bad code.
+      expect(root.querySelector('[data-k="room-code"]')?.textContent).toBe(code);
+    } finally {
+      online.launcher.close();
+      server.dispose();
+    }
   });
 });

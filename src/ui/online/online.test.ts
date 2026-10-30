@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import type { ChatEntry, RoomInfo } from '../../net/protocol';
+import { clockMs, type ChatEntry, type RoomInfo } from '../../net/protocol';
 import { ChatPanel } from './chat';
 import { JoinCard, noticeScreen } from './join';
 import { LobbyScreen } from './lobby';
@@ -91,7 +91,9 @@ describe('lobbyView', () => {
       '4 towns · 1 player + 3 bots · Fast clock',
     );
     expect(configSummary({ seatCount: 3, timer: 'off' }, 3)).toBe('3 towns · 3 players · no clock');
-    expect(timerHint('normal')).toBe('90 s for the first pick');
+    expect(timerHint('normal')).toBe(
+      `${(clockMs('normal', 'pick', 0) ?? 0) / 1000} s for the first pick`,
+    );
     expect(timerHint('off')).toBe('picks wait for everyone');
     expect(inviteUrl('http://x.dev/play?debug=1&server=local#a', 'K7QF2M')).toBe(
       'http://x.dev/play?room=K7QF2M&server=local',

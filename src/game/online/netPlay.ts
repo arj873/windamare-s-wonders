@@ -27,7 +27,10 @@ export interface NetPlayOptions<S, T> {
   /** Client-side engine: the table model asks it for legal uses of the viewer's own view. */
   engine: DraftEngine<S, T>;
   present: Presenter<S, T>;
-  /** The fx lane's reveal animation (src/game/fx.ts); absent = the table's own badges. */
+  /**
+   * The reveal animation and sound: the binding's hook (src/game/windamere/fx.ts, the same path
+   * as play.ts offline). Absent = no reveal animation.
+   */
   fx?: RevealHook<S, T>;
   /** Final scores: "New game" = leave the room. */
   onLeave(): void;
@@ -141,7 +144,6 @@ export class NetPlay<S, T> {
       },
     };
     this.table = new DraftTable(handlers);
-    this.table.ownEffects = !opts.fx;
     this.presenceEl = h('div', {
       class: 'ol-presence',
       attrs: { role: 'status', 'aria-live': 'polite', 'data-k': 'presence' },
@@ -244,17 +246,18 @@ export class NetPlay<S, T> {
         : view.view.submitted[viewer] === true);
     this.model = model;
     this.table.update(model);
-    // The fx lane animates each new action once the table shows it (never the first render).
-    if (this.fxKey !== null && model.effectsKey !== this.fxKey) {
+    // The fx lane animates each new action once the table shows it (never the first render),
+    // as play.ts does offline.
+    if (this.fxKey !== null && model.actionKey !== this.fxKey) {
       this.opts.fx?.onAction({
-        key: model.effectsKey,
+        key: model.actionKey,
         view,
         model,
         anchors: this.table.anchors,
         reducedMotion: !motionOn(),
       });
     }
-    this.fxKey = model.effectsKey;
+    this.fxKey = model.actionKey;
     this.renderPresence(game);
     this.tick();
   }
