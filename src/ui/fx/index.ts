@@ -26,7 +26,8 @@ export function playCue(id: string, seat: SeatId | null, who: TableFx): void {
 
 /**
  * The one call ui makes per resolved action: animate `latestEvents(view)` with sound.
- * Resolves when the last beat has played; ui should keep input blocked until then.
+ * Resolves when the last beat has played. Input is never blocked (UX.md P1): ui passes
+ * `cancelled` so a click or key skips the rest of the beats.
  */
 export function playRevealWithSound(
   events: readonly WwEventEntry[],

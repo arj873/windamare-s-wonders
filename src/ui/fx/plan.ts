@@ -20,6 +20,8 @@ export type Step =
   | { kind: 'fly'; from: SeatId; to: SeatId; text: string }
   /** A Great Work tier fills. */
   | { kind: 'tier'; seat: SeatId; greatWork: string; tier: number }
+  /** A message for the whole table (the Season's Raid revealed, an Honour left unclaimed). */
+  | { kind: 'notice'; text: string }
   /** A Raid result lands on a town. */
   | { kind: 'raid'; seat: SeatId; outcome: 'held' | 'plundered'; text: string };
 
@@ -38,11 +40,18 @@ export interface PlanOptions {
   label?: (id: string) => string;
 }
 
-/** "+2 flint, +1 coins" for the nonzero entries of `gains`. */
+/** "1 coin", "2 coins". */
+export const coinsText = (n: number): string => `${n} ${n === 1 ? 'coin' : 'coins'}`;
+
+/** "+2 flint, +1 coin" for the nonzero entries of `gains`. */
 export function gainsText(gains: Gains, label: (id: string) => string = (s) => s): string {
   return Object.entries(gains)
     .filter(([, n]) => n !== 0)
-    .map(([k, n]) => `${n > 0 ? '+' : '−'}${Math.abs(n)} ${label(k)}`)
+    .map(([k, n]) => {
+      const sign = n > 0 ? '+' : '−';
+      const abs = Math.abs(n);
+      return k === 'coins' ? `${sign}${coinsText(abs)}` : `${sign}${abs} ${label(k)}`;
+    })
     .join(', ');
 }
 
@@ -115,7 +124,7 @@ export function planReveal(entries: readonly WwEventEntry[], opts: PlanOptions =
         if (e.coins > 0)
           push(
             e,
-            { kind: 'chip', seat: e.seat, text: `−${e.coins} coins`, tone: 'loss' },
+            { kind: 'chip', seat: e.seat, text: `−${coinsText(e.coins)}`, tone: 'loss' },
             'coin',
             e.seat,
           );
@@ -127,7 +136,7 @@ export function planReveal(entries: readonly WwEventEntry[], opts: PlanOptions =
             kind: 'fly',
             from: e.buyer,
             to: e.seller,
-            text: `${e.price} coins for ${label(e.good)}`,
+            text: `${coinsText(e.price)} for ${label(e.good)}`,
           },
           'coin',
           e.buyer,
@@ -175,7 +184,7 @@ export function planReveal(entries: readonly WwEventEntry[], opts: PlanOptions =
         break;
       case 'raid': {
         const held = e.outcome === 'held';
-        const text = held ? `Held (+${e.valour} valour)` : `Plundered (−${e.lost} coins)`;
+        const text = held ? `Held (+${e.valour} valour)` : `Plundered (−${coinsText(e.lost)})`;
         push(
           e,
           { kind: 'raid', seat: e.seat, outcome: e.outcome, text },
@@ -187,14 +196,39 @@ export function planReveal(entries: readonly WwEventEntry[], opts: PlanOptions =
       case 'bounty':
         push(
           e,
-          { kind: 'fly', from: e.from, to: e.to, text: `${e.coins} coins bounty` },
+          { kind: 'fly', from: e.from, to: e.to, text: `${coinsText(e.coins)} bounty` },
           'coin',
           e.to,
         );
         break;
-      case 'honour':
       case 'greatWork':
+        push(
+          e,
+          { kind: 'chip', seat: e.seat, text: label(e.greatWork), tone: 'note' },
+          'reveal',
+          e.seat,
+        );
+        break;
       case 'raidRevealed':
+        push(
+          e,
+          { kind: 'notice', text: `Raid: ${label(e.raid)} (strength ${e.strength})` },
+          'reveal',
+          null,
+        );
+        break;
+      case 'honour':
+        if (e.leaders.length === 0) {
+          push(e, { kind: 'notice', text: `${label(e.honour)}: no leader` }, null, null);
+        } else {
+          for (const seat of e.leaders)
+            push(
+              e,
+              { kind: 'chip', seat, text: `Leads ${label(e.honour)}`, tone: 'note' },
+              null,
+              seat,
+            );
+        }
         break;
     }
   }

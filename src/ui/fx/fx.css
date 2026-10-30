@@ -58,3 +58,58 @@
     transform: none;
   }
 }
+
+/* ---- reveal sprites (reveal.ts): transient, absolutely positioned in the overlay ---- */
+.fx-sprite {
+  z-index: 50;
+  white-space: nowrap;
+  font-family: var(--font-display, inherit);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.fx-card {
+  min-width: 64px;
+  padding: 18px 12px;
+  text-align: center;
+  color: var(--ink-dark, #2a2118);
+  background: linear-gradient(180deg, var(--card-paper, #f4ead2), var(--card-paper-2, #e6d6b0));
+  border: 2px solid var(--card-edge, #8a6d3b);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+.fx-chip {
+  padding: 3px 10px;
+  font-size: 14px;
+  border-radius: 999px;
+  color: var(--ink, #fff);
+  background: var(--surface-raised, rgb(30 26 20 / 0.9));
+  border: 1.5px solid var(--line, #8a6d3b);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+.fx-chip.fx-gain {
+  border-color: var(--good, #5fae6b);
+}
+.fx-chip.fx-loss {
+  border-color: var(--bad, #c8573f);
+}
+.fx-chip.fx-note,
+.fx-chip.fx-coin {
+  border-color: var(--accent, #d9a441);
+}
+.fx-tier,
+.fx-raid,
+.fx-notice {
+  padding: 6px 16px;
+  font-size: 18px;
+  border-radius: var(--radius, 10px);
+  color: var(--ink, #fff);
+  background: var(--surface-raised, rgb(30 26 20 / 0.92));
+  border: 2px solid var(--accent, #d9a441);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.4);
+}
+.fx-raid.fx-plundered {
+  border-color: var(--bad, #c8573f);
+}
+.fx-raid.fx-held {
+  border-color: var(--good, #5fae6b);
+}

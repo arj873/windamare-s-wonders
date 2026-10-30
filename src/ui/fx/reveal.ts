@@ -8,6 +8,7 @@
  * getBoundingClientRect per anchor per step). `prefers-reduced-motion` (or `instant`) skips the
  * motion and resolves at once; sounds still play. Never rejects: a missing anchor is skipped.
  */
+import './fx.css';
 import type { SeatId } from '../../engine/core';
 import type { WwEventEntry } from '../../engine/game/events';
 import { planReveal, type Beat, type BeatCue, type PlanOptions, type Step } from './plan';
@@ -42,6 +43,7 @@ export const STEP_MS = {
   fly: 600,
   tier: 640,
   raid: 760,
+  notice: 1100,
 } as const;
 const BEAT_GAP_MS = 90;
 
@@ -200,6 +202,22 @@ async function playStep(step: Step, a: RevealAnchors, speed: number): Promise<vo
           { transform: `${CENTER} scale(1.2)`, opacity: 1, offset: 0.4 },
           { transform: `${CENTER} scale(1)`, opacity: 1, offset: 0.75 },
           { transform: `${CENTER} scale(1)`, opacity: 0 },
+        ],
+        ms,
+      );
+    }
+    case 'notice': {
+      const el = sprite(layer, 'fx-notice', step.text, {
+        x: layer.clientWidth / 2,
+        y: layer.clientHeight * 0.3,
+      });
+      return run(
+        el,
+        [
+          { transform: `${CENTER} translateY(14px)`, opacity: 0 },
+          { transform: `${CENTER} translateY(0)`, opacity: 1, offset: 0.2 },
+          { transform: `${CENTER} translateY(0)`, opacity: 1, offset: 0.8 },
+          { transform: `${CENTER} translateY(-8px)`, opacity: 0 },
         ],
         ms,
       );
