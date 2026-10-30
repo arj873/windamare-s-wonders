@@ -1,7 +1,7 @@
 # ART: visual identity
 
-Owner: art lane. Status: A1 first pass. **Not yet viewed in a browser** (no dev server existed
-when written); SVGs pass `xmllint` only.
+Owner: art lane. Status: A3 (retheme to CARDS.md). Viewed once in headless Chrome via `art-dev.html` (A3);
+layout renders. No colour-blind simulator run.
 
 ## Look
 
@@ -28,48 +28,65 @@ Fonts come from `@fontsource` packages (`@fontsource/marcellus`, `@fontsource-va
 
 ## Card anatomy (200×280 viewBox, `public/art/card-frame.svg`)
 
-| Zone (svg id) | Position                | Content                           |
-| ------------- | ----------------------- | --------------------------------- |
-| `cost`        | top-left column         | resource/coin icons, one per unit |
-| `name`        | top bar, type colour    | card name, Marcellus              |
-| `art`         | middle right            | art window (136×100)              |
-| `effect`      | below art               | effect text + effect icons        |
-| `band`        | bottom bar, type colour | type shape icon + type label      |
+| Zone (svg id) | Position                | Content                                    |
+| ------------- | ----------------------- | ------------------------------------------ |
+| `cost`        | top-left column         | goods/coin icons, one per unit             |
+| `name`        | top bar, kind colour    | card name, Marcellus                       |
+| `art`         | middle right            | art window (136×100)                       |
+| `effect`      | below art               | effect text                                |
+| `spend`       | dashed strip            | Spend band gains (R5): goods, coin, labour |
+| `band`        | bottom bar, kind colour | kind shape icon + kind label               |
 
-Frame is parametric: set `--type-color` / `--type-ink` on the host and inline the SVG (as in
-`art-dev.html`). Via `<img>` the CSS vars do not apply and fallbacks show.
+Frame is parametric: set `--kind-color` on the host and inline the SVG (as `art-dev.html`
+does). Via `<img>` the CSS vars do not apply and fallbacks show. Season is not drawn on the
+frame yet (open).
 
-## Card-type colour coding (provisional, ww-design owns the final list)
+## Card kinds (CARDS.md, RULES.md R7)
 
-Colours follow the Okabe-Ito colour-blind-safe set. **Colour is never the only cue:** every type
-has a unique band silhouette and glyph, and the band always prints the type name.
+Okabe-Ito colour-blind-safe hues, **assigned deliberately not to match the 7 Wonders
+colour-to-role map** (ORIGINALITY §1.5, §6): no red military, green science, blue civic,
+yellow commerce, purple late-scoring, brown/grey resources. **Colour is never the only cue:**
+every kind has its own band silhouette and glyph, and the band prints the kind name.
 
-| Type     | Colour    | Shape    | Glyph           |
-| -------- | --------- | -------- | --------------- |
-| raw      | `#8a5a2b` | hexagon  | sapling         |
-| craft    | `#6b6f78` | square   | hammer          |
-| civic    | `#0072b2` | circle   | columns         |
-| trade    | `#e69f00` | diamond  | exchange arrows |
-| military | `#d55e00` | triangle | post/banner     |
-| science  | `#009e73` | pentagon | sparkle dial    |
-| guild    | `#cc79a7` | star     | cross mark      |
+| Kind     | Colour    | Shape       | Glyph          |
+| -------- | --------- | ----------- | -------------- |
+| Holding  | `#009e73` | house       | house in roof  |
+| Hall     | `#e69f00` | arch        | columns        |
+| Market   | `#cc79a7` | hexagon     | market basket  |
+| Watch    | `#56b4e9` | banner      | tower          |
+| Lore     | `#d55e00` | diamond     | cross-and-ring |
+| Landmark | `#2b2d6e` | eight-burst | peak           |
 
-Caveat: raw (brown) vs craft (grey) vs trade (orange) are close for some deficiencies; shape
-and label carry the distinction. Not tested with a simulator yet.
+Originality check against §1.5: Holding is green (7W: brown/grey), Hall amber (7W civic is
+blue), Market rose (7W commerce is yellow), Watch sky blue (7W war is red), Lore vermillion
+(7W science is green), Landmark indigo (7W guilds are purple). Sky-blue Watch vs 7W blue civic
+is the nearest overlap; judged acceptable because Watch is also a banner shape. Needs human
+eye. Colour-blind safety is by palette and shape only, no simulator run.
 
-**Adding a type:** add `--type-<id>` and `--type-<id>-ink` to `tokens.css`, copy a
-`public/art/types/*.svg` and change shape path + glyph. No frame change needed.
+**Adding a kind:** add `--kind-<id>` and `--kind-<id>-ink` to `tokens.css`; copy a
+`public/art/kinds/*.svg` and change the shape path and glyph. No frame change needed.
 
-## Icons (`public/art/icons/`, 32×32)
+## Goods and counters (`public/art/goods/`, 32×32)
 
-Resources: timber, stone, clay, grain, glass, cloth. Currency: coin. Score: points. Each is a
-coloured disc (or star) with a white glyph and dark outline, so they read on any card. The
-resource set is a placeholder until design fixes the resource list.
+Goods (lumber, brick, wool, grain, ore) reuse Colonizers of Windamere's glyphs (catan
+`src/ui/icons.ts`) on a pale tinted tile, so both games share a world. Then coin, **labour**
+(hammer-and-wedge disc), **Guard** (tower, sky blue), **Valour** (star, amber), **Renown**
+(indigo hexagon). Goods are distinguished by glyph, not just tile colour.
+
+## Lore ranks, Raid, Great Work, Honours (`public/art/badges/`, `honours/`)
+
+- `badges/lore-1..6.svg`: Lore diamond with the numeral and that many pips.
+- `badges/raid-frame.svg` (200×280): dark card with a jagged top edge so a Raid is never mistaken
+  for a normal card; slots `name`, `art`, `strength` (vermillion disc), `flavour`.
+- `badges/great-work-track.svg` (500×170): four tier slots I to IV with a progress bar
+  (`#progress` width 0 to 460 for labour). Thresholds are data; labels are drawn by the UI.
+- `honours/*.svg`: eight rosette badges, one glyph each: warden, steward, patron, merchant, sage,
+  master-builder, treasurer, broad-town.
 
 ## Monument (`public/art/monument-frame.svg`, 480×220)
 
-Stepped plinth with three stage sockets (`stage-1..3`) and a saffron capstone. Stage count is
-not final; duplicate or remove sockets to match RULES.md.
+Stepped plinth with three sockets (`stage-1..3`) and a saffron capstone. A Great Work has four
+tiers, so this frame is **superseded by the track above; retire or restyle it** (open).
 
 ## Table chrome (A2)
 
@@ -80,21 +97,22 @@ shows pass direction; mirror for the other side), `round-badge.svg` (timer ring:
 card fan). Live-layout equivalents are CSS in `src/ui/theme/chrome.css`
 (`.table .seat .seat-me .neighbour .round-badge .timer-low`; `--timer` 0..1 drives the ring).
 Seat identity: colour (`--seat`) plus a marker shape and the seat name, never colour alone.
-Built from catan's patterns without UX.md/RULES.md; **adjust when they land**. Not viewed in a
-browser yet.
+Built from catan's patterns before UX.md/RULES.md landed; not yet reconciled with UX.md.
 
 ## Preview
 
 `art-dev.html` renders every asset plus a sample card per type. Run under vite (platform) at
-`/art-dev.html`. Untested until a dev server exists.
+`/art-dev.html`. Rendered once under vite in headless Chrome (A3).
 
 ## Originality
 
-No 7 Wonders iconography: no laurel-wreath coin, no tablet/cog/compass science trio, no
-wonder-board layout. Glyphs here are generic and drawn from scratch.
+No 7 Wonders iconography: no laurel-wreath coin, no tablet/cog/compass trio, no wonder-board
+layout, no colour-to-role map (see kinds table). Glyphs are generic and drawn from scratch,
+except goods glyphs, which are ours from Colonizers of Windamere.
 
 ## Open
 
-- Final type and resource lists (design).
-- Card art illustrations: none yet, art window is a flat placeholder.
-- Fonts packages (platform).
+- Reconcile table chrome with `docs/design/UX.md`.
+- Season marker on the card frame; Spend band layout for 3+ gains.
+- Monument frame (3 sockets) vs 4-tier Great Work.
+- Card art illustrations: none yet, the art window is a flat placeholder.

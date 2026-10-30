@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 280"><title>Raid card frame</title><defs><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2a22"/><stop offset="1" stop-color="#1e0c04"/></linearGradient></defs>
+<path d="M4 20l14-14 14 14 14-14 14 14 14-14 14 14 14-14 14 14 14-14 14 14 14-14 14 14 8 8v236a14 14 0 01-14 14H18A14 14 0 014 270z" fill="url(#r)" stroke="#e09a72" stroke-width="4" stroke-linejoin="round"/>
+<rect id="name" x="16" y="30" width="168" height="30" rx="8" fill="#fbf3e2" stroke="#1e0c04" stroke-width="2"/>
+<rect id="art" x="16" y="68" width="168" height="110" rx="6" fill="#5e2914" stroke="#e09a72" stroke-width="2"/>
+<circle id="strength" cx="100" cy="210" r="34" fill="#d55e00" stroke="#fbf3e2" stroke-width="4"/>
+<path d="M100 184l12 36h-24z" fill="#fff" opacity=".35"/>
+<rect id="flavour" x="16" y="250" width="168" height="20" rx="6" fill="#fbf3e2" opacity=".9"/></svg>

@@ -2,7 +2,7 @@
  * Windamere's Wonders design tokens. Ported from catan's Sunfired theme (terracotta, cobalt
  * glaze, cream wells, saffron highlights), trimmed to what a card game needs.
  * Marcellus for titles, Nunito for everything else.
- * Card-type colours are Okabe-Ito-derived (colour-blind safe) and ALWAYS paired with a band
+ * Card-kind colours are Okabe-Ito-derived (colour-blind safe) and ALWAYS paired with a band
  * shape and an icon; see docs/design/ART.md.
  */
 :root {
@@ -45,29 +45,31 @@
   --card-shadow: 0 3px 5px rgba(0, 0, 0, 0.45);
   --card-radius: 0.07; /* fraction of card width */
 
-  /* Card types (provisional: ww-design owns the final list). Fill, ink-on-fill, shape in ART.md. */
-  --type-raw: #8a5a2b; /* brown, hexagon band */
-  --type-raw-ink: #fff;
-  --type-craft: #6b6f78; /* grey, square band */
-  --type-craft-ink: #fff;
-  --type-civic: #0072b2; /* blue, circle band */
-  --type-civic-ink: #fff;
-  --type-trade: #e69f00; /* orange-yellow, diamond band */
-  --type-trade-ink: #1e0c04;
-  --type-military: #d55e00; /* vermillion, triangle band */
-  --type-military-ink: #fff;
-  --type-science: #009e73; /* bluish green, pentagon band */
-  --type-science-ink: #fff;
-  --type-guild: #cc79a7; /* reddish purple, star band */
-  --type-guild-ink: #1e0c04;
+  /* Card kinds (docs/design/CARDS.md). Okabe-Ito colours, deliberately NOT the 7 Wonders
+     colour-to-role map (ORIGINALITY 1.5); each kind also has its own band shape and glyph. */
+  --kind-holding: #009e73; /* bluish green, house shape */
+  --kind-holding-ink: #fff;
+  --kind-hall: #e69f00; /* amber, arch shape */
+  --kind-hall-ink: #1e0c04;
+  --kind-market: #cc79a7; /* rose, hexagon shape */
+  --kind-market-ink: #1e0c04;
+  --kind-watch: #56b4e9; /* sky blue, banner shape */
+  --kind-watch-ink: #1e0c04;
+  --kind-lore: #d55e00; /* vermillion, diamond shape */
+  --kind-lore-ink: #fff;
+  --kind-landmark: #2b2d6e; /* deep indigo, burst shape */
+  --kind-landmark-ink: #fff;
 
-  /* Resource / currency / points. */
-  --res-timber: #3f8f4a;
-  --res-stone: #8d96a3;
-  --res-clay: #c0603a;
-  --res-grain: #e0a21f;
-  --res-glass: #56b4e9;
-  --res-cloth: #9a5fb0;
+  /* Goods: Colonizers of Windamere's look (catan src/ui/icons.ts, theme --rf-*). */
+  --good-lumber: #3c9a49;
+  --good-brick: #c4532d;
+  --good-wool: #bde37d;
+  --good-grain: #f0c53f;
+  --good-ore: #8795a5;
+  --labour: #6b4a2a;
+  --guard: #56b4e9;
+  --valour: #e69f00;
+  --raid: #d55e00;
   --coin: #f5b82e;
   --points: #1f4fa0;
 }
