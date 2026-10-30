@@ -52,11 +52,23 @@ export interface WindamereGreedyOptions {
  * Perk that scores or defends (renown, guard) and 0.5 for an economy Perk; ties go to the lower
  * labour total (easier to finish). An untuned first guess; it only needs to be a rule, not index 0.
  */
+/** Valour a Guard-minded town holds at the end (a first guess from the level 2 sims). */
+const EXPECTED_VALOUR = 3;
+
 export function rateGreatWork(content: WwContent, id: string): number {
   const gw = content.greatWorks.find((g) => g.id === id);
   if (!gw) return 0;
   const renown = (specs: readonly EffectSpec[]) =>
-    specs.reduce((a, e) => a + (e.type === 'renown' ? (e.amount as number) : 0), 0);
+    specs.reduce(
+      (a, e) =>
+        a +
+        (e.type === 'renown'
+          ? (e.amount as number)
+          : e.type === 'scorePerValour'
+            ? (e.amount as number) * EXPECTED_VALOUR
+            : 0),
+      0,
+    );
   const tiers = gw.tiers.reduce((a, t) => a + renown(t.reward), 0);
   const perk = gw.perk.reduce(
     (a, e) => a + (e.type === 'renown' || e.type === 'guard' ? 1 : 0.5),
