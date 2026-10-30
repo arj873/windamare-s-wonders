@@ -65,7 +65,7 @@
         left: 60px;
         top: 18px;
         width: 120px;
-        color: var(--type-ink);
+        color: var(--kind-ink);
         font-family: var(--font-display);
         font-size: 15px;
       }
@@ -78,7 +78,7 @@
       .card .band {
         left: 54px;
         top: 244px;
-        color: var(--type-ink);
+        color: var(--kind-ink);
         font-size: 13px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
@@ -106,20 +106,32 @@
   <body>
     <h1>Windamere's Wonders: art preview</h1>
     <p>
-      Static preview of every asset in <code>public/art/</code>. Types are provisional (ww-design
-      owns the final list).
+      Static preview of every asset in <code>public/art/</code>. Kinds and goods follow
+      docs/design/CARDS.md.
     </p>
 
     <section>
-      <h2>Card types (colour + shape + icon)</h2>
-      <div class="row" id="types"></div>
+      <h2>Card kinds (colour + shape + glyph)</h2>
+      <div class="row" id="kinds"></div>
     </section>
     <section>
-      <h2>Resources, coin, points</h2>
-      <div class="row" id="icons"></div>
+      <h2>Goods, coin, labour, Guard, Valour, Renown</h2>
+      <div class="row" id="goods"></div>
     </section>
     <section>
-      <h2>Sample cards (frame is inline SVG, type colour via CSS vars)</h2>
+      <h2>Lore ranks 1-6, Honours</h2>
+      <div class="row" id="ranks"></div>
+      <div class="row" id="honours" style="margin-top: 12px"></div>
+    </section>
+    <section>
+      <h2>Raid frame, Great Work track</h2>
+      <div class="row">
+        <img src="/art/badges/raid-frame.svg" width="200" alt="raid frame" />
+        <img src="/art/badges/great-work-track.svg" width="500" alt="great work track" />
+      </div>
+    </section>
+    <section>
+      <h2>Sample cards (frame is inline SVG, kind colour via CSS vars)</h2>
       <div class="row" id="cards"></div>
     </section>
     <section>
@@ -148,39 +160,63 @@
     </section>
 
     <script>
-      const TYPES = ['raw', 'craft', 'civic', 'trade', 'military', 'science', 'guild'];
-      const ICONS = ['timber', 'stone', 'clay', 'grain', 'glass', 'cloth', 'coin', 'points'];
-      const cell = (src, label) =>
-        `<div class="cell"><img src="${src}" width="48" height="48" alt="${label}" />${label}</div>`;
-      document.getElementById('types').innerHTML = TYPES.map(
-        (t) =>
-          `<div class="cell"><div class="sw" style="background:var(--type-${t})"></div>${cell(`/art/types/${t}.svg`, t)}</div>`,
+      const KINDS = ['holding', 'hall', 'market', 'watch', 'lore', 'landmark'];
+      const GOODS = [
+        'lumber',
+        'brick',
+        'wool',
+        'grain',
+        'ore',
+        'coin',
+        'labour',
+        'guard',
+        'valour',
+        'renown',
+      ];
+      const HONOURS = [
+        'warden',
+        'steward',
+        'patron',
+        'merchant',
+        'sage',
+        'master-builder',
+        'treasurer',
+        'broad-town',
+      ];
+      const cell = (src, label, w = 48) =>
+        `<div class="cell"><img src="${src}" width="${w}" height="${w}" alt="${label}" />${label}</div>`;
+      const $ = (id) => document.getElementById(id);
+      $('kinds').innerHTML = KINDS.map(
+        (k) =>
+          `<div class="cell"><div class="sw" style="background:var(--kind-${k})"></div>${cell(`/art/kinds/${k}.svg`, k)}</div>`,
       ).join('');
-      document.getElementById('icons').innerHTML = ICONS.map((i) =>
-        cell(`/art/icons/${i}.svg`, i),
-      ).join('');
+      $('goods').innerHTML = GOODS.map((i) => cell(`/art/goods/${i}.svg`, i)).join('');
+      $('ranks').innerHTML = [1, 2, 3, 4, 5, 6]
+        .map((n) => cell(`/art/badges/lore-${n}.svg`, `rank ${n}`))
+        .join('');
+      $('honours').innerHTML = HONOURS.map((h) => cell(`/art/honours/${h}.svg`, h, 56)).join('');
 
+      // Sample content is placeholder text, not final card data (CARDS.md owns that).
       const SAMPLES = [
-        ['raw', 'Timber Camp', '+1 timber each round.', ['coin']],
-        ['craft', 'Kiln', 'Makes 1 clay or glass.', ['clay', 'clay']],
-        ['civic', 'Town Hall', '3 points.', ['stone', 'stone', 'cloth']],
-        ['trade', 'Market Row', '+1 coin per neighbour.', ['coin', 'coin']],
-        ['military', 'Watchtower', '+2 strength.', ['timber', 'stone']],
-        ['science', 'Observatory', 'Choose a lore symbol.', ['glass', 'cloth']],
-        ['guild', "Weavers' Guild", '1 point per cloth card.', ['cloth', 'cloth', 'grain']],
+        ['holding', 'Sample Holding', 'Yields 1 lumber.', ['brick']],
+        ['hall', 'Sample Hall', '3 Renown.', ['lumber', 'brick']],
+        ['market', 'Sample Market', '+1 coin each Yield.', ['coin', 'coin']],
+        ['watch', 'Sample Watch', '+2 Guard.', ['ore', 'ore']],
+        ['lore', 'Sample Lore', 'Rank 3.', ['wool', 'grain']],
+        ['landmark', 'Sample Mark', 'Scores from your town.', ['ore', 'brick', 'lumber']],
       ];
       fetch('/art/card-frame.svg')
         .then((r) => r.text())
         .then((svg) => {
           const frame = svg.replace('<svg ', '<svg class="frame" ');
-          document.getElementById('cards').innerHTML = SAMPLES.map(
-            ([t, n, e, c]) => `
-    <div class="card" style="--type-color: var(--type-${t}); --type-ink: var(--type-${t}-ink)">
+          $('cards').innerHTML = SAMPLES.map(
+            ([k, n, e, c]) => `
+    <div class="card" style="--kind-color: var(--kind-${k}); --kind-ink: var(--kind-${k}-ink)">
       ${frame}
-      <div class="t cost">${c.map((i) => `<img src="/art/icons/${i}.svg" alt="${i}" />`).join('')}</div>
+      <div class="t cost">${c.map((i) => `<img src="/art/goods/${i}.svg" alt="${i}" />`).join('')}</div>
       <div class="t name">${n}</div>
       <div class="t eff">${e}</div>
-      <img class="ti" src="/art/types/${t}.svg" alt="${t}" /><div class="t band">${t}</div>
+      <img class="ti" src="/art/kinds/${k}.svg" alt="${k}" /><div class="t band">${k}</div>
     </div>`,
           ).join('');
         });
