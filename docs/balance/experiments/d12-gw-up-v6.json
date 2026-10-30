@@ -1,0 +1,6 @@
+{
+  "extends": "d12-gw-up.json",
+  "name": "d12-gw-up-v6",
+  "hypothesis": "Design D12 item 2a: d12-gw-up plus Valour Winter 5 -> 6 (2/3/4/5 -> 2/3/4/6). Under the threshold rise the 4th source is Valour (6-22%) or Purse (5-15%) of level-2 winners, near 10%; one more Valour in Winter lifts Valour over 10% at 3-7 seats without letting it take over (Valour 3/4/5/6 did).",
+  "tunables": { "valourBySeason": [2, 3, 4, 6] }
+}

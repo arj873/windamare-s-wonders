@@ -1,0 +1,5 @@
+{
+  "name": "d12-gw-up",
+  "hypothesis": "Design D12 item 1 (CARDS.md §17; design's scratch gw-up): every Great Work's thresholds +1/+1/+2/+3 (standard 4/9/15/22 -> 5/10/17/25, Spire 6/12/19/27 -> 7/13/21/30). Level-2 Great Work stops topping > 55% of winners (fails today at 2 and 4 seats) and tier IV falls toward 50%. D12 pass: >= 4 sources at >= 10% of winners at 3-7 seats and top < 55%. Cost to watch: level-1 tier IV, already under 20% at 2-3 seats.",
+  "greatWorks": { "*": { "thresholdDelta": [1, 1, 2, 3] } }
+}

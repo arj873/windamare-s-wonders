@@ -1,7 +1,8 @@
-# Balance report: Windamere at bot levels 1 and 2 (cards L1-L4)
+# Balance report: Windamere at bot levels 1 and 2 (cards L1-L5)
 
-**Current state: section 8 (L4, main `86c28af`, D9c + D10b + L3 + D10c as shipped).** Sections
-0-7 are the history that led there, each on the main it names.
+**Current state: section 8 (L4, main `86c28af`: every target) with section 9 (L5, main
+`2db6fa1`: what bots' B9 Lore plan moved, design's D12 grid, the rivalry payoff).** Sections 0-7
+are the history that led there, each on the main it names.
 
 Owner: balance lane. Run 2026-10-30 on main `4fb5baf`: design D9b (`868c469`, -1 good on 21
 Summer/Autumn cards) on top of D9 (Great Work thresholds 4/9/15/22, Valour 2/3/4/5), engine E4
@@ -373,3 +374,110 @@ only section 8's bots-metric row under-counts. My "I1 incl. D10b" (`scripts/bala
 two score types' Renown exactly, and Wend Fair's `onBuildNeighbourMin` coins from the Build log
 at 4 coins per Renown (exact while no `buildBonus` applies to Markets, true on this main). The
 D10b part is 1.0-1.8 Renown per town at level 1 and 1.8-4.3 at level 2; the coin part is 0.0-0.2.
+(Bots' metric counts them since `baa7915`; section 9.)
+
+## 9. L5 on main `2db6fa1`: bots' Lore plan, design's D12 grid, the rivalry payoff
+
+Content is the same as `86c28af` (no content commit between); bots `baa7915` adds B9 (level 2/3
+price a Lore card by the run it would complete) and counts the D10b types in the I1 metric. 1000
+games per row, seeds 1-1000, 2-7 seats. Tables: `docs/balance/baseline/2db6fa1-level{1,2}.md`,
+`-k2.md`; every before/after table in `docs/balance/results.md`.
+
+**Bot code per row.** Level 1 = `src/bots/greedy.ts` `9e6bdd4` + `windamereAdapter.ts`
+`0d45898` in both L4 and L5. Levels 2/3 = `windamereEval.ts` `0d45898` in L4, `baa7915` (B9) in
+L5. Metrics = `windamereMetrics.ts` `9e6bdd4` in L4 (plus my D10b I1 column), `baa7915` in L5.
+
+### 9.1 The L4 rows bots' Lore plan moves (L4 `0d45898` -> L5 `baa7915`, same content)
+
+| Row (level 2)                             | L4                     | L5                         | Note                                      |
+| ----------------------------------------- | ---------------------- | -------------------------- | ----------------------------------------- |
+| S3 Lore run >= 3 (>= 25%)                 | 10-15%                 | **16-21%** (+4..+7)        | still fails                               |
+| S3 Lore run >= 5 (5-15%)                  | 1-4%                   | 3-5% (5% at 4 and 6 seats) | at the floor at best                      |
+| Lore as the winner's top source           | 1-2%                   | 1-2%                       | Lore runs grow, but never win a game      |
+| S1 sources >= 10% of winners (2..7 seats) | 3 / 4 / 2 / 3 / 3 / 3  | **3 / 4 / 2 / 2 / 3 / 2**  | worse at 5 and 7 seats (Purse 9.7% there) |
+| S1 top source (<= 55%)                    | Great Work 43-57%      | Great Work 42-55%          | 2 seats 55.1%, 4 seats 54.7%: on the line |
+| S4 tier IV                                | 57-72%                 | 56-70%                     | -2..-4                                    |
+| K2 level 3 / level 2                      | 1.12-1.51x             | 1.07-1.43x                 | level 2 gained more than level 3          |
+| K1 (level 2 vs random)                    | 99.6% at 3, 4.95x at 5 | 99.7% at 3, 4.95x at 5     | unchanged                                 |
+
+Level 1 is identical to L4 on every gameplay row (same code, same content, same seeds). Only the
+I1 row moved, 4-12% -> 8-17%, because the bots' metric now counts D10b; my Build-time cross-check
+gives the same 8-17% (L1) and 11-17% (L2).
+
+### 9.2 Design's D12 grid (CARDS.md §17)
+
+Pass (design's condition): **>= 4 sources at >= 10% of winners at 3-7 seats, and the top source
+under 55%**. Overlays: `d12-gw-up` = every Great Work's thresholds +1/+1/+2/+3 (standard 4/9/15/22
+-> 5/10/17/25; Spire 6/12/19/27 -> 7/13/21/30); `-v6` adds Valour 2/3/4/5 -> 2/3/4/6;
+`-v2356` adds 2/3/5/6. `d12-gw-up-v6-rival` is my diagnostic, not design's: `-v6` plus the
+rivalry Landmarks' neighbour amounts -1 (The Victors' Oak 4 -> 3, Pride of the Wend 3 -> 2,
+Commons of the Wend 2 -> 1, Brokers' Arcade 2 -> 1 per 3 sold).
+
+Sources >= 10% of winners at 2 / 3 / 4 / 5 / 6 / 7 seats (pass needs 4 at 3-7):
+
+| Variant            | Level 2                   | top source, level 2   | Level 1               | top source, level 1                   | Level-1 tier IV | Level-2 tier IV | Level-2 I1 | Pass |
+| ------------------ | ------------------------- | --------------------- | --------------------- | ------------------------------------- | --------------- | --------------- | ---------- | ---- |
+| main (L5 baseline) | 3 / 4 / 2 / 2 / 3 / 2     | Great Work 42-55%     | 3 / 2 / 2 / 3 / 4 / 2 | Great Work or Valour 39-49%           | 15-24%          | 56-70%          | 11-17%     | no   |
+| d12-gw-up          | 3 / 4 / **3 / 4 / 4** / 3 | Great Work **38-46%** | 3 / 2 / 2 / 3 / 4 / 3 | Great Work or Valour 30-48%           | **9-15%**       | **40-54%**      | 12-18%     | no   |
+| d12-gw-up-v6       | 2 / 4 / 3 / 3 / 3 / 4     | Great Work 35-47%     | 3 / 2 / 2 / 3 / 4 / 2 | **Valour** 34-54% (3 seats 54.0%)     | 9-15%           | 40-54%          | 11-18%     | no   |
+| d12-gw-up-v2356    | 2 / 4 / 3 / 3 / 3 / 4     | Great Work 36-46%     | 3 / 2 / 2 / 2 / 2 / 2 | **Valour** 37-59% (**3 seats 58.7%**) | 9-15%           | 39-54%          | 11-18%     | no   |
+| d12-gw-up-v6-rival | 3 / 3 / 2 / **4 / 5 / 4** | Great Work 38-52%     | 3 / 2 / 2 / 2 / 3 / 2 | Valour 34-58%                         | 9-15%           | 40-55%          | **7-14%**  | no   |
+
+What it says:
+
+1. **The threshold rise does what design wants at level 2**: the Great Work no longer tops more
+   than 46% of level-2 winners at any count, and level-2 tier IV falls from 56-70% to 40-54%
+   (S4 passes at 2, 3, 5, 6 seats). It gives 4 sources at 3, 5 and 6 seats and **misses at 4 and
+   7 seats by one source** (Valour 12.2% / 7.1%, Purse 9.1% / 13.1%, Landmark 19.6% / 25.7%).
+2. **Raising Valour does not add a source; it swaps one.** Each step of Valour takes level-2
+   winners from Purse (under `-v6`, Purse is 7.3 / 9.7 / 9.9% at 4 / 5 / 6 seats) and at level 1
+   makes Valour the top source at 3 seats (54.0%; 58.7% under `-v2356`, over the cap).
+3. **The rivalry Landmarks are the Landmark source at 3-4 seats.** Trimming them (my probe, on
+   top of `-v6`) takes Landmark from 11-18% to 0.3-1.8% of level-2 winners there and loses the
+   source, while at 5-7 seats it passes (4 / 5 / 4 sources). It also drops level-2 I1 from 11-18%
+   to 7-14% (fails at 2 and 5 seats), and level-1 Valour tops 57.8% of winners at 3 seats (over
+   the cap). Not a fix as it stands; it shows where the sources come from.
+4. **Level 1 never reaches 4 sources** in any variant (2-4), and every threshold rise takes
+   level-1 tier IV to 9-15% (S4 floor 20% fails at every count).
+5. **S1g still flags at 6 seats** under every threshold variant (Town 79-82% of level-2 winners;
+   main 78.8%); only the rivalry probe clears it (72.5%).
+
+### 9.3 The rivalry payoff at level 2 (design D12 item 4)
+
+Renown from `scoreBeat`, `scoreNeighbourMin` and `scoreSales` (cards and the Ring of Oaths Perk),
+main `2db6fa1`, 2 / 3 / 4 / 5 / 6 / 7 seats:
+
+| Level | Winner mean                            | from cards                             | share of winner's total | winner - runner-up | every town |
+| ----- | -------------------------------------- | -------------------------------------- | ----------------------- | ------------------ | ---------- |
+| 2     | 8.0 / 13.7 / 13.7 / 11.3 / 14.5 / 13.6 | 7.8 / 13.2 / 13.2 / 10.8 / 14.1 / 13.0 | 13-21%                  | 2.3-4.2            | 6.5-9.9    |
+| 1     | 3.1 / 8.4 / 7.7 / 7.0 / 9.1 / 8.3      | 2.9 / 8.0 / 7.2 / 6.5 / 8.6 / 7.9      | 8-19%                   | 0.9-2.7            | 2.6-6.0    |
+
+Design's "8-15 Renown" is right for level 2 (8.0-14.5). Is it too big? What the numbers say:
+
+- It is a fifth to a seventh of a level-2 winner's Renown, but the winner leads the runner-up on
+  it by only 2.3-4.2 (the margin is 6-11 Renown), so it shifts who wins less than its size
+  suggests: every town gets 6.5-9.9.
+- It is the interaction: I1 at level 2 is 11-17% with it; on top of `d12-gw-up-v6`, one step
+  less on the rivalry Landmarks takes I1 from 11-18% to 7-14% (fails at 2 and 5 seats) and the
+  winner's rivalry Renown to 4.4-10.4.
+- It feeds the Landmark source and S1g Town: with the rivalry Landmarks -1 (on `-v6`), S1g falls
+  from 59-82% to 43-73% (no 75% flag left).
+
+So: not too big for I1 (it is what passes I1), but it decides where the 4th S1 source comes from
+at 3-4 seats. A change to it moves S1, S1g and I1 together and has to be measured with all three.
+
+### 9.4 For design
+
+1. **Thresholds +1/+1/+2/+3 is the strongest D12 part** (level-2 S1 cap and S4 fixed) but
+   misses S1 breadth at 4 and 7 seats by one source, leaves the S1g flag at 6 seats (81.5%), and
+   costs level 1's tier IV (9-15%).
+2. **No Valour step tried adds a 4th source**; Valour takes winners from Purse, and at level 1
+   it takes the top (3 seats 54-59%). Valour 2/3/5/6 breaks the level-1 cap; 2/3/4/6 is at it.
+3. **The Purse lever is the one left untested** (2 Renown per 5 coins needs the engine to accept
+   a non-whole `coinsPerRenown`; R12.2f shape). Purse is the source that falls just under 10%
+   (7-10% at 4-6 seats under `-v6`).
+4. **Rivalry**: keep it (it is I1); if it moves, measure S1, S1g and I1 together.
+5. **Lore** under B9 grows (runs >= 3 16-21% at level 2) but is still never a winner's top source
+   (1-2%); S3 still fails at level 2.
+
+Every number is bot play (levels 1 and 2), not human play.

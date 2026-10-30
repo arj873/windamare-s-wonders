@@ -1,0 +1,10 @@
+{
+  "extends": "d12-gw-up-v6.json",
+  "name": "d12-gw-up-v6-rival",
+  "hypothesis": "Diagnostic for D12 (balance's probe, not design's grid). Under d12-gw-up-v6 the 4th source fails by a little: level-2 Purse 7.3 / 9.7 / 9.9% of winners at 4 / 5 / 6 seats while Landmark takes 18-30%. Much of level-2 Landmark Renown is the rivalry Landmarks (The Victors' Oak, Pride of the Wend, Commons of the Wend, Brokers' Arcade), which design asks about anyway (D12 item 4: are rivalry payoffs too big for level 2?). Their neighbour amounts -1 (4->3, 3->2, 2->1, 2->1 per 3 sold) free winners for Purse and Valour so 4 sources reach 10% at 3-7 seats, while I1 stays >= 10%.",
+  "cardEffect": {
+    "kinds": ["landmark"],
+    "types": ["scoreBeat", "scoreNeighbourMin", "scoreSales"],
+    "delta": -1
+  }
+}

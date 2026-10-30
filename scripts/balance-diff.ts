@@ -87,9 +87,17 @@ const ROWS: [string, string, (r: Record<string, number | string>) => string][] =
   ],
   ['I1 neighbour share median', '>= 10%', (r) => pct(r.nbrShareMedian as number)],
   [
-    'I1 incl. D10b types',
+    'I1 incl. D10b, Build-time Wend Fair coins',
     '>= 10%',
     (r) => (r.nbrShareAllMedian === undefined ? 'n/a' : pct(r.nbrShareAllMedian as number)),
+  ],
+  [
+    'rivalry Renown: winner / winner - runner-up',
+    'report',
+    (r) =>
+      r.rivalWinner === undefined
+        ? 'n/a'
+        : `${num(r.rivalWinner as number)} / ${num(r.rivalGap as number)}`,
   ],
   ['F1 max seat deviation', '<= 3 pts', (r) => `${num((r.seatMaxDev as number) * 100)}`],
   ['winning score median', 'report', (r) => num(r.winScoreMedian as number)],
