@@ -77,8 +77,8 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
   covers (R7.9). Defaults: R15.7.
 - **R4.4** A town may change or withdraw its pick until the last town submits. When the last
   pick arrives, all picks lock and are revealed together (both cards and their roles).
-- **R4.5** **Resolve**, in four steps. Each step runs for every town (in seat order) before the
-  next step starts.
+- **R4.5** **Resolve**, in four steps. Each step runs for every town before the next step starts
+  (lockstep, R4.8).
   1. **Spend**: each town gains the Spend bands of the cards it Spent (R5). Spent cards go to the
      discard pile.
   2. **Build**: each town pays for and places its Build card (R6, R7). "When built" effects
@@ -88,9 +88,19 @@ Words: **town** = a player's seat and everything in it. **Renown** = victory poi
      the Great Work check (R8.3).
 - **R4.6** **Pass.** Each town passes the rest of its hand in the Season's direction. The next
   turn starts.
-- **R4.7** A town's result in steps 1 and 2 depends only on its own pick and state. Steps 3 and 4
-  read neighbours' towns but only add gains. So a pick that was legal when submitted is still
-  legal when it resolves, and seat order never changes the outcome.
+- **R4.7** Steps 1, 2 and 4 read only the town's own pick and state. Step 3 reads which cards the
+  neighbours Built in step 2, and only adds coins. So a pick that was legal when submitted is
+  still legal when it resolves, and seat order never changes the outcome.
+- **R4.8** **Lockstep.** All towns resolve the same turn together, and hands pass (R4.6) only
+  after every town has resolved. Within a step, an effect may read its own town as it stands but
+  reads other towns only as they stood when the step began. So towns may be processed in any
+  order with the same result; seat order only orders the log. The order in which picks arrive
+  never matters (R15.9).
+- **R4.9** There is no "draft ahead" (picking from the next hand before the table has resolved).
+  _Note for a later async mode (research online-ux.md §5 Q1):_ the only rule that ties a turn to
+  the neighbours' picks is the Caravan (step 3), whose coins can decide what a town affords next
+  turn. An async mode would move Caravan payouts to Season end first. Season ends (Raid, bounty,
+  the new deal) are a full-table sync anyway.
 
 ## R5. Spend bands
 
@@ -245,6 +255,9 @@ Rules for effects:
 - **R13.2** Only Spend gains (R5.2) can pay for the same turn's Build. `onBuild`, `buildBonus`,
   `caravan`, `yield`, `income` and tier rewards all arrive after the Build is paid.
 - **R13.3** A new effect type needs a rules change here first, then an engine handler.
+- **R13.4** "any" appears only in Spend bands and in a card's own `onBuild`, where the pick names
+  the good (R4.3). Effects that act outside a pick (`yield`, `caravan`, `heldBonus`, `seasonEnd`,
+  tier rewards) never use it. So resolution never stops to ask a town a question (R15.10).
 
 ## R14. Two-player variant
 
@@ -261,20 +274,38 @@ Rules for effects:
 
 ## R15. Timers, defaults and online play
 
-These answer net's open questions (MULTIPLAYER.md §2.1).
+These answer the open questions from net (MULTIPLAYER.md §2.1, §6) and research (online-ux.md
+§4.3, §5).
 
 - **R15.1** Seat range: 2 to 7 (R1.1). Bots count as seats.
-- **R15.2** Picks may be changed or withdrawn until the last pick of the turn arrives (R4.4).
-  There is no early lock.
-- **R15.3** One shared turn clock per turn (not a clock per player). Lengths by turn of the
-  Season: 90, 70, 55, 40† seconds. The Great Work choice: 60† seconds. Room options: Off,
-  Relaxed (× 1.5), Normal, Fast (× 0.5). Default: Normal online, Off in hotseat.
-- **R15.4** When the clock runs out, every town without a pick gets the default pick (R15.6).
-- **R15.5** **Away towns.** When every connected town (humans and bots) has picked, each away
-  town without a pick gets the default pick at once; the turn does not wait for it. A town that
-  stays away is handed to a bot under net's grace rules.
-- **R15.6** **Default pick**: Build nothing; Spend the first two cards in hand order (2 seats:
-  Spend the first two, Burn the third). Great Work choice default: the first offered.
+- **R15.2** **Changing a pick.** A town may change or withdraw its pick until the last pick of
+  the turn arrives (R4.4); there is no early lock. Whether a town has picked is public (a ready
+  mark on its seat); what it picked stays hidden until the reveal.
+- **R15.3** **Turn clock.** One clock per turn, shared by the whole table (not a clock per
+  player). It starts when the hands are dealt or passed. Normal lengths by turn of the Season:
+  90, 70, 55, 40† seconds; the Great Work choice: 60† seconds. Room options: Off, Relaxed
+  (× 1.5), Normal, Fast (× 0.5), rounded up to whole seconds (Fast: 45, 35, 28, 20 s). Default:
+  Normal online, Off in hotseat. Research suggests 30-45 s per pick (online-ux.md §4.3); ours is
+  longer because a pick is two cards with roles from up to 9, not one card from 7. The clock is a
+  cap: on Normal the whole game stays under 25 minutes (R18).
+- **R15.4** When the clock runs out, every town without a pick gets the timeout pick (R15.6), and
+  the turn resolves.
+- **R15.5** **Away towns** (the player's connection dropped; net decides when a seat counts as
+  away). When every town that is not away has picked:
+  1. the turn waits up to 15† more seconds (the **away wait**, never past the clock) for away
+     towns to come back and pick;
+  2. then each away town still without a pick gets the timeout pick, and the turn resolves.
+
+  The away wait applies with the clock Off too, so one dropped player never stalls the table for
+  long. A connected town that has not picked is always waited for (up to the clock, if on). A
+  town away longer than net's grace period is played by a bot until its player returns
+  (MULTIPLAYER.md §2.1.1).
+
+- **R15.6** **Timeout pick**: the pick the Easy bot (bots lane) would make for that town from the
+  town's own view, so a timed-out player still gets a sensible turn. **Fallback pick**, used
+  until that bot exists and in engine tests (the engine's `defaultPick`): Build nothing; Spend
+  the first two cards in hand order (2 seats: Spend the first two, Burn the third). Great Work
+  choice: the first offered.
 - **R15.7** **Default choices** (UI preselects them; timeouts and simple bots use them):
   - payment: the plan that spends the fewest coins, then the fewest goods; Exchanges in town
     order, goods in goods order;
@@ -284,6 +315,16 @@ These answer net's open questions (MULTIPLAYER.md §2.1).
   - discount: take it off goods in goods order.
 - **R15.8** **Recall.** A town may look at the cards it saw in each hand it passed on, until the
   Season ends. (So a bot that remembers has no edge over a human; the engine or UI provides it.)
+- **R15.9** **Resolution order.** All picks of a turn are applied together, in lockstep (R4.8).
+  The order in which picks arrive never matters, so a fast clicker gains nothing and a replay of
+  the same picks gives the same game.
+- **R15.10** **Decisions outside a pick.** There is one: the Great Work choice (R2.5). It uses the
+  pick flow: hidden, changeable until the last choice arrives, ready marks, its 60† s clock, the
+  away wait and a timeout pick (the first offered). Every other choice travels with a pick
+  (R4.3, R13.4); no rule or card asks a question during resolution.
+- **R15.11** **Hotseat with two or more humans.** Each human picks behind a cover screen ("Pass to
+  <name>"). A human's pick locks when they hand the device on; the reveal follows the last
+  human's pick. Bots pick without waiting. With one human, R4.4 applies unchanged.
 
 ## R16. Tunables
 
@@ -306,6 +347,8 @@ These answer net's open questions (MULTIPLAYER.md §2.1).
 | Coins per Renown            | 4                                        | R12.2g      |
 | Hand size (2 seats)         | 12                                       | R14.1       |
 | Turn clock (Normal)         | 90, 70, 55, 40 s; Great Work choice 60 s | R15.3       |
+| Clock options               | Off, Relaxed × 1.5, Normal, Fast × 0.5   | R15.3       |
+| Away wait                   | 15 s                                     | R15.5       |
 
 ## R17. Clarifications
 
