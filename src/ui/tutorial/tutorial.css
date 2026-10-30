@@ -1,0 +1,123 @@
+/* Guided first game: coach panel and focus rings. Theme tokens only. */
+.tut-panel {
+  position: absolute;
+  top: 108px;
+  left: 10px;
+  z-index: 5;
+  width: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px 12px 10px 14px;
+  border-radius: var(--radius, 12px);
+  border: 1.5px solid var(--edge, #5e2914);
+  background: var(--surface, #96452a);
+  color: var(--ink, #fff4e4);
+  font-family: var(--font-ui, system-ui, sans-serif);
+  pointer-events: auto;
+}
+.tut-panel[hidden] {
+  display: none;
+}
+.tut-panel.is-collapsed {
+  width: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.tut-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.tut-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent, #f5b82e);
+}
+.tut-min {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 18px;
+}
+.tut-title {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.tut-text {
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+.tut-todo {
+  margin: 0 0 6px;
+  color: var(--accent, #f5b82e);
+  font-weight: 700;
+}
+.tut-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tut-gap {
+  flex: 1;
+}
+.tut-skip {
+  background: none;
+  border: 0;
+  color: var(--ink-dim, #f7dac2);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.tut-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--edge, #5e2914);
+  background: var(--surface, #96452a);
+  color: var(--ink, #fff4e4);
+  cursor: pointer;
+}
+.tut-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: var(--radius, 12px);
+  border: 1.5px solid var(--edge, #5e2914);
+  background: var(--surface, #96452a);
+  color: var(--ink, #fff4e4);
+}
+.tut-hint-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* The element a lesson points at. ui marks these with data-tut="<name>". */
+[data-tut-focus='monument'] [data-tut='monument'],
+[data-tut-focus='hand'] [data-tut='hand'],
+[data-tut-focus='town'] [data-tut='town'],
+[data-tut-focus='neighbours'] [data-tut='neighbours'],
+[data-tut-focus='raid'] [data-tut='raid'] {
+  outline: 3px solid var(--accent, #f5b82e);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tut-panel {
+    animation: tut-in 0.25s ease;
+  }
+}
+@keyframes tut-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
