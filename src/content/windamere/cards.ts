@@ -273,7 +273,7 @@ export const SUMMER: readonly WwCardDef[] = [
     upgrade: { of: ['ferry-steps'], cost: g('1R 1H') },
     spend: g('2lab 1c'),
     effects: [fx.renown(3)],
-    counts: [1, 1, 1, 2, 2],
+    counts: [1, 1, 1, 1, 1],
   },
   {
     id: 'hearth-hall',
@@ -305,7 +305,7 @@ export const SUMMER: readonly WwCardDef[] = [
     cost: g('1S 1W'),
     spend: g('4c'),
     effects: [fx.income(1), fx.scoreBeat('markets', 3)],
-    counts: [1, 1, 1, 1, 1],
+    counts: [1, 1, 1, 2, 2],
   },
   {
     id: 'salt-weigh-house',
@@ -356,7 +356,7 @@ export const SUMMER: readonly WwCardDef[] = [
     cost: g('1R 1P'),
     spend: g('2P 1c'),
     effects: [fx.guard(2)],
-    counts: [1, 1, 1, 2, 2],
+    counts: [1, 1, 1, 1, 1],
   },
   {
     id: 'militia-yard',
@@ -378,7 +378,7 @@ export const SUMMER: readonly WwCardDef[] = [
     cost: g('1R 1H'),
     spend: g('1H 1c'),
     effects: [fx.guard(2), fx.scoreBeat('guard', 3)],
-    counts: [1, 1, 1, 1, 1],
+    counts: [1, 1, 1, 2, 2],
   },
   {
     id: 'watchfire-ridge',
@@ -613,7 +613,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     cost: g('1W 1H'),
     spend: g('2lab 1c'),
     effects: [fx.lore(4), fx.scoreBeat('loreRun', 3)],
-    counts: [1, 1, 1, 1, 1],
+    counts: [1, 1, 1, 2, 2],
   },
   {
     id: 'chronicle-house',
@@ -623,7 +623,7 @@ export const AUTUMN: readonly WwCardDef[] = [
     cost: g('1P 1W 1H'),
     spend: g('2lab 1any'),
     effects: [fx.lore(5)],
-    counts: [1, 2, 2, 3, 3],
+    counts: [1, 2, 2, 2, 2],
   },
   // Landmarks.
   {
@@ -689,7 +689,7 @@ export const WINTER: readonly WwCardDef[] = [
     upgrade: { of: ['wend-council-house'], cost: g('2W 1H') },
     spend: g('3lab 3c'),
     effects: [fx.renown(6)],
-    counts: [1, 2, 2, 3, 3],
+    counts: [1, 2, 2, 2, 2],
   },
   {
     id: 'ice-fair-hall',
@@ -846,7 +846,7 @@ export const WINTER: readonly WwCardDef[] = [
     cost: g('1R 2P 1H'),
     spend: g('3any'),
     effects: [fx.scoreBeat('valour', 4)],
-    counts: [1, 1, 1, 1, 1],
+    counts: [1, 1, 1, 2, 2],
   },
   {
     id: 'market-cross',
