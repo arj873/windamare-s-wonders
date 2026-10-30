@@ -746,6 +746,21 @@
   content: '✗ ';
   color: var(--bad);
 }
+/* R10 #1: the last Raid heads the final card, compact, read before the scores count up. */
+.dt-result-raid {
+  margin-bottom: 12px;
+}
+.dt-result-raid h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 400;
+}
+.dt-result-raid .dt-season-lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  font-size: 13px;
+}
 .dt-season-next {
   margin: 10px 0 0;
   text-align: center;
@@ -1048,6 +1063,21 @@
   text-align: center;
   font-family: var(--font-display);
   font-size: 22px;
+}
+/*
+ * R10 #1: while the totals count up (src/game/windamere/fx.ts sets .is-counting), the towns sit in
+ * seat order with no ranks, no winner's mark and no headline; when the count lands they settle.
+ */
+.dt-result.is-counting .dt-band-card {
+  order: var(--seat-i, 0);
+}
+.dt-result.is-counting .dt-band-card.is-winner {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.dt-result.is-counting .dt-band-rank,
+.dt-result.is-counting .dt-headline {
+  visibility: hidden;
 }
 
 /* ---- tablet / small laptop -------------------------------------------- */

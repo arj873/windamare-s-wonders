@@ -179,7 +179,7 @@ export interface TableModel {
   prompt: PromptModel | null;
   /** The latest reveal: who did what with which card, then what else happened (R6 #4). */
   reveal: { title: string; lines: RevealLine[]; happenings: string[] } | null;
-  /** UX.md §10.1: the latest action ended a Season (not the game): its summary card. */
+  /** UX.md §10.1: the latest action ended a Season (the last one too): its summary card. */
   seasonEnd: SeasonEndInfo | null;
   /**
    * R15.8 Recall: the hands the viewer passed on this round, newest last (owner-only in the
@@ -346,7 +346,8 @@ export function tableModel<S, T>(input: TableInput<S, T>): TableModel {
       }),
       happenings: present.happenings?.(view) ?? [],
     },
-    seasonEnd: phase === 'gameOver' ? null : (present.seasonEnd?.(view) ?? null),
+    // R10 #1: the game's last action ends Winter too; its Raid card comes before the final scores.
+    seasonEnd: present.seasonEnd?.(view) ?? null,
     recall:
       viewer === null
         ? []

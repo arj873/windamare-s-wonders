@@ -6,12 +6,13 @@
  *
  * Per action, in order: the reveal (fx F1), a tier burst for each Great Work tier completed
  * (F3 tierMoment), the Season banner when a new Season's Raid is revealed (F3 seasonTransition,
- * after ui's Season-end card closes), and at the end the score count-up then the gameEnd sound.
+ * after ui's Season-end card closes). At game end, apart from that chain: the final scores count
+ * up the moment their card shows (after the Winter Raid's card), then the gameEnd sound.
  */
 import { sfx } from '../../audio';
 import { latestEvents, SEASONS, type WwRules, type WwSeat, type WwTable } from '../../engine';
 import {
-  countUpScores,
+  countUp,
   playCue,
   playRevealWithSound,
   seasonTransition,
@@ -20,6 +21,7 @@ import {
   type TableFx,
 } from '../../ui/fx';
 import '../../ui/fx/fx.css';
+import type { ResultModel } from '../../ui/table/model';
 import type { Presenter } from '../../ui/table/present';
 import type { RevealHook } from '../fx';
 
@@ -68,6 +70,8 @@ export function windamereFx(
 ): RevealHook<WwSeat, WwTable> {
   /** Bumped by skip/dispose and by every new action, so an older run stops at its next step. */
   let generation = 0;
+  /** The final scores' count-up (R10 #1), started once per game end. */
+  let finale: Finale = NO_FINALE;
   const label = (id: string): string => {
     const good = rules.content.goods.find((g) => g.id === id);
     if (good) return good.name;
@@ -138,21 +142,99 @@ export function windamereFx(
           );
         }
         // Game over: totals count up, lowest first, then the gameEnd sound.
-        if (view.phase.kind === 'gameOver' && model.result) {
-          const totals = new Map(model.result.columns.map((c) => [c.seat, c.total]));
-          const rows = anchors
-            .scoreTotals()
-            .map(({ seat: s, el }) => ({ el, total: totals.get(s) ?? 0 }));
-          await countUpScores(rows, { instant, onTick: () => playCue('scoreTick', null, who) });
-          if (live()) sfx.play('gameEnd');
-        }
       })();
+      // R10 #1: the final card counts up as soon as it shows (after the Winter Raid's card),
+      // not after the Winter reveal behind it.
+      if (view.phase.kind === 'gameOver' && model.result) {
+        finale.stop();
+        finale = countFinal(anchors.root, model.result, who, instant, () => anchors.scoreTotals());
+      }
     },
     skip() {
       generation += 1;
+      finale.skip();
     },
     dispose() {
       generation += 1;
+      finale.stop();
+    },
+  };
+}
+
+interface Finale {
+  /** A tap: the totals land now (only once counting has begun; earlier taps close cards). */
+  skip(): void;
+  /** The table left: stop watching and counting. */
+  stop(): void;
+}
+const NO_FINALE: Finale = { skip() {}, stop() {} };
+
+/**
+ * The final scores' moment (R10 #1). When `.dt-result` appears (a MutationObserver fires before
+ * the browser paints, so the real totals never flash), every total shows 0, ranks and "X wins"
+ * hide (`.is-counting`, table.css), and the totals count up lowest first; when the last lands the
+ * ranks and the headline show and the gameEnd sound plays. Reduced motion: totals at once.
+ */
+function countFinal(
+  root: HTMLElement,
+  result: ResultModel,
+  who: TableFx,
+  instant: boolean,
+  totals: () => { seat: number; el: HTMLElement }[],
+): Finale {
+  const want = new Map(result.columns.map((c) => [c.seat, c.total]));
+  let observer: MutationObserver | null = null;
+  let landNow: (() => void) | null = null;
+  let stopped = false;
+  const start = (card: HTMLElement) => {
+    observer?.disconnect();
+    observer = null;
+    const rows = totals().map(({ seat, el }) => ({ el, total: want.get(seat) ?? 0 }));
+    let landed = false;
+    const land = () => {
+      if (landed) return;
+      landed = true;
+      landNow = null;
+      for (const r of rows) r.el.textContent = String(r.total);
+      card.classList.remove('is-counting');
+      if (!stopped) sfx.play('gameEnd');
+    };
+    if (instant) return land();
+    card.classList.add('is-counting');
+    for (const r of rows) r.el.textContent = '0';
+    landNow = land;
+    void (async () => {
+      const order = [...rows].sort((a, b) => a.total - b.total);
+      for (const [i, r] of order.entries()) {
+        if (landed || stopped) return;
+        // fx's countUp draws into a stand-in, so a tap can land the real totals mid-count.
+        await countUp(document.createElement('span'), 0, r.total, {
+          ms: 700 + i * 150,
+          onTick: (n) => {
+            if (landed || stopped) return;
+            r.el.textContent = String(n);
+            playCue('scoreTick', null, who);
+          },
+        });
+      }
+      if (!stopped) land();
+    })();
+  };
+  const now = root.querySelector<HTMLElement>('.dt-result');
+  if (now) start(now);
+  else {
+    observer = new MutationObserver(() => {
+      const card = root.querySelector<HTMLElement>('.dt-result');
+      if (card) start(card);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+  }
+  return {
+    skip: () => landNow?.(),
+    stop: () => {
+      stopped = true;
+      observer?.disconnect();
+      landNow = null;
     },
   };
 }

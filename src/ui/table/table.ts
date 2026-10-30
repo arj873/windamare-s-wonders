@@ -385,6 +385,7 @@ export class DraftTable {
     // Test hooks (UX.md §18): what the table shows, readable without parsing text.
     this.element.dataset.phase = this.cover ? 'cover' : m.phase;
     this.element.dataset.viewer = m.viewer === null ? '' : String(m.viewer);
+    // At game end the last Season's lines head the final card instead (R10 #1).
     this.seasonUp =
       !m.result && !this.cover && m.seasonEnd !== null && m.actionKey !== this.seasonSeen;
     // A spectator (online, no seat) has no hand: they watch a town and its neighbours instead.
@@ -400,7 +401,7 @@ export class DraftTable {
       watched ? this.watchBar(m, watched) : this.cover ? this.hiddenHand() : this.hand(m),
       this.side(m),
       ...(m.result
-        ? [this.result(m.result)]
+        ? [this.result(m.result, m.seasonEnd)]
         : this.cover
           ? [this.coverScreen(this.cover)]
           : this.seasonUp && m.seasonEnd
@@ -770,20 +771,7 @@ export class DraftTable {
           attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dt-season-title' },
         },
         h('h2', { id: 'dt-season-title' }, s.title),
-        h(
-          'ul',
-          { class: 'dt-season-lines' },
-          ...s.lines.map((l) =>
-            h(
-              'li',
-              {
-                class: `is-${l.tone}`,
-                attrs: l.seat === null ? {} : { 'data-seat': String(l.seat) },
-              },
-              l.text,
-            ),
-          ),
-        ),
+        this.seasonLines(s),
         s.next && h('p', { class: 'dt-season-next' }, s.next),
         h(
           'div',
@@ -823,6 +811,21 @@ export class DraftTable {
       ],
       actions: [{ label: 'Close', primary: true }],
     });
+  }
+
+  /** A Season end's lines: each town's Raid result and bounties (Season card, final card). */
+  private seasonLines(s: SeasonEndInfo): HTMLElement {
+    return h(
+      'ul',
+      { class: 'dt-season-lines' },
+      ...s.lines.map((l) =>
+        h(
+          'li',
+          { class: `is-${l.tone}`, attrs: l.seat === null ? {} : { 'data-seat': String(l.seat) } },
+          l.text,
+        ),
+      ),
+    );
   }
 
   private closeSeasonCard(): void {
@@ -1394,7 +1397,8 @@ export class DraftTable {
     );
   }
 
-  private result(r: ResultModel): HTMLElement {
+  /** `last`: the final Season's Raid, read first (R10 #1: it had no card of its own). */
+  private result(r: ResultModel, last: SeasonEndInfo | null): HTMLElement {
     return h(
       'div',
       { class: 'ww-scrim dt-result-scrim' },
@@ -1404,6 +1408,13 @@ export class DraftTable {
           class: 'ww-dialog is-wide dt-result',
           attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dt-result-title' },
         },
+        last &&
+          h(
+            'section',
+            { class: 'dt-result-raid', attrs: { 'aria-label': last.title } },
+            h('h3', {}, last.title),
+            this.seasonLines(last),
+          ),
         h('h2', { id: 'dt-result-title' }, 'Final scores'),
         // UX.md §10.2: one card per town, best first, its score in bands (not a score pad).
         h(
@@ -1414,7 +1425,8 @@ export class DraftTable {
               'li',
               {
                 class: `dt-band-card${c.winner ? ' is-winner' : ''}`,
-                style: { '--seat': c.color },
+                // --seat-i: seat order while the totals count up (R10 #1), rank order after.
+                style: { '--seat': c.color, '--seat-i': String(c.seat) },
                 attrs: {
                   'aria-label': `${c.rank}. ${c.you ? 'You' : c.name}: ${c.total}`,
                   'data-seat': String(c.seat),
