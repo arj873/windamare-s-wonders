@@ -4,13 +4,27 @@
  * preset; read-only for guests), chat, and Start. Re-renders the seats on every room update; the
  * name field, the chat and the copy button persist.
  */
-import { LIMITS, type RoomConfig, type RoomInfo, type TimerPreset } from '../../net/protocol';
+import {
+  BOT_LEVELS,
+  LIMITS,
+  type BotLevel,
+  type RoomConfig,
+  type RoomInfo,
+  type TimerPreset,
+} from '../../net/protocol';
 import { confirmDialog } from '../dialog';
 import { append, h } from '../dom';
 import {
+  BOT_LEVEL_OPTIONS,
+  botLevelLabel,
+  COLOUR_SLOTS,
   lobbyView,
+  seatColor,
   TIMER_OPTIONS,
   timerHint,
+  withBotLevel,
+  withColour,
+  withConfig,
   withSeatCount,
   type LobbyView,
   type SeatRange,
@@ -24,7 +38,8 @@ export interface LobbyActions {
   setName(name: string): void;
   takeSeat(seat: number): void;
   leaveSeat(): void;
-  configure(config: RoomConfig): void;
+  /** Host: new room settings. `false` = not sent (offline): the lobby keeps showing the old. */
+  configure(config: RoomConfig): boolean;
   start(): void;
   leave(): void;
   /** Host: remove a member from the room (asked to confirm first). */
@@ -42,6 +57,16 @@ export interface LobbyOptions {
   copy?: (text: string) => Promise<void>;
   /** "Are you sure?" before a kick; default ui's confirmDialog. */
   confirm?: (title: string, text: string, confirmLabel: string) => Promise<boolean>;
+}
+
+/** The `data-k` of the focused control inside `box`, so a re-render can put focus back. */
+function focusedKey(box: HTMLElement): string | null {
+  const el = document.activeElement;
+  return el instanceof HTMLElement && box.contains(el) ? el.getAttribute('data-k') : null;
+}
+
+function refocus(box: HTMLElement, key: string | null): void {
+  if (key) box.querySelector<HTMLElement>(`[data-k="${key}"]`)?.focus();
 }
 
 async function defaultCopy(text: string, input: HTMLInputElement): Promise<void> {
@@ -69,8 +94,11 @@ export class LobbyScreen {
   private readonly linkInput: HTMLInputElement;
   private readonly copyLabel: HTMLElement;
   private room: RoomInfo | null = null;
+  private me: string | null = null;
   private view: LobbyView | null = null;
   private copiedTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Host: the seat whose colour swatches are open, if any. */
+  private colourOpen: number | null = null;
 
   constructor(private readonly opts: LobbyOptions) {
     this.linkInput = h('input', {
@@ -198,6 +226,7 @@ export class LobbyScreen {
   /** Re-render from a room update. */
   update(room: RoomInfo, me: string | null): void {
     this.room = room;
+    this.me = me;
     const v = lobbyView(room, me, this.opts.range);
     this.view = v;
     if (document.activeElement !== this.nameInput) this.nameInput.value = v.me?.name ?? '';
@@ -221,6 +250,16 @@ export class LobbyScreen {
   destroy(): void {
     if (this.copiedTimer !== null) clearTimeout(this.copiedTimer);
     this.element.remove();
+  }
+
+  /**
+   * Host edit: send it and show it now (`withConfig`), so the next edit builds on it even before
+   * the server's room message comes back; that message then replaces the guess.
+   */
+  private configure(config: RoomConfig): void {
+    const room = this.room;
+    if (this.opts.actions.configure(config) === false || !room) return;
+    this.update(withConfig(room, config), this.me);
   }
 
   private commitName(): void {
@@ -269,8 +308,9 @@ export class LobbyScreen {
   }
 
   private renderSeats(v: LobbyView): void {
-    const a = this.opts.actions;
     const room = this.room;
+    if (this.colourOpen !== null && !v.seats[this.colourOpen]?.canSetColour) this.colourOpen = null;
+    const focus = focusedKey(this.seatsBox);
     this.seatsBox.replaceChildren(...v.seats.map((s) => this.seatCard(s, v)));
     if (v.canAddSeat && room) {
       this.seatsBox.append(
@@ -283,7 +323,9 @@ export class LobbyScreen {
               class: 'btn btn-ghost ol-seat-add',
               title: 'Add a seat; a bot plays it unless someone sits down',
               attrs: { 'data-k': 'add-bot' },
-              on: { click: () => a.configure(withSeatCount(room.config, room.seats.length + 1)) },
+              on: {
+                click: () => this.configure(withSeatCount(room.config, room.seats.length + 1)),
+              },
             },
             '+ Add bot',
           ),
@@ -326,6 +368,7 @@ export class LobbyScreen {
         ),
       );
     }
+    refocus(this.seatsBox, focus);
   }
 
   /** Host: remove a member, after "Are you sure?" (UX.md §11.5: destructive actions only). */
@@ -345,13 +388,15 @@ export class LobbyScreen {
     const room = this.room;
     const meSeated = v.me?.seat != null;
     const name = s.name ?? 'Bot';
+    const level = botLevelLabel(s.botLevel);
     const sub =
       s.name === null
-        ? 'Open seat · a bot plays it'
+        ? `Open seat · ${/^[aeiou]/i.test(level) ? 'an' : 'a'} ${level} bot plays it`
         : s.isAway
           ? 'Disconnected · seat kept for a minute'
           : 'Connected';
     const buttons: (HTMLElement | false)[] = [
+      s.canSetLevel && !!room && this.levelSelect(s, room),
       s.canRemove &&
         !!room &&
         h(
@@ -360,7 +405,9 @@ export class LobbyScreen {
             class: 'btn btn-sm btn-ghost',
             title: 'Remove this seat',
             attrs: { 'data-k': 'remove-bot' },
-            on: { click: () => a.configure(withSeatCount(room.config, room.seats.length - 1)) },
+            on: {
+              click: () => this.configure(withSeatCount(room.config, room.seats.length - 1)),
+            },
           },
           'Remove seat',
         ),
@@ -393,6 +440,24 @@ export class LobbyScreen {
           meSeated ? 'Move here' : 'Sit here',
         ),
     ];
+    const open = this.colourOpen === s.index;
+    const dot =
+      s.canSetColour && room
+        ? h('button', {
+            class: 'ol-dot ol-dot-btn',
+            title: `${s.colorLabel}: change colour`,
+            attrs: {
+              'aria-label': `Seat ${s.index + 1} colour: ${s.colorLabel}. Change`,
+              'aria-expanded': String(open),
+              'data-k': `colour-${s.index}`,
+            },
+            on: { click: () => this.toggleColours(s.index) },
+          })
+        : h('span', {
+            class: 'ol-dot',
+            title: s.colorLabel,
+            attrs: { role: 'img', 'aria-label': s.colorLabel },
+          });
     return h(
       'li',
       {
@@ -401,7 +466,7 @@ export class LobbyScreen {
         attrs: { 'data-seat': String(s.index), 'data-k': `seat-${s.index}` },
       },
       h('span', { class: 'ol-seat-no', attrs: { 'aria-hidden': 'true' } }, String(s.index + 1)),
-      h('span', { class: 'ol-dot', attrs: { 'aria-hidden': 'true' } }),
+      dot,
       h(
         'div',
         { class: 'ol-seat-main' },
@@ -416,14 +481,96 @@ export class LobbyScreen {
         h('div', { class: 'ol-seat-sub muted' }, sub),
       ),
       h('div', { class: 'ol-seat-actions' }, ...buttons),
+      open && room && this.swatches(s, v, room),
     );
   }
 
+  private toggleColours(seat: number): void {
+    this.colourOpen = this.colourOpen === seat ? null : seat;
+    if (this.view) this.renderSeats(this.view);
+    const key =
+      this.colourOpen === null
+        ? `colour-${seat}`
+        : `swatch-${seat}-${this.view?.seats[seat]?.colour ?? 0}`;
+    this.seatsBox.querySelector<HTMLElement>(`[data-k="${key}"]`)?.focus();
+  }
+
+  /** Host: the palette for one seat. A colour another seat has is offered as a swap. */
+  private swatches(s: SeatView, v: LobbyView, room: RoomInfo): HTMLElement {
+    const holder = new Map(v.seats.map((x) => [x.colour, x]));
+    return h(
+      'div',
+      {
+        class: 'ol-swatches',
+        attrs: { role: 'group', 'aria-label': `Colour for seat ${s.index + 1}` },
+        on: { keydown: (e) => e.key === 'Escape' && this.toggleColours(s.index) },
+      },
+      ...COLOUR_SLOTS.map((slot) => {
+        const look = seatColor(slot);
+        const other = holder.get(slot);
+        const mine = slot === s.colour;
+        const label =
+          mine || !other
+            ? look.name
+            : `${look.name}: swap with seat ${other.index + 1} (${other.name ?? 'bot'})`;
+        return h(
+          'button',
+          {
+            class: `ol-swatch${mine ? ' is-on' : ''}${other && !mine ? ' is-taken' : ''}`,
+            style: { '--sw': look.color },
+            title: label,
+            attrs: {
+              'aria-label': label,
+              'aria-pressed': String(mine),
+              'data-k': `swatch-${s.index}-${slot}`,
+            },
+            on: {
+              click: () => {
+                if (!mine) this.configure(withColour(room, s.index, slot));
+                this.toggleColours(s.index); // closes; focus back on the seat's colour button
+              },
+            },
+          },
+          other && !mine
+            ? h('span', { attrs: { 'aria-hidden': 'true' } }, String(other.index + 1))
+            : '',
+        );
+      }),
+    );
+  }
+
+  /** Host: the bot level for an open seat (UX.md §6 "[Normal ▾]"). */
+  private levelSelect(s: SeatView, room: RoomInfo): HTMLElement {
+    const select = h(
+      'select',
+      {
+        class: 'input ol-level',
+        attrs: { 'aria-label': `Bot level, seat ${s.index + 1}`, 'data-k': `level-${s.index}` },
+        on: {
+          change: (e) => {
+            const level = (e.target as HTMLSelectElement).value as BotLevel;
+            if (BOT_LEVELS.includes(level) && level !== s.botLevel) {
+              this.configure(withBotLevel(room, s.index, level));
+            }
+          },
+        },
+      },
+      ...BOT_LEVEL_OPTIONS.map((o) => {
+        const opt = h('option', { title: o.hint }, o.label);
+        opt.value = o.id;
+        return opt;
+      }),
+    );
+    select.value = s.botLevel;
+    select.title = BOT_LEVEL_OPTIONS.find((o) => o.id === s.botLevel)?.hint ?? '';
+    return select;
+  }
+
   private renderConfig(config: RoomConfig, v: LobbyView): void {
-    const a = this.opts.actions;
     const pick = (timer: TimerPreset) => {
-      if (timer !== config.timer) a.configure({ ...config, timer });
+      if (timer !== config.timer) this.configure({ ...config, timer });
     };
+    const focus = focusedKey(this.configBox);
     this.configBox.replaceChildren(
       h(
         'div',
@@ -449,6 +596,7 @@ export class LobbyScreen {
         h('small', { class: 'muted' }, `${timerHint(config.timer)}; shorter later in a Season.`),
       ),
     );
+    refocus(this.configBox, focus);
     this.configNote.textContent = v.isHost
       ? 'You are the host: add bots or wait for friends, then start. Open seats are played by bots.'
       : v.hostAway

@@ -198,6 +198,7 @@
 }
 .ol-seat {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
@@ -222,8 +223,9 @@
   font-family: var(--font-num, var(--font-ui));
   color: var(--ink-dim);
 }
+/* Too narrow for the name next to the buttons (a phone, a level picker): buttons wrap below. */
 .ol-seat-main {
-  flex: 1;
+  flex: 1 1 120px;
   min-width: 0;
 }
 .ol-seat-name {
@@ -241,8 +243,68 @@
   font-size: 12px;
 }
 .ol-seat-actions {
+  margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+}
+/* Host: the seat's dot is the colour button (a 28 px target around the 16 px dot). */
+.ol-dot-btn {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--edge);
+  position: relative;
+}
+.ol-dot-btn::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+.ol-dot-btn[aria-expanded='true'] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--ink);
+}
+.ol-swatches {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0 2px 28px;
+}
+.ol-swatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 99px;
+  border: 2px solid var(--edge);
+  background: var(--sw);
+  color: #fff;
+  font: 800 12px/1 var(--font-num, var(--font-ui));
+  text-shadow:
+    0 0 2px #000,
+    0 0 2px #000;
+  cursor: pointer;
+}
+.ol-swatch.is-on {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--surface) inset;
+}
+.ol-swatch.is-taken {
+  opacity: 0.8;
+}
+.ol-level {
+  width: auto;
+  min-height: 0;
+  padding: 3px 8px;
+  font-size: 13px;
 }
 .ol-seat-add-row {
   display: flex;
@@ -314,6 +376,34 @@
   }
   .ol-side {
     position: static;
+  }
+}
+/* Phone portrait (UX.md §12.1, reference 390 px). */
+@media (max-width: 560px) {
+  .ol-inner {
+    width: calc(100% - 20px);
+    padding-top: 14px;
+    gap: 12px;
+  }
+  .ol-main {
+    gap: 12px;
+  }
+  .ol-swatches {
+    padding-left: 0;
+    gap: 6px;
+  }
+  /* The summary gets its own line over Leave / Start instead of three cramped ones. */
+  .ol-lobby .su-footer-in {
+    width: calc(100% - 20px);
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+  .ol-lobby .su-summary {
+    flex-basis: 100%;
+    font-size: 13px;
+  }
+  .ol-footer-actions {
+    margin-left: auto;
   }
 }
 
@@ -496,6 +586,75 @@
 }
 .ol-dock-toggle {
   position: relative;
+}
+/*
+ * Phone (UX.md §12, ≤ 720 px): the dock is one bar along the bottom (waiting line, Leave, Chat)
+ * instead of a stack over the hand, and the chat opens as a sheet above it.
+ */
+@media (max-width: 720px) {
+  .ol-play {
+    --ol-bar-h: calc(54px + env(safe-area-inset-bottom, 0px));
+  }
+  /*
+   * ui pins the hand to the bottom on phones (table.css, R6 #3): lift it above the bar, and the
+   * table's bottom padding with it. Drop this once the table offers its own bottom inset.
+   */
+  .ol-play .dt-hand {
+    bottom: var(--ol-bar-h);
+  }
+  .ol-play .dt {
+    padding-bottom: calc(var(--dt-hand-h, 46vh) + 12px + var(--ol-bar-h));
+  }
+  .ol-dock {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: var(--surface);
+    border-top: 2px solid var(--edge);
+    box-shadow: var(--panel-shadow);
+  }
+  .ol-dock-panel {
+    order: -1;
+    flex-basis: 100%;
+    width: auto;
+    padding: 4px 0;
+    border: 0;
+    box-shadow: none;
+  }
+  .ol-dock-panel .ol-chat-list {
+    height: min(200px, 32vh);
+  }
+  .ol-presence {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    align-items: flex-start;
+    padding: 0 2px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    text-align: left;
+  }
+  .ol-presence > * {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ol-dock > .ol-row {
+    margin-left: auto;
+    flex-wrap: nowrap;
+  }
+  .ol-dock .btn {
+    min-height: 40px;
+    padding: 4px 14px;
+  }
 }
 .ol-dock-toggle.has-unread::after {
   content: '';
