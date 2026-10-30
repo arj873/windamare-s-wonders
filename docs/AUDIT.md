@@ -21,6 +21,41 @@ any real token/seed generator.
 
 Open findings: none. The tests stay as regression guards; any lane that changes an API they use must keep them compiling.
 
+## Q1 — Windamere engine against docs/RULES.md (main 5dbac5e, fixture content)
+
+Tested: `src/engine/game/*` through `createWindamereEngine(FIXTURE)` in
+`src/engine/game/rules.audit.test.ts`. The real card data (`src/content/`) is not on main, so card
+numbers are the engine fixture's. Rules design is still moving in D8 (Summer price, R6.7/R17.9):
+those two are covered only by the generic buy/short-supply tests and need a re-check after D8.
+
+**Open findings: none.** Method:
+
+- **Property tests (3 to 7 seats, 5 to 8 seeds each).** Whole 20-turn games of random but legal
+  _rich_ picks: purchases from either neighbour, Exchanges, bank, upgrades, random "any" goods,
+  random Great Works, random starting coins and stores. A counter test proves they exercise
+  buying, Exchanges, the bank, covers, gleans, tier completions and bounty. Per turn: arrival
+  order never changes the state (R4.8, R15.9, byte-equal JSON); hands pass to the right
+  neighbour for the Season (R3.3, R4.6); five turns a Season, hands empty and glean zone empty at
+  Season end (R3.5); coins, goods and counters stay whole numbers >= 0; labour and tiers only
+  rise and tiers equal the thresholds reached (R8); Landmarks are unique (R7.8); covered cards
+  sit in the covered zone with a coverer in town (R7.9); a Valour token appears exactly when
+  Guard >= the Raid, worth the Season's value (R9.4). At game end an **independent oracle**
+  re-implemented from RULES.md (Guard, Lore runs, Honours, every R13 `score…` effect, purse,
+  tie-break and ranking) must equal the engine's scores and ranking.
+- **Hidden information (R1.11).** Views hide later Raids, other hands, other picks and the glean
+  zone; towns stay public; changing a pick leaves no trace for other seats.
+- **Targeted rules:** R2.2/2.3/2.6/2.7, R3.7 (no Yield in any Winter turn), R4.5 timing,
+  R6.3 bank 5, R6.5, R6.6b per-neighbour limit, R6.6c price per Season, R6.7 shortage and
+  left-neighbour order, R7.8-R7.10, R9.5-R9.7 and R17.6 (bounty order with scarce coins), R10.5,
+  R11.2, R12.2f, R12.4, R17.3, R17.5, R17.11.
+- **Mutation check.** I broke the engine on purpose in 10 places (Winter Yield, bounty order,
+  plunder size, covered cards counting, seller order, buy limit, missing glean, market price,
+  bank price, final tier check): all but one equivalent mutant were caught by these tests.
+
+**Not implemented yet** (the engine says so in `ruleset.ts`): R14 (2-player variant: 10 cards,
+Burn) and R2.4/R2.5 (the Great Work choice at setup; towns start without one). Both are
+`it.todo` in the audit file; Q1 tests for them follow when engine lands them.
+
 ## Checked and fine (tests pass, keep them green)
 
 Engine (`src/engine/core/engine.audit.test.ts`):
