@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160"><title>The Hall of Echoes</title>
+<!-- Four tier layers: a host dims tier-N until the tier completes. -->
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c3d5a"/><stop offset="1" stop-color="#e09a72"/></linearGradient></defs>
+<rect width="240" height="160" fill="url(#sky)"/><path d="M0 128q60 -20 120 -6t120 -6v44H0z" fill="#853b22" stroke="#1e0c04" stroke-width="2.5" stroke-linejoin="round"/>
+<g id="tier-1"><rect x="50" y="76" width="140" height="54" rx="3" fill="#e9dcc0" stroke="#1e0c04" stroke-width="2.5" stroke-linejoin="round"/></g><g id="tier-2"><path d="M104 130V100.0a16.0 16.0 0 0 1 32 0V130z" fill="#3c1204" stroke="#1e0c04" stroke-width="2.5" stroke-linejoin="round"/></g><g id="tier-3"><path d="M42 76L120 36l78 40z" fill="#b3593a" stroke="#1e0c04" stroke-width="2.5" stroke-linejoin="round"/></g><g id="tier-4"><g fill="none" stroke="#f5b82e" stroke-width="3.5" stroke-linecap="round"><path d="M70 100q-10 10 0 20M60 96q-18 14 0 28M170 100q10 10 0 20M180 96q18 14 0 28"/></g></g>
+</svg>

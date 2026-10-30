@@ -92,13 +92,23 @@ A slim tower of four stacked bands, ids `tier-1..4` (base first), numerals I to 
 old three-socket plinth (7 Wonders wonder-board look, "stage" ids; research O3). Pairs with
 `badges/great-work-track.svg`, the horizontal progress bar.
 
+## Great Work vignettes (`public/art/great-works/<id>.svg`, 240×160)
+
+One scene per Great Work in `src/content/windamere/extras.ts` (14, file name = content id):
+mere-bridge, wind-organ, beacon-crown, salt-stair, stonewrights-spire, hall-of-echoes,
+harvest-wheel, ice-lantern, wolf-gate, tide-mill, lantern-market, ring-of-oaths, coinwell,
+fourfold-gate. Each is drawn as four layers `tier-1..4` (base first); inline the SVG and dim
+`#tier-N` until that tier completes, so the scene visibly builds up with labour. Scenes are
+simple flat shapes and are not tied to what the tier rewards are. Original Windamere places;
+no real-world ancient wonder (ORIGINALITY §5). Untested in the live UI.
+
 ## Table chrome (A2)
 
 Fixed art in `public/art/table/`: `table-bg.svg` (cobalt table with faint diamond tile),
 `seat-panel.svg` (terracotta, sockets avatar/name/tableau/plaque), `neighbour-strip.svg` (arrow
 shows pass direction; mirror for the other side), `round-badge.svg` (timer ring: animate
-`#ring-fill` `stroke-dashoffset`, circumference 251.3), `title-key-art.svg` (monument on a hill,
-card fan). Live-layout equivalents are CSS in `src/ui/theme/chrome.css`
+`#ring-fill` `stroke-dashoffset`, circumference 251.3), `title-key-art.svg` (refreshed in A6: the Wend ring road round the mere at dusk, seven lit
+towns, a beacon on the island; the columned-hall version is gone). Live-layout equivalents are CSS in `src/ui/theme/chrome.css`
 (`.table .seat .seat-me .neighbour .round-badge .timer-low`; `--timer` 0..1 drives the ring).
 Seat identity: colour (`--seat`) plus a marker shape and the seat name, never colour alone.
 Built from catan's patterns before UX.md/RULES.md landed; not yet reconciled with UX.md.
