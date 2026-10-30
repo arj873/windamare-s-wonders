@@ -375,7 +375,7 @@ export class GameSession<S, T> {
   }
 
   private botLevel(i: number): BotLevel {
-    return this.config.botLevels?.[i] ?? 'easy';
+    return this.config.botLevels?.[i] ?? 'medium';
   }
 
   private resizeSeats(): void {
