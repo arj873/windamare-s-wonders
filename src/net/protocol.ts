@@ -152,6 +152,23 @@ export const CLOSE = {
   expired: 4004,
 } as const;
 
+/** Errors after which the server closes the socket and the client must not reconnect. */
+export const FATAL_ERRORS: readonly ErrorCode[] = [
+  'version_mismatch',
+  'room_full',
+  'kicked',
+  'replaced',
+  'room_expired',
+];
+/** WebSocket close code -> the fatal error it means. */
+export const FATAL_BY_CLOSE: ReadonlyMap<number, ErrorCode> = new Map([
+  [CLOSE.versionMismatch, 'version_mismatch'],
+  [CLOSE.roomFull, 'room_full'],
+  [CLOSE.kicked, 'kicked'],
+  [CLOSE.replaced, 'replaced'],
+  [CLOSE.expired, 'room_expired'],
+]);
+
 // ---- server -> client ------------------------------------------------------
 
 export interface TimerInfo {
