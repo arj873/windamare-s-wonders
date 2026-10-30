@@ -17,6 +17,7 @@ if (root) {
   });
   // ?start: skip the setup screen (screenshots, quick checks).
   if (new URLSearchParams(location.search).has('start')) {
+    root.querySelector<HTMLButtonElement>('[data-k="play"]')?.click();
     root.querySelector<HTMLButtonElement>('[data-k="start"]')?.click();
   }
   Object.assign(window, { app });

@@ -24,6 +24,7 @@ if (root) {
   const debug = params.get('debug') === '1';
   const app = boot(root, {
     game: windamereBinding(),
+    homeArt: `${import.meta.env.BASE_URL}art/table/title-key-art.svg`,
     ...(debug
       ? {
           debug: {

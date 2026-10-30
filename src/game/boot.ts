@@ -17,6 +17,7 @@ import {
   type MenuItem,
   type NewGameConfig,
 } from '../ui';
+import { HomeScreen } from '../ui/home/screen';
 import { MAX_PLAYERS, MIN_PLAYERS, SEAT_COLORS } from '../ui/setup/model';
 import { playLocal, type GameBinding, type PlayHandle } from './play';
 
@@ -30,6 +31,8 @@ export interface BootOptions<S, T> {
    * no timer and no pass covers, so a script can play each seat in turn.
    */
   debug?: { seats: number; seed?: string };
+  /** Title key art behind the home screen (public/art). */
+  homeArt?: string;
 }
 
 /** The all-human game `?debug=1` starts. */
@@ -49,15 +52,19 @@ export function debugConfig(seats: number, seed?: string): NewGameConfig {
 
 export interface BootHandle<S, T> {
   menu: Menu;
-  /** The screen on show: the setup screen, or null while a game is on. */
+  /** The screen on show: home, setup, or neither while a game is on. */
+  readonly home: HomeScreen | null;
   readonly setup: SetupScreen | null;
   readonly play: PlayHandle<S, T> | null;
 }
 
 export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): BootHandle<S, T> {
   document.documentElement.classList.toggle('no-anim', !loadAnimations());
+  let home: HomeScreen | null = null;
   let setup: SetupScreen | null = null;
   let play: PlayHandle<S, T> | null = null;
+  /** The home screen's nickname, for the first human seat. */
+  let nickname = '';
   let lastConfig: NewGameConfig | null = null;
   let speed: BotSpeed = loadBotSpeed();
 
@@ -98,11 +105,28 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   corner.style.cssText = 'position:fixed;top:12px;left:12px;z-index:25;';
   corner.append(menu.element);
 
+  /** UX.md §4: the first screen (Play vs bots → setup). */
+  function showHome(): void {
+    play?.hide();
+    setup = null;
+    home = new HomeScreen({
+      onPlay: (name) => {
+        nickname = name;
+        showSetup();
+      },
+      ...(opts.homeArt ? { art: opts.homeArt } : {}),
+    });
+    menu.setItems(prefs);
+    root.replaceChildren(home.element, corner);
+  }
+
   function showSetup(): void {
     play?.hide();
+    home = null;
     setup = new SetupScreen({
       onStart: start,
-      ...(play ? { onBack: showPlay } : {}),
+      ...(play ? { onBack: showPlay } : { onBack: showHome, backLabel: 'Back' }),
+      ...(nickname ? { playerName: nickname } : {}),
     });
     menu.setItems(prefs);
     root.replaceChildren(setup.element, corner);
@@ -111,6 +135,7 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   function showPlay(): void {
     if (!play) return;
     setup = null;
+    home = null;
     menu.setItems([
       { kind: 'action', label: 'New game', hint: 'Back to the setup screen', onClick: showSetup },
       ...prefs,
@@ -149,10 +174,17 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     showPlay();
   }
 
-  showSetup();
-  if (opts.debug) start(debugConfig(opts.debug.seats, opts.debug.seed));
+  if (opts.debug) {
+    showSetup();
+    start(debugConfig(opts.debug.seats, opts.debug.seed));
+  } else {
+    showHome();
+  }
   return {
     menu,
+    get home() {
+      return home;
+    },
     get setup() {
       return setup;
     },
