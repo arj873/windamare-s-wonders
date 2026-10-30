@@ -765,7 +765,12 @@ export class DraftTable {
           'button',
           {
             class: 'btn btn-sm btn-ghost',
-            attrs: { 'data-act': 'unpick', 'data-k': 'unpick', 'aria-keyshortcuts': 'Z' },
+            attrs: {
+              'data-act': 'unpick',
+              'data-k': 'unpick',
+              'data-pt-role': 'unpick',
+              'aria-keyshortcuts': 'Z',
+            },
           },
           '↶ Change pick ',
           h('kbd', {}, 'Z'),
@@ -788,12 +793,19 @@ export class DraftTable {
     );
   }
 
-  /** Amounts as icon + number (R6 #5); each carries its words for hover and screen readers. */
+  /**
+   * Amounts as icon + number (R6 #5). Each is one image to assistive tech and qa's scanner
+   * ("3 coins", not an icon and a bare 3); the title shows the same words on hover.
+   */
   private parts(parts: readonly FacePart[]): HTMLElement[] {
     return parts.map((p) =>
       h(
         'span',
-        { class: 'dt-part', title: p.label, attrs: p.term ? { 'data-term': p.term } : {} },
+        {
+          class: 'dt-part',
+          title: p.label,
+          attrs: { role: 'img', 'aria-label': p.label, ...(p.term ? { 'data-term': p.term } : {}) },
+        },
         p.icon &&
           h('img', { class: 'dt-icon', attrs: { src: p.icon, alt: '', 'aria-hidden': 'true' } }),
         p.text,
@@ -906,6 +918,7 @@ export class DraftTable {
           attrs: {
             'data-act': `select:${c.id}`,
             'data-k': `card-${c.id}`,
+            'data-pt-role': 'card',
             'data-card': String(c.id),
             'data-def': c.def,
             'data-playable': String(c.playable),
@@ -982,6 +995,7 @@ export class DraftTable {
                   attrs: {
                     'data-act': `pick:${c.id}:${o.use.id}`,
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-pt-role': o.use.id,
                     'data-use': o.use.id,
                     'data-card': String(c.id),
                     'aria-keyshortcuts': o.use.key.toUpperCase(),
@@ -1015,8 +1029,10 @@ export class DraftTable {
                   disabled: true,
                   attrs: {
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-pt-role': o.use.id,
                     'data-use': o.use.id,
                     'data-card': String(c.id),
+                    'data-why': o.why ?? '',
                     'aria-describedby': `why-${c.id}-${o.use.id}`,
                   },
                 },
@@ -1052,7 +1068,9 @@ export class DraftTable {
                 'aria-checked': String(opt.selected),
                 'data-act': `choose:${c.id}:${o.use.id}:${r}:${k}`,
                 'data-k': `choice-${c.id}-${o.use.id}-${r}-${k}`,
+                'data-pt-role': 'choice',
                 'data-option': opt.key,
+                ...(opt.why === null ? {} : { 'data-why': opt.why }),
                 ...(opt.why === null ? {} : { 'aria-describedby': whyId(k) }),
               },
             },
@@ -1103,6 +1121,7 @@ export class DraftTable {
                 'aria-checked': String(a.chosen),
                 'data-act': `answer:${i}`,
                 'data-k': `answer-${i}`,
+                'data-pt-role': 'answer',
                 'data-answer': typeof a.answer === 'string' ? a.answer : JSON.stringify(a.answer),
                 'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
               },

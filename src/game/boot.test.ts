@@ -156,6 +156,23 @@ describe('boot', () => {
     expect(root.querySelector('.dt-chip[data-seat="2"]')?.getAttribute('data-status')).toBe(
       'picked',
     );
+    // qa's playtest hooks: roles on the controls, why a Build is closed, the view as JSON.
+    let closed: HTMLButtonElement | null = null;
+    for (const c of root.querySelectorAll<HTMLElement>('[data-pt-role="card"]')) {
+      c.click();
+      expect(root.querySelector('[data-pt-role="spend"]')).not.toBeNull();
+      closed = root.querySelector<HTMLButtonElement>('[data-pt-role="build"]:disabled');
+      if (closed) break;
+    }
+    expect(closed?.dataset.why).toMatch(/\S/); // seed 'qa': this hand has a Spend-only card
+    expect(root.querySelector('.dt-card .dt-part[role="img"]')?.getAttribute('aria-label')).toMatch(
+      /\S/,
+    );
+    const pt = (window as unknown as { __pt: { view(seat?: number): unknown } }).__pt;
+    const view = pt.view() as { view: { viewer: number }; seats: unknown[] };
+    expect(view.view.viewer).toBe(0);
+    expect(view.seats).toHaveLength(3);
+    expect((pt.view(1) as { view: { viewer: number } }).view.viewer).toBe(1);
     app.play?.dispose();
   });
 

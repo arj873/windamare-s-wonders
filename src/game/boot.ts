@@ -266,6 +266,19 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   if (opts.debug) {
     showSetup();
     start(debugConfig(opts.debug.seats, opts.debug.seed));
+    // qa's playtest browser layer (playtest/README.md) reads state here, never from the engine.
+    // Merged into any `__pt` the injected scanner already set.
+    const w = window as unknown as { __pt?: Record<string, unknown> };
+    w.__pt = {
+      ...w.__pt,
+      /** The DraftView on screen, or seat `seat`'s, as a JSON copy (read-only); null = no game. */
+      view: (seat?: number): unknown => {
+        if (!play || !opts.game) return null;
+        const g = play.game;
+        const v = seat === undefined ? g.view() : opts.game.engine.viewFor(g.state, seat);
+        return JSON.parse(JSON.stringify(v)) as unknown;
+      },
+    };
   } else {
     showHome();
   }
