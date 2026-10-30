@@ -1,0 +1,72 @@
+/*
+ * Table chrome as CSS, for live layout (SVGs in public/art/table/ are the fixed-art versions).
+ * Classes: .table, .seat, .seat-me, .neighbour, .round-badge, .timer-low.
+ * Seat identity: colour via --seat plus a marker shape (see ART.md), never colour alone.
+ */
+.table {
+  background: var(--page-bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+.seat {
+  --seat: var(--accent);
+  position: relative;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--panel-shadow);
+  border: 3px solid var(--edge);
+  color: var(--ink);
+}
+.seat-me {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.seat .seat-name {
+  font-family: var(--font-display);
+  letter-spacing: var(--display-tracking);
+  background: var(--card-paper);
+  color: var(--ink-dark);
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+.seat .seat-mark {
+  width: 18px;
+  height: 18px;
+  background: var(--seat);
+  border: 2px solid var(--card-edge);
+}
+.neighbour {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 3px solid var(--edge);
+  color: var(--ink);
+}
+.neighbour[data-side='right'] {
+  flex-direction: row-reverse;
+}
+.round-badge {
+  --timer: 1; /* 0..1 remaining */
+  display: grid;
+  place-items: center;
+  width: 96px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 4px solid var(--card-edge);
+  color: var(--ink-dark);
+  font-family: var(--font-num);
+  font-weight: 800;
+  background:
+    radial-gradient(circle, var(--card-paper) 0 60%, transparent 61%),
+    conic-gradient(var(--accent) calc(var(--timer) * 360deg), rgba(246, 234, 212, 0.35) 0),
+    var(--cobalt);
+}
+.round-badge.timer-low {
+  background:
+    radial-gradient(circle, var(--card-paper) 0 60%, transparent 61%),
+    conic-gradient(#ff8f7a calc(var(--timer) * 360deg), rgba(246, 208, 196, 0.5) 0), var(--cobalt);
+}
