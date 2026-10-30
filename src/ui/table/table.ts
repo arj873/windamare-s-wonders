@@ -43,6 +43,8 @@ export interface DraftTableHandlers {
   reveal?(): void;
   /** Final scores: same seats, new seed. */
   rematch?(): void;
+  /** The Season-end card closed (Continue or its own timer): the clock may run again. */
+  seasonClosed?(): void;
 }
 
 /** Who the device goes to next (hotseat). */
@@ -77,6 +79,11 @@ export function clockText(ms: number): string {
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 }
 
+/** The tutorial coach's focus mark (tutorial.css) on the Raid banner fact. */
+function tutMark(b: SeatStat): Record<string, string> {
+  return b.term === 'raid' ? { 'data-tut': 'raid' } : {};
+}
+
 export class DraftTable {
   readonly element: HTMLElement;
   /** DOM lookups and an overlay layer for the fx lane's reveal (anchors.ts, UX.md §19). */
@@ -96,6 +103,7 @@ export class DraftTable {
   private readonly fxLayer: HTMLElement;
   /** The Season-end card (UX.md §10.1): the action it was closed for, and its auto-close. */
   private seasonSeen: string | null = null;
+  private seasonUp = false;
   private seasonTimerFor: string | null = null;
   private seasonTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -186,6 +194,11 @@ export class DraftTable {
 
   get covered(): boolean {
     return this.cover !== null;
+  }
+
+  /** The Season-end card is on screen (R7 #1: the turn clock waits while it is read). */
+  get seasonOpen(): boolean {
+    return this.seasonUp;
   }
 
   // ---- intents -----------------------------------------------------------
@@ -335,6 +348,8 @@ export class DraftTable {
     // Test hooks (UX.md §18): what the table shows, readable without parsing text.
     this.element.dataset.phase = this.cover ? 'cover' : m.phase;
     this.element.dataset.viewer = m.viewer === null ? '' : String(m.viewer);
+    this.seasonUp =
+      !m.result && !this.cover && m.seasonEnd !== null && m.actionKey !== this.seasonSeen;
     patchChildren(this.element, [
       this.top(m),
       this.neighbour(m.left, 'left', m),
@@ -346,7 +361,7 @@ export class DraftTable {
         ? [this.result(m.result)]
         : this.cover
           ? [this.coverScreen(this.cover)]
-          : m.seasonEnd && m.actionKey !== this.seasonSeen
+          : this.seasonUp && m.seasonEnd
             ? [this.seasonCard(m.seasonEnd)]
             : []),
       this.fxLayer,
@@ -375,14 +390,28 @@ export class DraftTable {
   };
 
   private top(m: TableModel): HTMLElement {
-    const pass = m.pass && ` · hands pass ${m.pass.arrow} to ${m.pass.to}`;
+    // R7 #3: phones keep only the arrow; the words are for wider screens and screen readers.
+    const pass =
+      m.pass &&
+      h(
+        'span',
+        { class: 'dt-pass' },
+        ' · ',
+        h('span', { class: 'dt-pass-words' }, 'hands pass '),
+        m.pass.arrow,
+        h('span', { class: 'dt-pass-words' }, ` to ${m.pass.to}`),
+      );
     return h(
       'header',
       { class: 'dt-top' },
       h('div', { class: 'dt-round' }, m.round, pass),
-      ...m.banner
-        .filter((b) => !b.group)
-        .map((b) => h('div', { class: 'dt-banner' }, this.stat(b))),
+      h(
+        'div',
+        { class: 'dt-banners' },
+        ...m.banner
+          .filter((b) => !b.group)
+          .map((b) => h('div', { class: 'dt-banner', attrs: tutMark(b) }, this.stat(b))),
+      ),
       h('div', { class: 'dt-status', attrs: { 'aria-live': 'polite' } }, m.status),
       this.timerEl,
       // R6 #3: on phones the Table list, reveal and log live in a drawer.
@@ -415,7 +444,7 @@ export class DraftTable {
               },
             },
             h('span', { class: 'dt-dot', attrs: { 'aria-hidden': 'true' } }),
-            s.you ? 'You' : s.name,
+            h('span', { class: 'dt-chip-name' }, s.you ? 'You' : s.name),
             h(
               'span',
               { class: 'dt-chip-st', attrs: { 'aria-hidden': 'true' } },
@@ -515,6 +544,7 @@ export class DraftTable {
         attrs: {
           'aria-label': `${side === 'left' ? 'Left' : 'Right'} neighbour: ${s.name}`,
           'data-seat': String(s.seat),
+          'data-tut': 'neighbours',
         },
       },
       h(
@@ -554,7 +584,10 @@ export class DraftTable {
     if (!me) return h('section', { class: 'dt-town' }, h('p', { class: 'muted' }, 'Watching'));
     return h(
       'section',
-      { class: 'dt-town', attrs: { 'aria-label': 'Your town', 'data-seat': String(me.seat) } },
+      {
+        class: 'dt-town',
+        attrs: { 'aria-label': 'Your town', 'data-seat': String(me.seat), 'data-tut': 'town' },
+      },
       h(
         'header',
         { class: 'dt-town-head' },
@@ -577,7 +610,7 @@ export class DraftTable {
                   this.kindMark(col.kind),
                   `${col.kind.label} ${col.cards.length}`,
                 ),
-                ...col.cards.map((c) => this.mini(c)),
+                ...col.cards.map((c) => this.mini(c, true)),
               ),
             ),
           )
@@ -671,6 +704,7 @@ export class DraftTable {
     this.seasonTimer = null;
     this.seasonSeen = this.model?.actionKey ?? null;
     this.render();
+    this.handlers.seasonClosed?.();
   }
 
   private coverScreen(c: CoverInfo): HTMLElement {
@@ -731,7 +765,12 @@ export class DraftTable {
           'button',
           {
             class: 'btn btn-sm btn-ghost',
-            attrs: { 'data-act': 'unpick', 'data-k': 'unpick', 'aria-keyshortcuts': 'Z' },
+            attrs: {
+              'data-act': 'unpick',
+              'data-k': 'unpick',
+              'data-pt-role': 'unpick',
+              'aria-keyshortcuts': 'Z',
+            },
           },
           '↶ Change pick ',
           h('kbd', {}, 'Z'),
@@ -739,25 +778,34 @@ export class DraftTable {
     );
   }
 
-  private mini(c: TableauCard): HTMLElement {
+  /** A built card. `withText` (your town, R6 #10): what it does, under its name. */
+  private mini(c: TableauCard, withText = false): HTMLElement {
     return h(
       'span',
       {
-        class: `dt-mini${c.fresh ? ' is-fresh' : ''}`,
+        class: `dt-mini${c.fresh ? ' is-fresh' : ''}${withText ? ' has-text' : ''}`,
         title: `${c.face.name}: ${c.face.text}`,
         attrs: { 'data-card': String(c.id), 'data-kind': c.kind.id },
       },
       this.kindMark(c.kind),
       h('span', { class: 'dt-mini-name' }, c.face.name),
+      withText && c.face.text && h('span', { class: 'dt-mini-text' }, c.face.text),
     );
   }
 
-  /** Amounts as icon + number (R6 #5); each carries its words for hover and screen readers. */
+  /**
+   * Amounts as icon + number (R6 #5). Each is one image to assistive tech and qa's scanner
+   * ("3 coins", not an icon and a bare 3); the title shows the same words on hover.
+   */
   private parts(parts: readonly FacePart[]): HTMLElement[] {
     return parts.map((p) =>
       h(
         'span',
-        { class: 'dt-part', title: p.label, attrs: p.term ? { 'data-term': p.term } : {} },
+        {
+          class: 'dt-part',
+          title: p.label,
+          attrs: { role: 'img', 'aria-label': p.label, ...(p.term ? { 'data-term': p.term } : {}) },
+        },
         p.icon &&
           h('img', { class: 'dt-icon', attrs: { src: p.icon, alt: '', 'aria-hidden': 'true' } }),
         p.text,
@@ -795,7 +843,11 @@ export class DraftTable {
       'div',
       {
         class: `dt-monument is-${size}`,
-        attrs: { 'aria-label': `${mo.name}: ${mo.tiers} of ${mo.total} tiers. ${mo.progress}` },
+        attrs: {
+          'aria-label': `${mo.name}: ${mo.tiers} of ${mo.total} tiers. ${mo.progress}`,
+          // The tutorial coach points at your own Great Work (the large one, in your town).
+          ...(size === 'large' ? { 'data-tut': 'monument' } : {}),
+        },
       },
       mo.art && this.art(mo.art, 'dt-monument-art', mo.tiers),
       h(
@@ -839,7 +891,10 @@ export class DraftTable {
     );
     return h(
       'section',
-      { class: `dt-hand${m.staged ? ' is-locked' : ''}`, attrs: { 'aria-label': 'Your hand' } },
+      {
+        class: `dt-hand${m.staged ? ' is-locked' : ''}`,
+        attrs: { 'aria-label': 'Your hand', 'data-tut': 'hand' },
+      },
       head,
       h(
         'div',
@@ -863,6 +918,7 @@ export class DraftTable {
           attrs: {
             'data-act': `select:${c.id}`,
             'data-k': `card-${c.id}`,
+            'data-pt-role': 'card',
             'data-card': String(c.id),
             'data-def': c.def,
             'data-playable': String(c.playable),
@@ -939,6 +995,7 @@ export class DraftTable {
                   attrs: {
                     'data-act': `pick:${c.id}:${o.use.id}`,
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-pt-role': o.use.id,
                     'data-use': o.use.id,
                     'data-card': String(c.id),
                     'aria-keyshortcuts': o.use.key.toUpperCase(),
@@ -972,8 +1029,10 @@ export class DraftTable {
                   disabled: true,
                   attrs: {
                     'data-k': `use-${c.id}-${o.use.id}`,
+                    'data-pt-role': o.use.id,
                     'data-use': o.use.id,
                     'data-card': String(c.id),
+                    'data-why': o.why ?? '',
                     'aria-describedby': `why-${c.id}-${o.use.id}`,
                   },
                 },
@@ -986,6 +1045,7 @@ export class DraftTable {
   }
 
   private choiceRow(c: HandCard, o: UseOption, row: UseOption['choices'][number], r: number) {
+    const whyId = (k: number) => `why-${c.id}-${o.use.id}-${r}-${k}`;
     return h(
       'div',
       {
@@ -1008,12 +1068,21 @@ export class DraftTable {
                 'aria-checked': String(opt.selected),
                 'data-act': `choose:${c.id}:${o.use.id}:${r}:${k}`,
                 'data-k': `choice-${c.id}-${o.use.id}-${r}-${k}`,
+                'data-pt-role': 'choice',
                 'data-option': opt.key,
+                ...(opt.why === null ? {} : { 'data-why': opt.why }),
+                ...(opt.why === null ? {} : { 'aria-describedby': whyId(k) }),
               },
             },
             opt.label,
           ),
         ),
+      ),
+      // R7 #5: touch has no hover titles, so each closed option says why under the row.
+      ...row.options.flatMap((opt, k) =>
+        opt.why === null
+          ? []
+          : [h('span', { class: 'dt-choice-why', id: whyId(k) }, `${opt.label}: ${opt.why}`)],
       ),
     );
   }
@@ -1026,7 +1095,7 @@ export class DraftTable {
     const chosen = p.answers.find((a) => a.chosen);
     return h(
       'section',
-      { class: 'dt-hand dt-prompt', attrs: { 'aria-label': p.title } },
+      { class: 'dt-hand dt-prompt', attrs: { 'aria-label': p.title, 'data-tut': 'hand' } },
       h(
         'header',
         { class: 'dt-hand-head' },
@@ -1052,6 +1121,7 @@ export class DraftTable {
                 'aria-checked': String(a.chosen),
                 'data-act': `answer:${i}`,
                 'data-k': `answer-${i}`,
+                'data-pt-role': 'answer',
                 'data-answer': typeof a.answer === 'string' ? a.answer : JSON.stringify(a.answer),
                 'aria-keyshortcuts': i < 9 ? String(i + 1) : '',
               },
@@ -1138,7 +1208,7 @@ export class DraftTable {
         ),
         ...m.banner
           .filter((b) => b.group === 'side')
-          .map((b) => h('p', { class: 'dt-side-fact' }, this.stat(b))),
+          .map((b) => h('p', { class: 'dt-side-fact', attrs: tutMark(b) }, this.stat(b))),
       ),
       m.reveal &&
         h(

@@ -216,7 +216,10 @@ describe('windamerePresenter', () => {
       s = r.state;
     }
     const spring = rules.tunables.marketPrice[0]!;
-    expect(model(s).reveal?.happenings).toContain(`Ana bought Reed from Bo (${spring}g)`);
+    // R7 #4: each player reads "You" / "you" for themselves.
+    expect(model(s).reveal?.happenings).toContain(`You bought Reed from Bo (${spring}g)`);
+    expect(model(s, 1).reveal?.happenings).toContain(`Ana bought Reed from you (${spring}g)`);
+    expect(model(s, 2).reveal?.happenings).toContain(`Ana bought Reed from Bo (${spring}g)`);
     expect(model(s).seasonEnd).toBeNull();
 
     // Play out Spring: the action that ends it carries the Raid summary.
@@ -230,6 +233,8 @@ describe('windamerePresenter', () => {
     expect(
       model(summer).reveal?.happenings.some((t) => /held the Raid|was plundered/.test(t)),
     ).toBe(true);
+    const mine = end.lines.find((l) => l.seat === 0)!.text;
+    expect(mine).toMatch(/^You (held the Raid|were plundered) /);
   });
 
   it('keeps Recall of the hands passed this Season (R15.8)', () => {

@@ -68,6 +68,34 @@ describe('DraftTable', () => {
     expect(table.selection).toBeNull();
   });
 
+  it('says under a payment row why an option is closed (R7 #5: no hover on touch)', () => {
+    const state = newToyGame(3);
+    const { el, table } = mount(state);
+    const base = model(state);
+    const card = base.hand[0]!;
+    const use = card.options.find((o) => o.pick !== null)!;
+    const pick = use.pick!;
+    const row = {
+      key: 'pay-0-reed',
+      label: 'Get Reed',
+      options: [
+        { key: 'buy-1', label: 'P1 1g', pick, selected: true, why: null },
+        { key: 'buy-2', label: 'P2 1g', pick, selected: false, why: 'P2 has no Reed' },
+      ],
+    };
+    const hand = [
+      { ...card, options: card.options.map((o) => (o === use ? { ...o, choices: [row] } : o)) },
+    ];
+    table.update({ ...base, hand: [...hand, ...base.hand.slice(1)] });
+    $(el, `[data-k="card-${card.id}"]`)!.click();
+    const closed = $(el, '[data-option="buy-2"]') as HTMLButtonElement;
+    expect(closed.disabled).toBe(true);
+    const why = document.getElementById(closed.getAttribute('aria-describedby')!);
+    expect(why?.textContent).toBe('P2 1g: P2 has no Reed');
+    expect($(el, '[data-option="buy-1"]')!.hasAttribute('aria-describedby')).toBe(false);
+    expect(el.querySelectorAll('.dt-choice-why')).toHaveLength(1);
+  });
+
   it('selects with number keys, picks with the use key, Esc closes', () => {
     const state = newToyGame(3);
     const { el, handlers, table } = mount(state);
@@ -192,24 +220,30 @@ describe('DraftTable', () => {
   it('shows the Season-end card once per Season end; Continue or time closes it', () => {
     vi.useFakeTimers();
     const state = newToyGame(3);
-    const { el, table } = mount(state);
+    const seasonClosed = vi.fn();
+    const { el, table } = mount(state, { seasonClosed });
     const base = model(state);
     const seasonEnd = {
       title: 'End of Spring · Wolf Pack, strength 2',
       lines: [{ seat: 0, text: 'P0 held the Raid', tone: 'gain' as const }],
       next: 'Next: Summer · hands pass ▶ right',
     };
+    expect(table.seasonOpen).toBe(false);
     table.update({ ...base, actionKey: 'end-1', seasonEnd });
+    expect(table.seasonOpen).toBe(true); // R7 #1: play.ts holds the clock meanwhile
     expect($(el, '#dt-season-title')?.textContent).toBe(seasonEnd.title);
     expect($(el, '.dt-season-next')?.textContent).toBe(seasonEnd.next);
     $(el, '[data-k="season-ok"]')!.click();
     expect($(el, '.dt-season')).toBeNull();
+    expect(table.seasonOpen).toBe(false);
+    expect(seasonClosed).toHaveBeenCalledTimes(1);
     table.update({ ...base, actionKey: 'end-1', seasonEnd }); // same action: stays closed
     expect($(el, '.dt-season')).toBeNull();
     table.update({ ...base, actionKey: 'end-2', seasonEnd });
     expect($(el, '.dt-season')).not.toBeNull();
     vi.advanceTimersByTime(SEASON_CARD_MS);
     expect($(el, '.dt-season')).toBeNull();
+    expect(seasonClosed).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });
 

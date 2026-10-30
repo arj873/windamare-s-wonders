@@ -979,25 +979,31 @@ breaking change for qa: say so in the status file.
 seats (default 4, clamped to the player range), named `P1`…`PN`, no pick timer and **no pass
 covers**: the table shows whichever seat the game waits for, so a script plays each seat in turn.
 In debug mode only, `window.ww` is the app handle (`ww.play.game.state` = the full state, for
-assertions; never read it to choose moves). Without `debug=1` nothing of this exists.
+assertions; never read it to choose moves), and `window.__pt.view(seat?)` returns the `DraftView`
+on screen (or seat `seat`'s) as a JSON copy, null with no game. `__pt` is merged into whatever an
+injected scanner already put there, so a scanner should merge too (`Object.assign`), not replace
+it. Without `debug=1` nothing of this exists.
 
 **Attributes** (the table's root is `.dt`):
 
-| Element                     | Attributes                                                                        |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| table root `.dt`            | `data-phase` = `pick` / `prompt` / `gameOver` / `cover`; `data-viewer` = seat     |
-| status chip, summary row    | `data-seat`, `data-status` = `picked` / `thinking` / `idle`                       |
-| neighbour panel             | `data-seat`                                                                       |
-| hand card (button)          | `data-card` (card id), `data-def` (catalog id), `data-playable`                   |
-| Build / Spend button        | `data-use` = `build` / `spend`, `data-card`; disabled when not legal              |
-| choice row (in the popover) | `data-choice` = `cover` or `pay-<i>-<good>`                                       |
-| choice option (button)      | `data-option` = `cover-<cardId>`, `full`, `buy-<seat>`, `exchange-<good>`, `bank` |
-| prompt answer (Great Work)  | `data-answer` = the answer (a Great Work id)                                      |
-| final scores                | `.dt-band-card` per town, best first                                              |
+| Element                     | Attributes                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| table root `.dt`            | `data-phase` = `pick` / `prompt` / `gameOver` / `cover`; `data-viewer` = seat                                                              |
+| status chip, summary row    | `data-seat`, `data-status` = `picked` / `thinking` / `idle`                                                                                |
+| neighbour panel             | `data-seat`                                                                                                                                |
+| hand card (button)          | `data-pt-role="card"`, `data-card` (card id), `data-def` (catalog id), `data-playable`                                                     |
+| Build / Spend button        | `data-pt-role` = `data-use` = `build` / `spend`, `data-card`; disabled when not legal, then `data-why` = the reason                        |
+| choice row (in the popover) | `data-choice` = `cover` or `pay-<i>-<good>`                                                                                                |
+| choice option (button)      | `data-pt-role="choice"`, `data-option` = `cover-<cardId>`, `full`, `buy-<seat>`, `exchange-<good>`, `bank`; disabled ones carry `data-why` |
+| ready mark (Change pick)    | `data-pt-role="unpick"` (shown while your pick waits face down)                                                                            |
+| prompt answer (Great Work)  | `data-pt-role="answer"`, `data-answer` = the answer (a Great Work id)                                                                      |
+| cost / Spend amount         | `.dt-part` with `role="img"` and `aria-label` ("3 coins", "1 Reed")                                                                        |
+| final scores                | `.dt-band-card` per town, best first                                                                                                       |
 
 **Flow for one pick:** click the hand card → click `[data-option]` buttons to change sellers (each
-option is re-checked by the engine; disabled ones carry the reason in `title`) → click
-`[data-use="build"]` or `[data-use="spend"]`. Keyboard works too (`1`–`9`, `B`, `S`, `Z`, `Esc`).
+option is re-checked by the engine; disabled ones say why in `data-why`, a line under the row and
+`title`) → click `[data-use="build"]` or `[data-use="spend"]`. Keyboard works too (`1`–`9`, `B`,
+`S`, `Z`, `Esc`).
 
 ---
 

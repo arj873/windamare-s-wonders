@@ -38,6 +38,20 @@ export interface GameBinding<S, T> {
     hint(scale: number): string;
   };
   /**
+   * The tutorial lane's guided first game (src/ui/tutorial): a coach over a normal hotseat game.
+   * `options` are the ruleset options its game needs (merged into `options`).
+   */
+  tutorial?: {
+    options: Record<string, Json>;
+    create(root: HTMLElement, host: TutorialHost<S, T>): TutorialHandle;
+  };
+  /**
+   * RULES.md R19 First game: the ruleset options that turn it on (Windamere:
+   * `{ firstGame: true }`, ENGINE.md §15.5) and the setup screen's line about it. Absent = the
+   * game has no First game and setup shows no toggle.
+   */
+  firstGame?: { options: Record<string, Json>; hint: string };
+  /**
    * The tutorial lane's help (src/ui/help): tooltips for every `data-term` on the table, the
    * '?' key and "How to play" open the rules, "All cards" opens the card list.
    */
@@ -45,6 +59,33 @@ export interface GameBinding<S, T> {
     attach(root: HTMLElement): { openRules(): void; destroy(): void };
     openCards(view: DraftView<S, T>): void;
   };
+}
+
+/** What the tutorial coach reads and asks of the app (tutorial lane's CoachHost). */
+export interface TutorialHost<S, T> {
+  /** The learner's view of the game on screen; null before a game. */
+  view(): DraftView<S, T> | null;
+  /** The seed of the game on screen (views hide it); null = no game. */
+  seed(): string | null;
+  /** Start the tutorial game (the app adds the tutorial's ruleset options). */
+  start(cfg: NewGameConfig): void;
+  /** Open the new-game screen. */
+  newGame(): void;
+  /** Bots move at least this slowly (ms per move); null = the player's own speed again. */
+  pace(ms: number | null): void;
+}
+
+export interface TutorialHandle {
+  /** The coach's panel: the app keeps it on screen across screen changes. */
+  panel: HTMLElement;
+  /** "Learn to play": a fresh tutorial game with the coach. */
+  begin(): void;
+  /** After every render of a game. */
+  update(): void;
+  /** Off the table (home or setup on screen): hide the panel and its focus ring. */
+  hide(): void;
+  /** First visit: a one-time "New here?" card in `parent`. */
+  offer(parent: HTMLElement, returning: boolean, onLearn: () => void): void;
 }
 
 /** Without a game-specific clock: Normal is a flat 45 s per decision. */
@@ -58,6 +99,8 @@ export interface PlayHooks<S = unknown, T = unknown> {
   covers?: boolean;
   /** A reveal hook overriding the binding's (tests); see src/game/fx.ts. */
   fx?: RevealHook<S, T>;
+  /** After every render (the tutorial coach re-reads the table). */
+  afterRender?(): void;
 }
 
 export interface PlayHandle<S, T> {
@@ -66,7 +109,7 @@ export interface PlayHandle<S, T> {
   table: DraftTable;
   /** The table left the screen (setup opened over it): stop the clock. */
   hide(): void;
-  /** Back on screen: the clock runs again unless a pass cover is up. */
+  /** Back on screen: the clock runs again unless a pass cover or the Season card is up. */
   show(): void;
   /** "How to play" (the tutorial lane's rules overlay), when the game has one. */
   openRules?(): void;
@@ -93,8 +136,18 @@ export function gameConfig(cfg: NewGameConfig, options?: Record<string, Json>): 
   return {
     seed: cfg.seed ?? randomSeed(),
     seats: cfg.players.map((p) => ({ name: p.name })),
-    ...(options ? { options } : {}),
+    ...(options && Object.keys(options).length > 0 ? { options } : {}),
   };
+}
+
+/** The ruleset options for a new game: the binding's, plus its First game ones when chosen. */
+export function gameOptions<S, T>(
+  binding: GameBinding<S, T>,
+  cfg: NewGameConfig,
+): Record<string, Json> | undefined {
+  const first = cfg.firstGame ? binding.firstGame?.options : undefined;
+  if (!binding.options && !first) return undefined;
+  return { ...binding.options, ...first };
 }
 
 /** Start a game, or return why the engine refused the setup. */
@@ -104,7 +157,7 @@ export function playLocal<S, T>(
   hooks: PlayHooks<S, T>,
 ): PlayHandle<S, T> | string {
   const { engine, present } = binding;
-  const config = gameConfig(cfg, binding.options);
+  const config = gameConfig(cfg, gameOptions(binding, cfg));
   const err = engine.validateConfig(config);
   if (err) return `Can't start: ${err}`;
 
@@ -139,7 +192,19 @@ export function playLocal<S, T>(
       shownTo = game.viewer;
       syncCover(game);
     },
+    seasonClosed: () => holdClock(game),
   });
+
+  /** The table is off screen (setup over it). */
+  let hidden = false;
+  /**
+   * The clock waits while nobody can act on it: a pass cover, the Season-end card being read
+   * (R7 #1), or setup over the table. Bots keep playing.
+   */
+  const holdClock = (g: LocalGame<S, T>) => {
+    if (hidden || table.covered || table.seasonOpen) g.pause();
+    else g.resume();
+  };
 
   /**
    * Hotseat (UX.md §9): with 2+ humans the hand on screen belongs to `shownTo`. When the game
@@ -149,16 +214,12 @@ export function playLocal<S, T>(
   const syncCover = (g: LocalGame<S, T>) => {
     const covers = hooks.covers ?? true;
     const next = covers && g.humans.length > 1 && !g.over && g.viewer !== shownTo ? g.viewer : null;
-    if (next === null) {
-      g.resume();
-      table.setCover(null);
-    } else {
-      g.pause();
-      table.setCover({
-        name: g.state.seats[next]?.name ?? 'the next player',
-        color: looks[next]?.color ?? '',
-      });
-    }
+    table.setCover(
+      next === null
+        ? null
+        : { name: g.state.seats[next]?.name ?? 'the next player', color: looks[next]?.color ?? '' },
+    );
+    holdClock(g);
   };
 
   const tick = () => {
@@ -190,6 +251,7 @@ export function playLocal<S, T>(
       syncCover(g);
       const model = tableModel({ view, engine, present, looks });
       table.update(model);
+      holdClock(g);
       // The fx lane animates each new action once the table shows it (never the first render).
       if (fxKey !== null && model.actionKey !== fxKey && !table.covered) {
         fx?.onAction({
@@ -202,6 +264,7 @@ export function playLocal<S, T>(
       }
       fxKey = model.actionKey;
       tick();
+      hooks.afterRender?.();
     },
     onTimeout: (seat, action) => {
       const who = game.humans.length > 1 ? (game.state.seats[seat]?.name ?? 'you') : 'you';
@@ -224,8 +287,14 @@ export function playLocal<S, T>(
     element: table.element,
     game,
     table,
-    hide: () => game.pause(),
-    show: () => syncCover(game),
+    hide: () => {
+      hidden = true;
+      game.pause();
+    },
+    show: () => {
+      hidden = false;
+      syncCover(game);
+    },
     ...(help ? { openRules: () => help.openRules() } : {}),
     dispose: () => {
       clearInterval(ticker);

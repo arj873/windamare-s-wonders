@@ -72,10 +72,15 @@ const BAND_LABELS: Record<string, string> = {
 
 const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * Where public/ is served. `import.meta.env` exists only under Vite: plain node/tsx (qa's
+ * playtest text layer) has none, so fall back to the site root there.
+ */
+const BASE: string = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 /** Art A5's icons (public/art/goods/): the five goods plus coin, guard, labour, renown, valour. */
-const icon = (name: string): string => `${import.meta.env.BASE_URL}art/goods/${name}.svg`;
+const icon = (name: string): string => `${BASE}art/goods/${name}.svg`;
 /** Any file under public/art (kinds/<kind>, great-works/<content id>: art A6). */
-const art = (path: string): string => `${import.meta.env.BASE_URL}art/${path}.svg`;
+const art = (path: string): string => `${BASE}art/${path}.svg`;
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 /** A Raid's Season as a round index (Raids are drawn per Season, R2.6). */
 const raidSeason = (season: string): number =>
@@ -141,6 +146,18 @@ export function windamerePresenter(
   engine: DraftEngine<WwSeat, WwTable>,
 ): Presenter<WwSeat, WwTable> {
   const nameOf = (view: View, seat: SeatId) => view.seats[seat]?.name ?? `Town ${seat + 1}`;
+  /** R7 #4: interaction lines say "You" / "you" for the viewer, names for everyone else. */
+  const isMe = (view: View, seat: SeatId) => view.view.viewer === seat;
+  const subject = (view: View, seat: SeatId) => (isMe(view, seat) ? 'You' : nameOf(view, seat));
+  const object = (view: View, seat: SeatId) => (isMe(view, seat) ? 'you' : nameOf(view, seat));
+  /** Several towns, the viewer first ("You and Bo"). */
+  const towns = (view: View, seats: readonly SeatId[], sep: string) =>
+    [...seats]
+      .sort((a, b) => Number(isMe(view, b)) - Number(isMe(view, a)))
+      .map((s) => subject(view, s))
+      .join(sep);
+  const bountyLine = (view: View, e: { to: SeatId; from: SeatId; coins: number }) =>
+    `${subject(view, e.to)} took a ${e.coins}-coin bounty from ${object(view, e.from)}`;
   const check = (view: View, seat: SeatId, pick: Pick) =>
     engine.ruleset.validatePick(view, seat, pick);
   const normalize = (view: View, seat: SeatId, pick: Pick) =>
@@ -354,7 +371,7 @@ export function windamerePresenter(
 
   /** R6 #4: the latest action's interaction in plain sentences, with names and prices. */
   function happenings(view: View): string[] {
-    const name = (s: SeatId) => nameOf(view, s);
+    const name = (s: SeatId) => subject(view, s);
     const good = (g: string) => goodName(rules, g);
     const out: string[] = [];
     for (const { event: e } of latestEvents(view)) {
@@ -374,7 +391,7 @@ export function windamerePresenter(
         case 'trade':
           out.push(
             e.filled
-              ? `${name(e.buyer)} bought ${good(e.good)} from ${name(e.seller)} (${e.price}g)`
+              ? `${name(e.buyer)} bought ${good(e.good)} from ${object(view, e.seller)} (${e.price}g)`
               : `${name(e.buyer)} bought ${good(e.good)} from the bank: ${name(e.seller)} ran short`,
           );
           break;
@@ -390,13 +407,14 @@ export function windamerePresenter(
           out.push(raidLine(view, e));
           break;
         case 'bounty':
-          out.push(`${name(e.to)} took a ${e.coins}-coin bounty from ${name(e.from)}`);
+          out.push(bountyLine(view, e));
           break;
         case 'honour': {
           const h = rules.honour(e.honour).name;
+          const one = e.leaders.length === 1 && !e.leaders.some((l) => isMe(view, l));
           out.push(
             e.leaders.length
-              ? `${e.leaders.map(name).join(' and ')} now lead${e.leaders.length === 1 ? 's' : ''} ${h}`
+              ? `${towns(view, e.leaders, ' and ')} now lead${one ? 's' : ''} ${h}`
               : `Nobody leads ${h} now`,
           );
           break;
@@ -419,10 +437,10 @@ export function windamerePresenter(
       lost: number;
     },
   ): string {
-    const who = nameOf(view, e.seat);
+    const who = subject(view, e.seat);
     return e.outcome === 'held'
       ? `${who} held the Raid (Guard ${e.guard} vs ${e.strength}): +${e.valour} Valour`
-      : `${who} was plundered (Guard ${e.guard} vs ${e.strength}): −${e.lost} coin${e.lost === 1 ? '' : 's'}`;
+      : `${who} ${isMe(view, e.seat) ? 'were' : 'was'} plundered (Guard ${e.guard} vs ${e.strength}): −${e.lost} coin${e.lost === 1 ? '' : 's'}`;
   }
 
   /** UX.md §10.1: the Season-end card, when the latest action resolved a Raid. */
@@ -442,7 +460,7 @@ export function windamerePresenter(
       if (e.type === 'bounty') {
         lines.push({
           seat: e.to,
-          text: `${nameOf(view, e.to)} took a ${e.coins}-coin bounty from ${nameOf(view, e.from)}`,
+          text: bountyLine(view, e),
           tone: 'info',
         });
       }
@@ -615,7 +633,7 @@ export function windamerePresenter(
         id: `honour-${h.honour}`,
         label: 'Honour',
         value: `${rules.honour(h.honour).name}: ${
-          h.leaders.length ? h.leaders.map((l) => nameOf(view, l)).join(', ') : 'nobody yet'
+          h.leaders.length ? towns(view, h.leaders, ', ') : 'nobody yet'
         }`,
         group: 'side',
         term: 'honour',

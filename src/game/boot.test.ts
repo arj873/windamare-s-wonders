@@ -156,6 +156,23 @@ describe('boot', () => {
     expect(root.querySelector('.dt-chip[data-seat="2"]')?.getAttribute('data-status')).toBe(
       'picked',
     );
+    // qa's playtest hooks: roles on the controls, why a Build is closed, the view as JSON.
+    let closed: HTMLButtonElement | null = null;
+    for (const c of root.querySelectorAll<HTMLElement>('[data-pt-role="card"]')) {
+      c.click();
+      expect(root.querySelector('[data-pt-role="spend"]')).not.toBeNull();
+      closed = root.querySelector<HTMLButtonElement>('[data-pt-role="build"]:disabled');
+      if (closed) break;
+    }
+    expect(closed?.dataset.why).toMatch(/\S/); // seed 'qa': this hand has a Spend-only card
+    expect(root.querySelector('.dt-card .dt-part[role="img"]')?.getAttribute('aria-label')).toMatch(
+      /\S/,
+    );
+    const pt = (window as unknown as { __pt: { view(seat?: number): unknown } }).__pt;
+    const view = pt.view() as { view: { viewer: number }; seats: unknown[] };
+    expect(view.view.viewer).toBe(0);
+    expect(view.seats).toHaveLength(3);
+    expect((pt.view(1) as { view: { viewer: number } }).view.viewer).toBe(1);
     app.play?.dispose();
   });
 
@@ -222,8 +239,104 @@ describe('boot', () => {
     document.querySelectorAll('.ww-scrim').forEach((s) => s.remove());
   });
 
+  it('Learn to play: the coached First game vs 3 Easy bots, paced, kept off other screens', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    // First visit: the one-time card, plus the home button.
+    expect(root.querySelector('[data-k="learn"]')).not.toBeNull();
+    click(root, '[data-k="tut-hint-learn"]');
+    const s = app.play!.game.state;
+    expect(s.config.options).toEqual({ firstGame: true });
+    expect(s.seats.map((x) => x.name)).toEqual(['You', 'Bot 1', 'Bot 2', 'Bot 3']);
+    const panel = root.querySelector<HTMLElement>('.tut-panel')!;
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).not.toBe('');
+    for (const part of ['hand', 'town', 'monument', 'raid'])
+      expect(root.querySelector(`[data-tut="${part}"]`), part).not.toBeNull();
+    expect(root.querySelectorAll('[data-tut="neighbours"]')).toHaveLength(2);
+    // The coach slows bots to TUTORIAL_PACE_MS even at Instant speed.
+    vi.advanceTimersByTime(100);
+    expect(app.play!.game.state.seats[1]!.pick).toBeNull();
+    vi.advanceTimersByTime(5000);
+    expect(app.play!.game.state.seats[1]!.pick).not.toBeNull();
+    // Setup over the game hides the panel; Back brings it back.
+    app.menu.setOpen(true);
+    [...root.querySelectorAll<HTMLElement>('.ww-menu-item')]
+      .find((b) => b.textContent?.startsWith('New game'))!
+      .click();
+    expect(root.querySelector('.setup')).not.toBeNull();
+    expect(panel.hidden).toBe(true);
+    click(root, '[data-k="back"]');
+    expect(panel.isConnected && !panel.hidden).toBe(true);
+    // Any other game ends the run.
+    app.menu.setOpen(true);
+    [...root.querySelectorAll<HTMLElement>('.ww-menu-item')]
+      .find((b) => b.textContent?.startsWith('New game'))!
+      .click();
+    click(root, '[data-k="start"]');
+    expect(panel.hidden).toBe(true);
+    app.play?.dispose();
+    // The card shows once.
+    const again = mount();
+    boot(again, { game: windamereBinding() });
+    expect(again.querySelector('.tut-hint')).toBeNull();
+  });
+
+  it('holds the turn clock while the Season card is up (R7 #1)', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    toSetup(root);
+    click(root, '[data-k="clock-normal"]');
+    click(root, '[data-k="start"]');
+    vi.advanceTimersByTime(10);
+    click(root, '[data-k="answer-0"]');
+    for (let turn = 0; turn < 5 && !root.querySelector('.dt-season'); turn++) {
+      vi.advanceTimersByTime(10);
+      click(root, '.dt-card');
+      click(root, '[data-use="spend"]');
+      vi.advanceTimersByTime(50);
+    }
+    expect(root.querySelector('.dt-season')).not.toBeNull();
+    const game = app.play!.game;
+    expect(game.paused).toBe(true);
+    const left = game.clock()!.remainingMs;
+    vi.advanceTimersByTime(3000);
+    expect(game.clock()!.remainingMs).toBe(left);
+    click(root, '[data-k="season-ok"]');
+    expect(game.paused).toBe(false);
+    vi.advanceTimersByTime(1000);
+    expect(game.clock()!.remainingMs).toBe(left - 1000);
+    app.play?.dispose();
+  });
+
   it('maps setup bot levels onto the bots lane (Normal = level 2, Hard = level 3)', () => {
     expect(BOT_LEVEL).toEqual({ easy: 'easy', normal: 'medium', hard: 'hard' });
+  });
+
+  it('starts a First game: no Great Work choice, no Honours, Relaxed clock (R19)', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('ww.botSpeed', 'instant');
+    const root = mount();
+    const app = boot(root, { game: windamereBinding() });
+    toSetup(root);
+    expect(root.querySelector('[data-k="first-game-on"]')).not.toBeNull();
+    click(root, '[data-k="first-game-on"]');
+    expect(root.querySelector('[data-k="clock-relaxed"]')?.getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    click(root, '[data-k="start"]');
+    const s = app.play!.game.state;
+    expect(s.config.options).toEqual({ firstGame: true });
+    expect(s.phase.kind).toBe('pick'); // the Great Work is dealt, no choice screen
+    expect(root.querySelector('.dt-prompt')).toBeNull();
+    expect(root.querySelectorAll('.dt-card')).toHaveLength(6);
+    expect(root.querySelector('.dt-side-fact')).toBeNull(); // no Honours to list
+    expect(app.play!.game.clock()?.totalMs).toBe(68_000); // Relaxed: 45 s × 1.5, rounded up
+    app.play?.dispose();
   });
 
   it('refuses a setup the ruleset cannot seat, with a notice', () => {

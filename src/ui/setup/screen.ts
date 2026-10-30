@@ -29,6 +29,7 @@ import {
   setSeed,
   withPlayerName,
   setClock,
+  setFirstGame,
   setupError,
   shuffleSeats,
   summaryLine,
@@ -51,6 +52,8 @@ export interface SetupScreenOptions {
   playerName?: string;
   /** What a clock option means in this game ("45 s on a fresh hand, 25 s at the end"). */
   clockHint?: (scale: number) => string;
+  /** The game offers a First game (RULES.md R19): show its toggle, with this one-line summary. */
+  firstGame?: { hint: string };
   /** "Learn to play" in the header (UX.md §11.6); absent hides it. */
   onTutorial?: () => void;
   /** Where the draft is remembered (default localStorage; null = nowhere). */
@@ -151,6 +154,7 @@ export class SetupScreen {
       this.header(),
       this.modeSection(),
       this.seatsSection(),
+      ...(this.opts.firstGame ? [this.rulesSection()] : []),
       this.timerSection(),
       this.moreSection(),
     );
@@ -177,7 +181,7 @@ export class SetupScreen {
           'button',
           {
             class: 'btn su-learn',
-            title: 'A guided first game against two easy bots',
+            title: 'A guided first game against three Easy bots',
             attrs: { 'data-k': 'learn' },
             on: { click: () => this.opts.onTutorial?.() },
           },
@@ -392,6 +396,38 @@ export class SetupScreen {
   }
 
   /** RULES.md R15.3: Off / Relaxed / Normal / Fast; the game says what each means in seconds. */
+  /** UX.md §5 Rule options: today the First game (R19), with what it changes. */
+  private rulesSection(): HTMLElement {
+    const on = this.draft.firstGame;
+    return this.section(
+      'Rule options',
+      'rules',
+      h(
+        'div',
+        { class: 'seg', attrs: { role: 'group', 'aria-label': 'First game' } },
+        h(
+          'button',
+          {
+            class: `seg-btn${on ? '' : ' is-on'}`,
+            attrs: { 'aria-pressed': String(!on), 'data-k': 'first-game-off' },
+            on: { click: () => this.set(setFirstGame(this.draft, false)) },
+          },
+          'Full game',
+        ),
+        h(
+          'button',
+          {
+            class: `seg-btn${on ? ' is-on' : ''}`,
+            attrs: { 'aria-pressed': String(on), 'data-k': 'first-game-on' },
+            on: { click: () => this.set(setFirstGame(this.draft, true)) },
+          },
+          'First game',
+        ),
+      ),
+      h('p', { class: 'muted su-hint' }, this.opts.firstGame?.hint ?? ''),
+    );
+  }
+
   private timerSection(): HTMLElement {
     const d = this.draft;
     const hint = d.clock === 'off' ? '' : (this.opts.clockHint?.(clockScale(d.clock)) ?? '');

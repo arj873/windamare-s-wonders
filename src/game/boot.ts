@@ -17,10 +17,11 @@ import {
   type MenuItem,
   type NewGameConfig,
 } from '../ui';
-import { HomeScreen } from '../ui/home/screen';
-import { MAX_PLAYERS, MIN_PLAYERS, SEAT_COLORS } from '../ui/setup/model';
+import { HomeScreen, NAME_KEY } from '../ui/home/screen';
+import { browserStorage, loadPref } from '../ui/prefs';
+import { MAX_PLAYERS, MIN_PLAYERS, SEAT_COLORS, STORAGE_KEY } from '../ui/setup/model';
 import type { RevealHook } from './fx';
-import { playLocal, type GameBinding, type PlayHandle } from './play';
+import { playLocal, type GameBinding, type PlayHandle, type TutorialHandle } from './play';
 
 export interface BootOptions<S, T> {
   /** Replaces what Start does (tests). */
@@ -46,6 +47,12 @@ export interface BootOptions<S, T> {
   };
 }
 
+/** Someone who has played here before (a saved nickname or setup) is not offered the tutorial. */
+function returning(): boolean {
+  const store = browserStorage();
+  return loadPref(store, NAME_KEY) !== null || loadPref(store, STORAGE_KEY) !== null;
+}
+
 /** The all-human game `?debug=1` starts. */
 export function debugConfig(seats: number, seed?: string): NewGameConfig {
   const n = Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Math.floor(seats) || 4));
@@ -67,6 +74,8 @@ export interface BootHandle<S, T> {
   readonly home: HomeScreen | null;
   readonly setup: SetupScreen | null;
   readonly play: PlayHandle<S, T> | null;
+  /** Show the home screen (the online lane calls this when a player leaves a room). */
+  showHome(): void;
 }
 
 export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): BootHandle<S, T> {
@@ -77,12 +86,19 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   /** The home screen's nickname, for the first human seat. */
   let nickname = '';
   let lastConfig: NewGameConfig | null = null;
+  /** The last game was the tutorial's (its ruleset options carry over to a rematch). */
+  let lastTutorial = false;
   let speed: BotSpeed = loadBotSpeed();
+  /** The tutorial coach's floor on bot speed, ms per move. */
+  let paceMs: number | null = null;
+  let coach: TutorialHandle | null = null;
 
   const botDelayMs = (): number => {
     const s = BOT_SPEEDS.find((b) => b.id === speed) ?? BOT_SPEEDS[1];
-    return s ? s.minMs + Math.random() * (s.maxMs - s.minMs) : 0;
+    const ms = s ? s.minMs + Math.random() * (s.maxMs - s.minMs) : 0;
+    return Math.max(ms, paceMs ?? 0);
   };
+  const learn = (): void => coach?.begin();
 
   const botSpeed: MenuChoice<BotSpeed> = {
     kind: 'choice',
@@ -116,9 +132,15 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
   corner.style.cssText = 'position:fixed;top:12px;left:12px;z-index:25;';
   corner.append(menu.element);
 
+  /** One screen at a time, with the ☰ corner and the tutorial coach's panel kept on top. */
+  function mount(screen: HTMLElement): void {
+    root.replaceChildren(screen, corner, ...(coach ? [coach.panel] : []));
+  }
+
   /** UX.md §4: the first screen (Play vs bots → setup). */
   function showHome(): void {
     play?.hide();
+    coach?.hide();
     setup = null;
     home = new HomeScreen({
       onPlay: (name) => {
@@ -132,22 +154,28 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
             onJoin: (code: string, name: string) => opts.online?.join(code, name, root),
           }
         : {}),
+      ...(coach ? { onTutorial: learn } : {}),
     });
     menu.setItems(prefs);
-    root.replaceChildren(home.element, corner);
+    mount(home.element);
+    // The tutorial's one-time "New to the game?" card, for a first visit only.
+    if (coach) coach.offer(home.element, returning(), learn);
   }
 
   function showSetup(): void {
     play?.hide();
+    coach?.hide();
     home = null;
     setup = new SetupScreen({
       onStart: start,
       ...(play ? { onBack: showPlay } : { onBack: showHome, backLabel: 'Back' }),
       ...(nickname ? { playerName: nickname } : {}),
       ...(opts.game?.clock ? { clockHint: opts.game.clock.hint } : {}),
+      ...(opts.game?.firstGame ? { firstGame: { hint: opts.game.firstGame.hint } } : {}),
+      ...(coach ? { onTutorial: learn } : {}),
     });
     menu.setItems(prefs);
-    root.replaceChildren(setup.element, corner);
+    mount(setup.element);
   }
 
   function showPlay(): void {
@@ -167,21 +195,36 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
             },
           ]
         : []),
+      ...(coach
+        ? [
+            {
+              kind: 'action' as const,
+              label: 'Learn to play',
+              hint: 'A guided first game against 3 bots',
+              onClick: learn,
+            },
+          ]
+        : []),
       ...prefs,
     ]);
-    root.replaceChildren(play.element, corner);
+    mount(play.element);
     play.show();
+    coach?.update();
   }
 
-  function start(cfg: NewGameConfig): void {
+  /** `tutorial`: the game the coach runs, with the tutorial's ruleset options. */
+  function start(cfg: NewGameConfig, tutorial = false): void {
     if (opts.onStart) return opts.onStart(cfg);
-    if (!opts.game) {
+    const game = opts.game;
+    if (!game) {
       showToast(
         `No game yet (the ruleset is not in): ${cfg.players.length} players, clock ${cfg.clock}`,
       );
       return;
     }
-    const next = playLocal(opts.game, cfg, {
+    const extra = tutorial ? game.tutorial?.options : undefined;
+    const binding = extra ? { ...game, options: { ...game.options, ...extra } } : game;
+    const next = playLocal(binding, cfg, {
       botDelayMs,
       covers: !opts.debug,
       ...(opts.fx ? { fx: opts.fx } : {}),
@@ -189,7 +232,11 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
       onRematch: () => {
         if (!lastConfig) return;
         const { seed: _seed, ...again } = lastConfig;
-        start(again);
+        start(again, lastTutorial);
+      },
+      // The coach reads the table on screen only (a game starting behind setup waits for showPlay).
+      afterRender: () => {
+        if (play?.element.isConnected) coach?.update();
       },
     });
     if (typeof next === 'string') {
@@ -199,12 +246,39 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     play?.dispose();
     play = next;
     lastConfig = cfg;
+    lastTutorial = tutorial;
     showPlay();
+  }
+
+  // The tutorial coach (tutorial lane) lives on `root`, above every screen; not in the harness.
+  if (opts.game?.tutorial && !opts.debug) {
+    coach = opts.game.tutorial.create(root, {
+      view: () => play?.game.view() ?? null,
+      seed: () => (play ? String(play.game.state.config.seed) : null),
+      start: (cfg) => start(cfg, true),
+      newGame: showSetup,
+      pace: (ms) => {
+        paceMs = ms;
+      },
+    });
   }
 
   if (opts.debug) {
     showSetup();
     start(debugConfig(opts.debug.seats, opts.debug.seed));
+    // qa's playtest browser layer (playtest/README.md) reads state here, never from the engine.
+    // Merged into any `__pt` the injected scanner already set.
+    const w = window as unknown as { __pt?: Record<string, unknown> };
+    w.__pt = {
+      ...w.__pt,
+      /** The DraftView on screen, or seat `seat`'s, as a JSON copy (read-only); null = no game. */
+      view: (seat?: number): unknown => {
+        if (!play || !opts.game) return null;
+        const g = play.game;
+        const v = seat === undefined ? g.view() : opts.game.engine.viewFor(g.state, seat);
+        return JSON.parse(JSON.stringify(v)) as unknown;
+      },
+    };
   } else {
     showHome();
   }
@@ -219,5 +293,6 @@ export function boot<S, T>(root: HTMLElement, opts: BootOptions<S, T> = {}): Boo
     get play() {
       return play;
     },
+    showHome,
   };
 }
