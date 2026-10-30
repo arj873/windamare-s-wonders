@@ -8,6 +8,7 @@ import { makeCtx } from '../core/ctx';
 import { createWindamereEngine } from './engine';
 import { EVENT_TYPES, eventsOf } from './events';
 import { updateHonourLeaders } from './honours';
+import { resolveRaid } from './raid';
 import {
   build,
   fx,
@@ -94,7 +95,7 @@ describe('log lines a viewer reads as "You" (E8)', () => {
     const after = playTurn(s);
     const raids = after.log.filter((e) => e.kind === 'raid');
     expect(logText(raids[0]!, 0)).toMatch(/^You hold \(Guard 4 vs \d+\): Valour \d+\.$/);
-    expect(logText(raids[1]!, 1)).toMatch(/^You are plundered \(Guard 0 vs \d+\): -\d+ coins\.$/);
+    expect(logText(raids[1]!, 1)).toMatch(/^You are plundered \(Guard 0 vs \d+\): −\d+ coins?\.$/);
     expect(logText(raids[1]!, 0)).toBe(raids[1]!.text);
     const bounty = after.log.filter((e) => e.kind === 'bounty')[1]!; // town 2 pays town 0
     expect([bounty.seat, bounty.targets]).toEqual([0, [2]]);
@@ -109,6 +110,48 @@ describe('log lines a viewer reads as "You" (E8)', () => {
     // A line that names no town has no pieces: everyone reads the text.
     const raid = last(after, 'raidRevealed');
     expect([raid.parts, raid.targets]).toEqual([undefined, undefined]);
+  });
+
+  it('E9 R9.5 plunder reads "−1 coin", "−N coins", and a town with none loses none (R17.6)', () => {
+    const s = newWwGame(3);
+    s.round = 3; // Winter's Raid, strength 7
+    s.seats.forEach((t, i) => (t.data.coins = [0, 1, 100][i]!)); // Guard 0: all plundered
+    resolveRaid(fx, makeCtx(fxRuleset, s, new Rng(1)));
+    const lines = s.log.filter((e) => e.kind === 'raid');
+    const lost = lines.map((e) => (e.data as { lost: number }).lost);
+    expect(lost.slice(0, 2)).toEqual([0, 1]);
+    expect(lost[2]).toBeGreaterThan(1);
+    expect(lines.map((e) => e.text.replace(/^.*\): /, ''))).toEqual([
+      'no coins to lose.',
+      '−1 coin.',
+      `−${lost[2]} coins.`,
+    ]);
+  });
+
+  it('E9 a town named "You" (the tutorial) reads in the second person: "You yield", "You are plundered"', () => {
+    const s = table();
+    s.seats[0]!.name = 'You';
+    build(s, 0, 'tf-toll'); // 1 coin per neighbour that builds
+    build(s, 0, 'tf-apiary'); // yields 1 honey
+    Object.assign(townData(s, 1).store, { slate: 2 });
+    const apiary = setHand(s, 1, ['tf-apiary'])[0]!; // town 1 builds: town 0 collects a toll
+    const after = playTurn(s, { 1: build1(apiary) });
+    const mine = after.log.filter((e) => e.seat === 0 && e.seq === after.seq);
+    expect(mine.map((e) => e.text)).toEqual([
+      'You spend tf-stall.',
+      'You collect 1 in tolls.',
+      'You yield.',
+    ]);
+    // The same line for every viewer: the name is "You" whoever reads it.
+    for (const e of mine)
+      for (const v of [0, 1, 'spectator'] as const) expect(logText(e, v)).toBe(e.text);
+    const plunder = newWwGame(3);
+    plunder.seats[0]!.name = 'You';
+    plunder.seats[0]!.data.coins = 1;
+    resolveRaid(fx, makeCtx(fxRuleset, plunder, new Rng(1)));
+    expect(plunder.log.find((e) => e.kind === 'raid')!.text).toMatch(
+      /^You are plundered \(Guard 0 vs \d+\): −1 coin\.$/,
+    );
   });
 
   it('Honours: "You lead", "P0 and you share", and nobody', () => {
@@ -157,11 +200,15 @@ describe('log lines a viewer reads as "You" (E8)', () => {
 
   it('whole games: each line joins to its text, names only its actor and targets, and reads "You" for them', () => {
     const e = createWindamereEngine();
-    for (const seats of [3, 7]) {
+    // E9: no "You yields", "you is", "You takes": a verb after "you" never takes an -s.
+    const thirdPerson = /\b[Yy]ou \w+s\b/;
+    for (const seats of [2, 3, 7]) {
       const rng = new Rng(seats + 40);
+      // At 2 and 3 towns, town 0 is named "You", as in the tutorial.
+      const name = (i: number) => (i === 0 && seats < 7 ? 'You' : `Player ${i + 1}`);
       let s = e.createGame({
         seed: seats + 40,
-        seats: Array.from({ length: seats }, (_, i) => ({ name: `Player ${i + 1}` })),
+        seats: Array.from({ length: seats }, (_, i) => ({ name: name(i) })),
       });
       while (s.phase.kind !== 'gameOver') {
         const seat = rng.pick(e.waitingOn(s));
@@ -180,8 +227,10 @@ describe('log lines a viewer reads as "You" (E8)', () => {
         if ((EVENT_TYPES as readonly string[]).includes(entry.kind) && entry.seat !== null) {
           expect(named, where).toContain(entry.seat);
         }
+        expect(entry.text, where).not.toMatch(thirdPerson);
         for (const v of [...Array(seats).keys()]) {
           const line = logText(entry, v);
+          expect(line, where).not.toMatch(thirdPerson);
           if (named.includes(v)) expect(line, where).toMatch(/\b(You|you|Your)\b/);
           else expect(line, where).toBe(entry.text);
         }

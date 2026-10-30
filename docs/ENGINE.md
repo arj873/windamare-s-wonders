@@ -207,6 +207,11 @@ no seat ("Hands pass left.") has no `parts`: `logText` returns `text`. `seat` is
 `targets` the other seats involved; every seat a line names is one of them (tested). States saved
 before E8 have neither field: `logText` falls back to `text`.
 
+**A seat named "You" (E9).** The tutorial names your seat "You". A seat whose name is "you" (any
+case, trimmed) gets its second person in `text` and in its piece's `text` too, so every reader,
+`text` included, gets "You yield." and "You are plundered", never "You yields." or "You is
+plundered".
+
 Cost: the pieces repeat the text, so the log grows by about 43%. A random 7-town game on the
 shipped content ends with a 156 KB state (log 146 KB) against 112 KB (log 102 KB) before E8; at
 3 towns, 62 KB against 47 KB. A view is the same size.
@@ -796,6 +801,8 @@ log entry (`to`; no Windamere event needs it today, since every event is public,
 
 The rest name only their town: "You spend / glean / burn / build / complete X tier 1 / yield /
 hold / are plundered / will raise X", "Your defenders are rewarded.", "You gather your stores."
+Plunder reads "−1 coin." / "−3 coins." (a true minus sign, U+2212) and "no coins to lose." for a
+town with none (R17.6); the core's leftovers line says "1 leftover card" / "2 leftover cards".
 `raidRevealed` and "Nobody leads X." name no town (no pieces). The core's `gameOver` line has the
 winners as `targets` ("Game over: you win." / "Game over: P1 and you tie."). `eventsOf` entries
 carry `parts` and `targets` too, so `logText` takes them as they are.
@@ -846,6 +853,9 @@ event names was revealed in a pick first. E8 (`logtext.test.ts`, `core/log.test.
 row above as each town and a spectator read it, Honours shared and lost, ties at game over, and
 over whole games at 3 and 7 towns: the pieces join to `text`, name only the actor and targets,
 and every other viewer reads `text`. Mutation check: dropping trade's target failed 2 tests.
+E9: the plunder wording for 0, 1 and many coins; a town named "You" in a turn, a Raid and in
+whole games at 2 and 3 towns, where no line (as `text` or as any viewer reads it) has a verb with
+an -s after "you". Mutation check: ignoring the name "You" failed 3 tests.
 
 **Shipped content** (`shipped.ts`): `windamereContent()` maps design's `src/content/windamere`
 (goods, cards, Great Works, Raids, Honours, its R16 `TUNABLES`) to `WwContent`; design keeps its
