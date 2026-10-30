@@ -41,7 +41,23 @@ games at 2, 3 and 7 seats; two humans never see each other's hand or pick) and t
 The browser layer is **not** in the gate (it needs Chrome and a build); it was run by hand, see
 AUDIT.md Q2b.
 
-## Original plan (kept for the online layer, still to do)
+## Layer 3: online (`playtest/online.ts`)
+
+```
+nice -n 19 pnpm exec tsx playtest/online.ts [--seats 3..7] [--headed] [--out shots-dir]
+```
+
+One Chrome context per seat against `wrangler dev` (app and room server on one origin; reuses net's
+`src/server/e2e/support.ts` for the build, wrangler and the basic leak canary). The seats create and
+join a room through the lobby, start with the Fast clock, and play to the final scores by clicking.
+It checks every `game` frame each tab gets (net's canary, the seed and rng are the masks, other
+seats' prompt data and glean zone hidden, later Raids and other towns' Great Work hidden, `seq`
+never goes back, every frame parses), drops one tab's network and restores it, reloads that tab
+(same member, same seat, views flowing), and at the end all tabs must hold the same result.
+About 3 to 6 minutes, heavy (build + workerd + one Chrome per seat); not in the gate. It is a
+script, not a `pt` mode: there are no per-seat CLI commands online yet.
+
+## Original plan (kept for reference)
 
 ## What Catan has (`/home/blop/projects/catan/scripts/playtest`, ~4000 lines, read-only reference)
 
