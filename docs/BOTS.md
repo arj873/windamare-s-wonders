@@ -269,3 +269,25 @@ step over "normal" today. Think time: about 0.3 ms per decision in a whole-game 
 planning across turns, Recall (R15.8) use, and engine's lookahead API (E5) for real search at
 level 3. Needs from engine (E5): a pure `step`-style call on a state a bot builds from its view
 (sampled hidden hands), cheap enough for ~1000 calls per decision. Until then level 3 stays one-ply.
+
+## 10. Play-out search for level 3 (B6, negative result)
+
+`createWindamereBot(3, name, denialWeight, SEARCH)` adds a search on the E5 lookahead: take the top
+4 picks by the one-ply score, then for N determinized states (shared by all picks) play the pick,
+play the rest of the Season with the one-ply picker for every seat, and add the centred result
+(own end Renown + coins + goods, minus 0.25x the mean rival) to the one-ply score. Hidden
+information is read only through `determinize(view)`.
+
+Measured, 2x level 3 vs 2x search, 4 seats (fair share 25%):
+
+| search              | games | level 3 | search | ms/game |
+| ------------------- | ----- | ------- | ------ | ------- |
+| 6 samples, blend 1  | 600   | 24.3%   | 25.7%  | 800     |
+| 16 samples, blend 2 | 400   | 23.8%   | 26.3%  | 1800    |
+
+Standard error is about 2 points per row, so neither beats level 3 clearly, and the second costs
+2.3x the time. **Not wired into `pickFor`**; `hard` stays denial-only level 3 (K2 still 1.4x over
+level 2). Likely reasons: the play-out sees only Season-end Renown, coins and goods, not the
+future income of cards built (the one-ply score has that), and the other seats' one-ply picker is
+the same policy, so the search learns little. Untried: valuing econ in the leaf, playing to the
+game end in Winter, Lore-run and Honour planning (the other half of B6).

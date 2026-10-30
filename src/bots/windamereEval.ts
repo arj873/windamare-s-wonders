@@ -289,3 +289,12 @@ export function bestUse(rules: WwRules, state: WwState, seat: SeatId, def: WwCar
   if (build !== null && build > best) best = build;
   return best;
 }
+
+/** A full state's worth of one town: end Renown plus its coins and goods at the fixed prices. */
+export function townValue(rules: WwRules, state: WwState, seat: SeatId): number {
+  const d = state.seats[seat]?.data;
+  if (!d) throw new Error(`no seat ${seat}`);
+  let v = endRenown(rules, state, seat) + d.coins * COIN;
+  for (const g of rules.goods) v += (d.store[g] ?? 0) * GOOD * goodsFactor(state);
+  return v;
+}

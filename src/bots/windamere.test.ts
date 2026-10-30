@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGreedyBot, createRandomBot, createWindamereBot, pickFor, runSim } from './index';
+import { SEARCH } from './windamereBots';
 import { windamere, windamereRules } from './windamere';
 import { rateGreatWork, windamereAdapter } from './windamereAdapter';
 import { observeWindamere, SOURCES, sourcesOf } from './windamereMetrics';
@@ -125,5 +126,12 @@ describe('bots on the Windamere ruleset', () => {
       0,
     );
     expect(rateGreatWork(content, 'the-wolf-gate')).toBeGreaterThan(printed + 4);
+  });
+
+  it('the opt-in play-out search plays a whole game legally', () => {
+    const bot = createWindamereBot(3, 'search', 0.7, { ...SEARCH, samples: 2, candidates: 2 });
+    const { summary } = runSim({ engine: windamere, bots: bot, seats: 3 }, 1, 5);
+    expect(summary.violations).toEqual([]);
+    expect(summary.finished).toBe(1);
   });
 });
