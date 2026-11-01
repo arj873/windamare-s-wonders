@@ -7,13 +7,13 @@ import type { EffectSpec } from '../../engine';
 
 type Tier = EffectSpec[];
 
-/** Standard thresholds 4, 9, 15, 22 (R8.1; D9 raised them from 3, 6, 10, 15) unless given. */
+/** Standard thresholds 5, 10, 17, 25 (R8.1; D9 4, 9, 15, 22; D12a +1/+1/+2/+3) unless given. */
 function work(
   id: string,
   name: string,
   perk: EffectSpec[],
   tiers: [Tier, Tier, Tier, Tier],
-  thresholds: [number, number, number, number] = [4, 9, 15, 22],
+  thresholds: [number, number, number, number] = [5, 10, 17, 25],
 ): GreatWorkDef {
   const [t1, t2, t3, t4] = thresholds;
   return {
@@ -83,7 +83,7 @@ export const GREAT_WORKS: readonly GreatWorkDef[] = [
     "The Stonewright's Spire",
     [fx.yield('1lab')],
     [[fx.renown(2)], [fx.renown(4)], [fx.renown(5)], [fx.renown(6)]],
-    [6, 12, 19, 27],
+    [6, 13, 21, 30],
   ),
   work(
     'the-hall-of-echoes',

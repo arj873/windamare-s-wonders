@@ -231,7 +231,7 @@ on any card (R4 O15).
 
 ## 7. Great Works (pool of 14)
 
-Thresholds are the standard 4 / 9 / 15 / 22 labour (R8.1; D9 raised them from 3 / 6 / 10 / 15)
+Thresholds are the standard 5 / 10 / 17 / 25 labour (R8.1; D9 4 / 9 / 15 / 22, D12a §18)
 unless the row says otherwise. Each
 tier lists its reward; `on build` in a tier means "when the tier completes" (R8.4). Every tier
 pays some Renown, no tier pays a plain 3 or 7, and no tier gives a Lore rank (R4 O7; a test
@@ -239,25 +239,25 @@ enforces all three).
 
 | id                       | Name                    | Perk                              | Tier I                   | Tier II                   | Tier III                | Tier IV                  | Thresholds |
 | ------------------------ | ----------------------- | --------------------------------- | ------------------------ | ------------------------- | ----------------------- | ------------------------ | ---------- |
-| `the-mere-bridge`        | The Mere Bridge         | toll holding 1                    | renown 2, on build 4c    | renown 2, income 1        | renown 5                | renown 8                 | 4/9/15/22  |
-| `the-wind-organ`         | The Wind Organ          | spend lore: +1lab                 | renown 2                 | renown 4, on build 2W     | renown 6                | renown 4, score 2/lore   | 4/9/15/22  |
-| `the-beacon-crown`       | The Beacon Crown        | guard 1                           | renown 1, guard 1        | renown 2, held +2c        | renown 4, guard 1       | renown 6                 | 4/9/15/22  |
-| `the-salt-stair`         | The Salt Stair          | yield 1S                          | renown 1, on build 2W    | renown 2, yield 1W        | renown 4                | renown 5                 | 4/9/15/22  |
-| `the-stonewrights-spire` | The Stonewright's Spire | yield 1lab                        | renown 2                 | renown 4                  | renown 5                | renown 6                 | 6/12/19/27 |
-| `the-hall-of-echoes`     | The Hall of Echoes      | build hall: +2c                   | renown 2, on build 3c    | renown 4, discount hall 1 | renown 4                | renown 4, score 2/hall   | 4/9/15/22  |
-| `the-harvest-wheel`      | The Harvest Wheel       | discount holding 1                | renown 1, on build 1R 1P | renown 2, score 1/holding | renown 4                | renown 5                 | 4/9/15/22  |
-| `the-ice-lantern`        | The Ice Lantern         | season end 1W 1H                  | renown 2                 | renown 2, score 1/3 goods | renown 4                | renown 6                 | 4/9/15/22  |
-| `the-wolf-gate`          | The Wolf Gate           | held +2c                          | renown 1, guard 1        | renown 2, guard 1         | renown 4                | renown 2, score 2/Valour | 4/9/15/22  |
-| `the-tide-mill`          | The Tide Mill           | exchange S, income 1              | renown 1, yield 1S       | renown 2, exchange H      | renown 4                | renown 6                 | 4/9/15/22  |
-| `the-lantern-market`     | The Lantern Market      | income 1                          | renown 1, on build 3c    | renown 2, sell +1c        | renown 4, toll market 2 | renown 6                 | 4/9/15/22  |
-| `the-ring-of-oaths`      | The Ring of Oaths       | score 2/neighbour beaten on guard | renown 1, guard 1        | renown 4                  | renown 4, guard 1       | renown 8                 | 4/9/15/22  |
-| `the-coinwell`           | The Coinwell            | spend market: +2c, income 1       | renown 2                 | renown 2, income 1        | renown 4                | renown 8                 | 4/9/15/22  |
-| `the-fourfold-gate`      | The Fourfold Gate       | score 2/set                       | renown 2, on build 3c    | renown 4                  | renown 6                | renown 6, score 2/set    | 4/9/15/22  |
+| `the-mere-bridge`        | The Mere Bridge         | toll holding 1                    | renown 2, on build 4c    | renown 2, income 1        | renown 5                | renown 8                 | 5/10/17/25 |
+| `the-wind-organ`         | The Wind Organ          | spend lore: +1lab                 | renown 2                 | renown 4, on build 2W     | renown 6                | renown 4, score 2/lore   | 5/10/17/25 |
+| `the-beacon-crown`       | The Beacon Crown        | guard 1                           | renown 1, guard 1        | renown 2, held +2c        | renown 4, guard 1       | renown 6                 | 5/10/17/25 |
+| `the-salt-stair`         | The Salt Stair          | yield 1S                          | renown 1, on build 2W    | renown 2, yield 1W        | renown 4                | renown 5                 | 5/10/17/25 |
+| `the-stonewrights-spire` | The Stonewright's Spire | yield 1lab                        | renown 2                 | renown 4                  | renown 5                | renown 6                 | 6/13/21/30 |
+| `the-hall-of-echoes`     | The Hall of Echoes      | build hall: +2c                   | renown 2, on build 3c    | renown 4, discount hall 1 | renown 4                | renown 4, score 2/hall   | 5/10/17/25 |
+| `the-harvest-wheel`      | The Harvest Wheel       | discount holding 1                | renown 1, on build 1R 1P | renown 2, score 1/holding | renown 4                | renown 5                 | 5/10/17/25 |
+| `the-ice-lantern`        | The Ice Lantern         | season end 1W 1H                  | renown 2                 | renown 2, score 1/3 goods | renown 4                | renown 6                 | 5/10/17/25 |
+| `the-wolf-gate`          | The Wolf Gate           | held +2c                          | renown 1, guard 1        | renown 2, guard 1         | renown 4                | renown 2, score 2/Valour | 5/10/17/25 |
+| `the-tide-mill`          | The Tide Mill           | exchange S, income 1              | renown 1, yield 1S       | renown 2, exchange H      | renown 4                | renown 6                 | 5/10/17/25 |
+| `the-lantern-market`     | The Lantern Market      | income 1                          | renown 1, on build 3c    | renown 2, sell +1c        | renown 4, toll market 2 | renown 6                 | 5/10/17/25 |
+| `the-ring-of-oaths`      | The Ring of Oaths       | score 2/neighbour beaten on guard | renown 1, guard 1        | renown 4                  | renown 4, guard 1       | renown 8                 | 5/10/17/25 |
+| `the-coinwell`           | The Coinwell            | spend market: +2c, income 1       | renown 2                 | renown 2, income 1        | renown 4                | renown 8                 | 5/10/17/25 |
+| `the-fourfold-gate`      | The Fourfold Gate       | score 2/set                       | renown 2, on build 3c    | renown 4                  | renown 6                | renown 6, score 2/set    | 5/10/17/25 |
 
 Intent: each Great Work points at one way to play (Holdings, Lore, Guard, yield, labour, Halls,
 Winter stores, Valour, exchange, selling, beating neighbours, coins, sets). A full track is worth
 about 12 to 18 Renown plus the Perk and effects. The Stonewright's Spire gets labour every Yield,
-so its thresholds are higher (6 / 12 / 19 / 27). D9 per-work changes, from bots' win ratios
+so its thresholds are higher (6 / 13 / 21 / 30). D9 per-work changes, from bots' win ratios
 (BALANCE.md 1b, fair = 1.0): Harvest Wheel 1.46 and Stonewright's Spire 1.36 lowered; Coinwell
 0.59, Fourfold Gate 0.51, Tide Mill 0.68, Wind Organ 0.61, Hall of Echoes 0.71 raised; Salt
 Stair and Ice Lantern tier IV 8 → 6 (both above 1.15). D9c changed eight works' tier Renown
@@ -317,32 +317,33 @@ Thieves. A stronger Watch or a second one holds that too. A test checks this.
 - the ORIGINALITY.md §5 blocklist against every card, Great Work, Raid and Honour name and id,
   and our goods against the banned goods.
 
-Not checked (needs B1 bots and qa playtests):
+Not checked by tests: measured by bots (BALANCE.md), and later by qa playtests. Status
+2026-10-30 (D13); every number is bot play:
 
 1. **Economy curve.** A turn-1 Spring Holding yields up to 15 goods (R4 D4). Watch for
-   Holding-only towns winning; next lever is Spring Holding cost or a store cap (R4 D5).
-2. **Labour supply.** The Summer upgrades give up to 10 labour each. If most towns finish tier IV,
-   raise thresholds (R16) or cut the upgrade labour.
-3. **Trade.** Whether the Season price (1, 1, 1, 3 since D9c; bank 6) and the limit of 2 per neighbour
-   make buying the default; target: most Builds need at most one purchase. Bots should report
-   goods bought per town and the share of score from neighbours (RULES.md design note, R4 D1).
-4. **Tolls.** `toll 1` (any kind) on Fairground and Merchants' Row pays up to 2 coins a turn; may
-   be strong at 7 seats where neighbours always build.
-5. **Lore at 4 seats** is 18 of 96 cards. Check that runs of 5-6 are reachable but not routine.
-6. **Winter goods.** Whether towns can afford Winter cards (5-6 goods) from stores, gleans and
-   purchases at 3 coins (5 before D9c); if not, lower costs or raise Root Cellar's payout. Linked to N1: Winter
-   stock can be bought out by neighbours (RULES.md "planned tuning").
-7. **Teach load** (R4 D9): 23 effect types now. A "first game" option that turns off Honours and
-   upgrades is card D7 (after the first sim numbers).
-8. **Re-tune for single picks** (research N4). Costs and Spend bands here were first sized when
-   each Build had a Spend beside it; now a turn is a Build or a Spend, so fuel per Build roughly
-   halves. D5 only made first moves (Spring Holdings 3c, cheaper Lore, Spend bands of 2-4 units).
-   Plan (also in RULES.md "planned tuning"): run B1 on this data, then adjust **Spend bands
-   first, costs second, Spring first**, until every card is built 5-60% of the times it is
-   picked (balance target S5), Spend picks stay at most about a third of picks in Spring to
-   Autumn (P3, restated for single picks), and most Builds need at most one purchase.
-9. **Forced sales** (research N1): see item 6. First lever if bots show planned Builds broken by
-   sales: neighbours may not buy a town's last 1 of each good.
+   Holding-only towns winning. **Answered** (§11, D9): Holding-only fell from about 2x fair to
+   0.36-0.85x at level 1 (BALANCE.md §8.3). One-kind plans are now weak, not dominant.
+2. **Labour supply.** If most towns finish tier IV, raise thresholds. **Done twice**: D9 (§11)
+   and D12a (§18). Level-2 tier IV is 36-51%; level 1 9-15% (report only, research R11).
+3. **Trade.** Season price 1, 1, 1, 3 (D9c, §14), bank 6, limit 2 per neighbour. The neighbour
+   share is measured (I1 passes at 3-7 seats: RULES.md design note). **Open**: whether most
+   Builds need at most one purchase. No bot metric counts purchases per Build yet.
+4. **Tolls.** `toll 1` on Fairground and Merchants' Row. **Answered**: Tolls are worth 0.5-1.9
+   Renown per town at level 1 and 0.3-1.0 at level 2 (balance L5 baselines). Not strong at 7
+   seats.
+5. **Lore at 4 seats.** Runs of 5-6 should be reachable but not routine. **Partly**: runs of 5+
+   reach 3-4% of towns at level 1 and 2.5-5% at level 2, at or under the 5% floor. Runs of 3+ pass
+   at level 1 (27-33%) and fail at level 2 (16-21%), a bots matter first (D14 after bots).
+6. **Winter goods.** Whether towns can afford Winter cards (5-6 goods). **Open**, not measured
+   directly. Since D9c, Winter purchases cost 3 coins (5 before).
+7. **Teach load** (R4 D9): 26 effect types since D10b. **Done**: the First game option (D7, R19)
+   turns off Honours and upgrades.
+8. **Re-tune for single picks** (research N4). **Done** in D9, D9b, D9c and D11 (§11, §13, §14):
+   level-1 Summer/Autumn Spends pass at 3-7 seats. Level-2 bots still Spend 29-45% in Summer and
+   Autumn (balance P3 at level 2, open).
+9. **Forced sales** (research N1): neighbours buying out stock saved for next turn. **Open**, not
+   measured. First lever if bots or playtests show planned Builds broken by sales: neighbours may
+   not buy a town's last 1 of each good.
 
 ## 10. Research R4 findings: what was done
 
@@ -674,9 +675,10 @@ with D10b counted at 3-5. The cost is Town: rivalry Renown is card Renown (R12.2
 seats D10c gives back much of what L3 took from Town. Research's R9 now judges S1 by the 8
 sources, not the R12.2 groups, so this matters less than it looks; see §17.
 
-## 17. D12 proposal: a fourth source for level-2 winners (open, not built)
+## 17. D12 proposal: a fourth source for level-2 winners
 
-**Status: proposal.** Not built until balance's re-check of D9c, D10b, L3 and D10c on main is in
+**Status: item 1 built as D12a (§18); items 2-4 open** (balance L5 measured the grid: BALANCE.md
+§9). The proposal as written: not built until balance's re-check of D9c, D10b, L3 and D10c on main is in
 (inbox 06:50). Every number is bot play (`balance.ts`, level 2, 1000 games, seed 1, 2-7 seats,
 on main's content after D10c), measured with overlays in scratch; nothing here is shipped.
 
@@ -730,3 +732,28 @@ Lore never leads (1-3%) because level-2 bots barely build it whatever its number
    (`scoreBeat`, `scoreNeighbourMin`, `scoreSales`). Those payoffs were sized at level 1, where
    the bot ignored Renown amounts (§12). Balance's re-check should say whether they are now too
    big; cutting them would also move Landmark and "other card" shares in the table above.
+
+## 18. D12a: Great Work thresholds up (2026-10-30)
+
+From §17 item 1 and balance L5 (BALANCE.md §9.2): standard thresholds 4 / 9 / 15 / 22 → **5 / 10
+/ 17 / 25** (+1/+1/+2/+3). The Stonewright's Spire 6 / 12 / 19 / 27 → **6 / 13 / 21 / 30**: its
+tier I stays at 6, not 7 (no printed 7, R4 O15), which also helps it at level 2, where it was
+weak (0.89x). Research R11 judges S4 at level 2, so level 1's tier IV is report-only.
+
+**Measured** on main `7466497`, which includes bots' B10 (Guard weight ×3) that landed after L5
+(`balance.ts`, 1000 games, seed 1, section 1, 2-7 seats; shipped content, not an overlay; bot
+play):
+
+| Metric (target)                   | Level 2                                       | Level 1 (report)                              |
+| --------------------------------- | --------------------------------------------- | --------------------------------------------- |
+| Winner's top of 8 sources (≤ 55%) | GW 46-55% → **38-45%** (passes)               | 39-49% → 30-48%                               |
+| Sources ≥ 10% of winners (≥ 4)    | 2 / 3 / 3 / 2 / 2 / 3 → 2 / 3 / 3 / 3 / 4 / 3 | 3 / 2 / 2 / 3 / 4 / 2 → 3 / 2 / 2 / 3 / 4 / 3 |
+| Tier IV (20-50%, level 2 per R11) | 53-67% → **36-51%** (passes except 7 seats)   | 15-24% → 9-15%                                |
+| Blowouts, 2-7 seats (≤ 10%)       | 26/15/10/9/6/5 → 29/15/11/8/5/6%              | 56-18% → 58-19%                               |
+| I1                                | 9-16% → 10-17%                                | 8-17% → 8-18%                                 |
+| Great Works out of 0.75-1.25x     | 4 → 5 of 14 (Spire 0.89x → 1.10x)             | 2 → 3 of 14 (Spire 1.61x)                     |
+| Winning score median              | 57-65 → 55-63                                 | 39-47 → 37-46                                 |
+
+Still failing at level 2: S1 breadth at 2-5 and 7 seats. The 4th source is Valour (10-24% at 3-7
+seats now, B10 lifted it) or Purse (8-14%), each near the line. D12b picks between the §17 item 2
+levers once balance's L6 baseline (with B10) is in; the Purse shape needs the engine.
