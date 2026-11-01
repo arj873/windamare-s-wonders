@@ -1,33 +1,28 @@
 # KANBAN — Windamere's Wonders (mirror)
 
 **Live board: https://github.com/users/arj873/projects/3/views/1** · this file is generated from `.orchestra/cards.json`; agents read-only.
-Updated: 2026-10-30 09:03 · Progress: **121 / 130 cards done**
+Updated: 2026-11-01 03:03 · Progress: **125 / 135 cards done**
 
-## In progress (6)
+## In progress (4)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
 | A3 | art | P0 | Retheme to the real design: 6 kinds, goods, Lore ranks, Raid frame, Great Work track, Honours |
 | L6 | balance | P1 | Level-2 baseline with B10 Guard x3; D12 re-check; S4r run |
-| B11 | bots | P2 | S4r Great Work focus bot (level 1) for the tier IV reach test |
 | B6 | bots | P2 | Level 3 on engine lookahead + Lore-run/Honour planning (K2 1.5x) |
-| D12 | design | P2 | Proposal: a third scoring group that pays level-2 play |
-| U13 | ui | P2 | fx speed menu (Fast/Normal/Off); count-up once |
+| D12 | design | P2 | D12a thresholds shipped; D12b 4th source after L6 |
 
-## In review (1)
-
-| Card | Lane | Pri | Title |
-|---|---|---|---|
-| Q6 | qa | P1 | Card-text audit: no raw effect ids on any card face |
-
-## Ready (2)
+## Ready (5)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
-| D13 | design | P2 | RULES.md design notes: measured I1 by card; CARDS.md §9 pointers |
+| A10 | art | P2 | 12 more card illustrations (2 per kind) |
+| B12 | bots | P2 | K2 at 2/3/5/7 seats; Lore plan weight |
+| Q7 | qa | P2 | Full-game browser sweep 2/3/5/7 seats + First game |
+| T6 | tutorial | P2 | HOWTOPLAY Great Work thresholds 5/10/17/25 (D12a) |
 | U2 | ui | P1 | Fix R4 red-team: O4 placeholders + popover, O12 score tally |
 
-## Done (121)
+## Done (125)
 
 | Card | Lane | Pri | Title |
 |---|---|---|---|
@@ -53,6 +48,7 @@ Updated: 2026-10-30 09:03 · Progress: **121 / 130 cards done**
 | B8 | bots | P1 | Bots tests robust to D10b (unblocks design D9c+D10b) |
 | B9 | bots | P1 | I1 metric counts D10b types; Lore plan (36-38% of towns build none) |
 | B10 | bots | P2 | Goods plan / Honours; re-measure K2 and Lore share |
+| B11 | bots | P2 | S4r Great Work focus bot (level 1) for the tier IV reach test |
 | D2 | design | P0 | Original ruleset with numbered rules -> docs/RULES.md |
 | D2b | design | P0 | Answer lane questions in RULES.md: pick change before reveal, early resolve, timers, resolution order |
 | D2c | design | P0 | Human changes: new goods set, single pick, neighbour trade (own mechanism/numbers) |
@@ -67,6 +63,7 @@ Updated: 2026-10-30 09:03 · Progress: **121 / 130 cards done**
 | D9b | design | P1 | Re-tune follow-up |
 | D10b | design | P2 | Ship 4 pending neighbour cards once engine E7 lands |
 | D10c | design | P2 | Second copy of rivalry cards at 6-7 seats (I1) |
+| D13 | design | P2 | RULES.md design notes: measured I1 by card; CARDS.md §9 pointers |
 | D7 | design | P2 | First-game option (Honours and upgrades off) after sim numbers |
 | D9c | design | P2 | Re-tune from balance L2 at bot level 2 (Halls/Town top source) |
 | E1 | engine | P0 | Game-agnostic draft core: seats, hidden simultaneous picks, reveal, hand passing, seeded RNG, per-seat views |
@@ -118,6 +115,7 @@ Updated: 2026-10-30 09:03 · Progress: **121 / 130 cards done**
 | Q1b | qa | P0 | Update R6.6c/R6.3 audit tests to D8 prices (pairs with engine E4) |
 | Q1 | qa | P1 | Rules audit: engine vs docs/RULES.md, one audit test per rule |
 | Q2 | qa | P1 | Playtest harness: drive a browser game from a CLI |
+| Q6 | qa | P1 | Card-text audit: no raw effect ids on any card face |
 | Q2b | qa | P2 | Playtest harness browser layer (Playwright, system Chrome) |
 | Q3 | qa | P2 | Audit tests: R19 First game, D10a rivalry cards |
 | Q4 | qa | P2 | Playtest online layer: one page per seat, leak checks |
@@ -151,4 +149,5 @@ Updated: 2026-10-30 09:03 · Progress: **121 / 130 cards done**
 | U7 | ui | P1 | Wire online launcher, First game toggle, tutorial coach |
 | U9 | ui | P1 | Coach shows in normal games (bug); fx face; spectator layout; labels |
 | U11 | ui | P2 | Clock keeps seconds after pick; hotseat Sound menu; Burn row |
+| U13 | ui | P2 | fx speed menu (Fast/Normal/Off); count-up once |
 | U8 | ui | P2 | R7 top 5 UX fixes + qa/fx/art hooks |
