@@ -167,6 +167,24 @@ Not tested: widths below 360 or above 390, landscape, desktop widths, the online
 narrow widths, the pass-cover hotseat screen, text zoom, the Season card at the 3 clocks (it was
 measured with the clock off), a real phone (this is desktop Chrome with a mobile viewport and touch).
 
+## Q6 — card and Great Work text (main 2db6fa1, shipped content)
+
+`src/game/windamere/cardtext.audit.test.ts`: every card and Great Work through ui's `text.ts` on
+every surface: card face (name, cost, effect line, Spend line, amount labels), the tooltip and
+aria-label strings built from a face, the Card list sheet (real DOM, 4 Seasons, one row per card: the test asserts the row count equals the card count), Perk, tier rewards, the Great Work choice detail and the monument, and the help tooltips
+(terms). Bad = a raw effect id (camelCase), "undefined", "NaN", "[object", "Infinity", "null", an empty
+effect line or amount, a double space, or a raw kebab content id. It also builds one sample spec per
+effect type in the R13 table of `docs/RULES.md`, so a type ruled but without text fails even before a
+card uses it.
+
+**Open findings: none.** The first run found 4 cards printing a raw effect id (`wend-fair`
+`onBuildNeighbourMin`, `commons-of-the-wend` and `kinsfolk-hall` `scoreNeighbourMin`, `brokers-arcade`
+`scoreSales`; `effectText` had no case for those three R13 types). Fixed by ui (0b34008, PR #110);
+the tests are now plain and pass for every card, Perk and tier reward on every surface.
+
+Not checked: wording quality (clarity, grammar of the new sentences), pluralisation ("1 coins"),
+translations, the text on card art, the rules overlay (How to play) text, log lines.
+
 ## Checked and fine (tests pass, keep them green)
 
 Engine (`src/engine/core/engine.audit.test.ts`):
