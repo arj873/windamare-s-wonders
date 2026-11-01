@@ -22,6 +22,12 @@ Updated: 2026-11-01 03:03 · Progress: **125 / 135 cards done**
 | T6 | tutorial | P2 | HOWTOPLAY Great Work thresholds 5/10/17/25 (D12a) |
 | U2 | ui | P1 | Fix R4 red-team: O4 placeholders + popover, O12 score tally |
 
+## Backlog (1)
+
+| Card | Lane | Pri | Title |
+|---|---|---|---|
+| X1 | platform | P1 | Lanes on opencode deepseek-v4.1-flash-free: launch needs human OK |
+
 ## Done (125)
 
 | Card | Lane | Pri | Title |
