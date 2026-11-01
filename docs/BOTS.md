@@ -416,3 +416,30 @@ Before (§11): level 2 18% / 34% / 6.8. **K2**: 2 level 2 vs 2 level 3, 4 seats,
 1.12-1.51). Only 4 seats measured here. The goods plan across turns is **not done**; the Guard
 weight made it unnecessary for the Watch problem in these runs, but the "hands pass, so plan the
 goods" idea is untested.
+
+## 16. Great Work focus bot (B11, research S4r)
+
+`createGreatWorkBot(opts?)` (exported from `src/bots`, built on `windamereAdapter({ greatWork: true })`)
+is level 1 aimed at the Great Work. Rules: among Builds that score, cards that hand out labour go
+first (a 100 bonus in the cost key); a Spend takes the card with the most labour (then the biggest
+band); a Great Work offer with the least labour to finish all four tiers is taken. Options:
+`labourOnly` builds only labour cards (everything else is Spent), `content` rates the Great Works
+from a balance overlay's content, `name` renames it. Names: `focus-greatWork` and
+`focus-greatWork-only`.
+
+Measured (shipped thresholds 4, 9, 15, 22; towns reaching tier IV, 150 games, all seats this bot
+or all greedy):
+
+| seats | `focus-greatWork` | `focus-greatWork-only` | greedy |
+| ----- | ----------------- | ---------------------- | ------ |
+| 2     | 49%               | 100%                   | 20%    |
+| 3     | 34%               | 95%                    | 14%    |
+| 4     | 49%               | 99%                    | 23%    |
+| 5     | 42%               | 97%                    | 20%    |
+| 7     | 51%               | 99%                    | 25%    |
+
+So the spec'd bot (labour Builds first, Spend the most labour only when nothing scores) misses S4r's
+50% at 3 and 5 seats on these thresholds; the labour-only version reaches it everywhere, i.e. tier IV
+is reachable for someone who tries. Not measured under design's D12 thresholds: the content in my
+branch is main's, so balance should run both names on the overlay. Win share of either bot not
+measured here.

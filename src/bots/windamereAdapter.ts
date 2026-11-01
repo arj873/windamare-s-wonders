@@ -17,7 +17,8 @@ import type {
   WwSeat,
   WwTable,
 } from '../engine';
-import type { GreedyAdapter } from './greedy';
+import { createGreedyBot, type GreedyAdapter } from './greedy';
+import type { Bot } from './types';
 
 const ALWAYS = new Set([
   'renown',
@@ -47,6 +48,15 @@ function scores(effects: readonly EffectSpec[], round: number): boolean {
 export interface WindamereGreedyOptions {
   /** A specialist builds only cards of this kind (others are Spent), for strategy comparisons. */
   focus?: string;
+  /**
+   * Great Work focus (research S4r): among Builds that score, labour Builds go first; Spends take
+   * the most labour; the Great Work offer with the least labour to finish is taken.
+   */
+  greatWork?: boolean;
+  /** With `greatWork`: build only labour cards (everything else is Spent for labour). */
+  labourOnly?: boolean;
+  /** Content the Great Works are rated from (default: shipped; pass a balance overlay's). */
+  content?: WwContent;
 }
 
 /**
@@ -80,14 +90,25 @@ export function rateGreatWork(content: WwContent, id: string): number {
   return tiers + perk - labour / 1000;
 }
 
+/** True if the card's effects hand out labour (Builds that feed the Great Work). */
+function givesLabour(d: WwCardDef): boolean {
+  return d.effects.some((e) => ((e.gains as Record<string, number> | undefined)?.labour ?? 0) > 0);
+}
+
+/** Great Work offers for the focus bot: the least labour to finish all four tiers. */
+function labourToFinish(content: WwContent, id: string): number {
+  const gw = content.greatWorks.find((g) => g.id === id);
+  return gw ? -(gw.tiers[gw.tiers.length - 1]?.threshold ?? 99) : 0;
+}
+
 export function windamereAdapter(
   options: WindamereGreedyOptions = {},
 ): GreedyAdapter<WwSeat, WwTable> {
+  const content = options.content ?? CONTENT;
   return {
     rateAnswer(_view, _seat, kind, answer) {
-      return kind === 'greatWork' && typeof answer === 'string'
-        ? rateGreatWork(CONTENT, answer)
-        : null;
+      if (kind !== 'greatWork' || typeof answer !== 'string') return null;
+      return options.greatWork ? labourToFinish(content, answer) : rateGreatWork(content, answer);
     },
     assess(view, _seat, pick, def: CardDef | undefined) {
       const d = def as WwCardDef | undefined;
@@ -95,12 +116,41 @@ export function windamereAdapter(
       if (pick.use === 'build') {
         const args = (pick.args ?? {}) as WwPickArgs;
         const cost = sum(args.cover != null && d.upgrade ? d.upgrade.cost : d.cost);
-        const focused = options.focus === undefined || d.kind === options.focus;
-        return { scoringBuild: focused && scores(d.effects, view.round), cost, value: 0 };
+        const focused =
+          (options.focus === undefined || d.kind === options.focus) &&
+          !(options.greatWork && options.labourOnly && !givesLabour(d));
+        // The Great Work focus builds labour cards first: a lower cost wins among scoring Builds.
+        const bias = options.greatWork && givesLabour(d) ? 100 : 0;
+        return {
+          scoringBuild: focused && scores(d.effects, view.round),
+          cost: cost - bias,
+          value: 0,
+        };
       }
       const band = d.spend ?? {};
-      const value = sum(band) + 0.5 * (band.labour ?? 0);
+      const value = options.greatWork
+        ? 100 * (band.labour ?? 0) + sum(band)
+        : sum(band) + 0.5 * (band.labour ?? 0);
       return { scoringBuild: false, cost: 0, value };
     },
   };
+}
+
+/**
+ * Level 1 aimed at the Great Work (S4r), for balance to seat as a named policy. Default: scoring
+ * Builds still happen but labour Builds go first (`focus-greatWork`). `labourOnly` builds nothing
+ * but labour cards (`focus-greatWork-only`), the upper bound of what trying can reach.
+ */
+export function createGreatWorkBot(
+  opts: { content?: WwContent; labourOnly?: boolean; name?: string } = {},
+): Bot<WwSeat, WwTable> {
+  const adapter = windamereAdapter({
+    greatWork: true,
+    ...(opts.labourOnly ? { labourOnly: true } : {}),
+    ...(opts.content ? { content: opts.content } : {}),
+  });
+  return createGreedyBot(
+    adapter,
+    opts.name ?? (opts.labourOnly ? 'focus-greatWork-only' : 'focus-greatWork'),
+  );
 }
