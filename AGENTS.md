@@ -20,26 +20,29 @@ standup every 3 hours. Reference codebase (read-only, same author, same stack):
    reproduce 7 Wonders' card list, card names, costs, numbers, scoring tables, wonder boards or
    art. Genre mechanics (simultaneous drafting, hand passing, tableau building, neighbour
    interaction, a personal monument) are fine. `docs/design/ORIGINALITY.md` is the line.
-6. No codex or other non-Claude agents. Do not spawn subagents for lane work.
+6. Lane agents run in **opencode with `opencode/deepseek-v4.1-flash-free`** only (human's
+   decision, 2026-11-01). No other models or agent tools. Do not spawn subagents for lane work.
+   `opencode.json` in your worktree root is the orchestrator's (model + denied commands such as
+   `git push` and `sudo`); never edit or commit it.
 
 ## Lanes
 Agent names are `ww-<lane>`; status and inbox files use the bare lane name.
 
-| Lane | Model | Owns |
+| Lane | Agent | Owns |
 |---|---|---|
-| research | Opus 5.5 | `docs/design/RESEARCH.md`, `docs/design/research/**` |
-| design | Opus 5.5 | `docs/RULES.md`, `docs/design/**` except research/UX/ART files, `src/content/**` (card data, once rules are approved) |
-| platform | Sonnet 5.5 | `package.json`, `pnpm-*`, `tsconfig*`, `vite.config.ts`, `vitest.config.ts`, `eslint.config.js`, `.prettier*`, `.github/**`, `scripts/gate.sh`, `index.html`, `src/shared/**`, `docs/ARCHITECTURE.md`, `docs/REUSE.md`, `LICENSE` |
-| engine | Opus 5.5 | `src/engine/**`, `docs/ENGINE.md` |
-| ui | Opus 5.5 | `src/main.ts`, `src/app.ts`, `src/ui/**` except theme/online/fx/tutorial/help, `src/render/**`, `src/game/**` except online, `docs/design/UX.md` |
-| online | Opus 5.5 | `src/ui/online/**`, `src/game/online/**` |
-| fx | Sonnet 5.5 | `src/ui/fx/**`, `src/audio/**`, `public/audio/**` |
-| tutorial | Sonnet 5.5 | `src/ui/tutorial/**`, `src/ui/help/**`, `docs/HOWTOPLAY.md` |
-| art | Sonnet 5.5 | `src/ui/theme/**`, `public/**` except audio, `docs/design/ART.md`, `art-dev.html` |
-| net | Sonnet 5.5 | `src/net/**`, `src/server/**`, `wrangler.jsonc`, `docs/MULTIPLAYER.md` |
-| bots | Sonnet 5.5 | `src/bots/**`, `scripts/sim*` |
-| balance | Opus 5.5 | `docs/BALANCE.md`, `docs/balance/**`, `scripts/balance*` |
-| qa | Sonnet 5.5 | `src/**/*.audit.test.ts`, `docs/AUDIT.md`, `playtest/**` |
+| research | opencode | `docs/design/RESEARCH.md`, `docs/design/research/**` |
+| design | opencode | `docs/RULES.md`, `docs/design/**` except research/UX/ART files, `src/content/**` (card data, once rules are approved) |
+| platform | opencode | `package.json`, `pnpm-*`, `tsconfig*`, `vite.config.ts`, `vitest.config.ts`, `eslint.config.js`, `.prettier*`, `.github/**`, `scripts/gate.sh`, `index.html`, `src/shared/**`, `docs/ARCHITECTURE.md`, `docs/REUSE.md`, `LICENSE` |
+| engine | opencode | `src/engine/**`, `docs/ENGINE.md` |
+| ui | opencode | `src/main.ts`, `src/app.ts`, `src/ui/**` except theme/online/fx/tutorial/help, `src/render/**`, `src/game/**` except online, `docs/design/UX.md` |
+| online | opencode | `src/ui/online/**`, `src/game/online/**` |
+| fx | opencode | `src/ui/fx/**`, `src/audio/**`, `public/audio/**` |
+| tutorial | opencode | `src/ui/tutorial/**`, `src/ui/help/**`, `docs/HOWTOPLAY.md` |
+| art | opencode | `src/ui/theme/**`, `public/**` except audio, `docs/design/ART.md`, `art-dev.html` |
+| net | opencode | `src/net/**`, `src/server/**`, `wrangler.jsonc`, `docs/MULTIPLAYER.md` |
+| bots | opencode | `src/bots/**`, `scripts/sim*` |
+| balance | opencode | `docs/BALANCE.md`, `docs/balance/**`, `scripts/balance*` |
+| qa | opencode | `src/**/*.audit.test.ts`, `docs/AUDIT.md`, `playtest/**` |
 
 Root files not listed (`README.md`, `AGENTS.md`, `KANBAN.md`, `.gitignore`) belong to the
 orchestrator. Need a dependency? Ask platform under `Needs:`.
@@ -52,7 +55,10 @@ orchestrator. Need a dependency? Ask platform under `Needs:`.
 
 ## Workflow
 - Small commits; prefix each subject with your lane (`design: ...`). Before each commit run the
-  gate once it exists: `nice -n 19 scripts/gate.sh` (typecheck + lint + test).
+  gate once it exists: `nice -n 19 scripts/gate.sh` (typecheck + lint + test). Commit only when
+  it prints `GATE PASS` and exits 0; never pipe it through grep or tail (that hides the exit code).
+- New session? Read the last 3 sections of your status file and the latest inbox section first;
+  that is where your lane stands.
 - Change files with the Edit/Write tools rather than sed or heredocs in Bash.
 - Merges happen via squashed GitHub PRs. After yours merges you get the merged tip; run
   `git fetch . main:main 2>/dev/null; git rebase --onto main <tip>`. When told "rebase":
