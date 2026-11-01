@@ -12,7 +12,7 @@
 import { sfx } from '../../audio';
 import { latestEvents, SEASONS, type WwRules, type WwSeat, type WwTable } from '../../engine';
 import {
-  countUp,
+  countUpScores,
   playCue,
   playRevealWithSound,
   seasonTransition,
@@ -147,7 +147,14 @@ export function windamereFx(
       // not after the Winter reveal behind it.
       if (view.phase.kind === 'gameOver' && model.result) {
         finale.stop();
-        finale = countFinal(anchors.root, model.result, who, instant, () => anchors.scoreTotals());
+        finale = countFinal(
+          anchors.root,
+          model.result,
+          who,
+          instant,
+          () => anchors.scoreTotals(),
+          model.actionKey,
+        );
       }
     },
     skip() {
@@ -159,6 +166,18 @@ export function windamereFx(
       finale.stop();
     },
   };
+}
+
+/** A stable id per table element, for keys that must differ between games on one page. */
+const tableIds = new WeakMap<HTMLElement, number>();
+let nextTableId = 1;
+function tableId(root: HTMLElement): number {
+  let id = tableIds.get(root);
+  if (id === undefined) {
+    id = nextTableId++;
+    tableIds.set(root, id);
+  }
+  return id;
 }
 
 interface Finale {
@@ -173,7 +192,8 @@ const NO_FINALE: Finale = { skip() {}, stop() {} };
  * The final scores' moment (R10 #1). When `.dt-result` appears (a MutationObserver fires before
  * the browser paints, so the real totals never flash), every total shows 0, ranks and "X wins"
  * hide (`.is-counting`, table.css), and the totals count up lowest first; when the last lands the
- * ranks and the headline show and the gameEnd sound plays. Reduced motion: totals at once.
+ * ranks and the headline show and the gameEnd sound plays (only if this call counted). Reduced
+ * motion or Animations Off: totals at once. fx's countUpScores does the counting.
  */
 function countFinal(
   root: HTMLElement,
@@ -181,8 +201,12 @@ function countFinal(
   who: TableFx,
   instant: boolean,
   totals: () => { seat: number; el: HTMLElement }[],
+  key: string,
 ): Finale {
   const want = new Map(result.columns.map((c) => [c.seat, c.total]));
+  // fx F6's `once`: a second call for this same game end (a reconnect, a repeated action) just
+  // shows the totals. Not the seed: views hide it, so every game would share one key.
+  const once = `${tableId(root)}:${key}:${result.columns.map((c) => c.total).join(',')}`;
   let observer: MutationObserver | null = null;
   let landNow: (() => void) | null = null;
   let stopped = false;
@@ -190,35 +214,27 @@ function countFinal(
     observer?.disconnect();
     observer = null;
     const rows = totals().map(({ seat, el }) => ({ el, total: want.get(seat) ?? 0 }));
-    let landed = false;
-    const land = () => {
-      if (landed) return;
-      landed = true;
-      landNow = null;
-      for (const r of rows) r.el.textContent = String(r.total);
+    let cancelled = false;
+    const settle = () => {
       card.classList.remove('is-counting');
-      if (!stopped) sfx.play('gameEnd');
+      landNow = null;
     };
-    if (instant) return land();
-    card.classList.add('is-counting');
-    for (const r of rows) r.el.textContent = '0';
-    landNow = land;
-    void (async () => {
-      const order = [...rows].sort((a, b) => a.total - b.total);
-      for (const [i, r] of order.entries()) {
-        if (landed || stopped) return;
-        // fx's countUp draws into a stand-in, so a tap can land the real totals mid-count.
-        await countUp(document.createElement('span'), 0, r.total, {
-          ms: 700 + i * 150,
-          onTick: (n) => {
-            if (landed || stopped) return;
-            r.el.textContent = String(n);
-            playCue('scoreTick', null, who);
-          },
-        });
-      }
-      if (!stopped) land();
-    })();
+    if (!instant) card.classList.add('is-counting');
+    // A tap: ranks show now; fx jumps every total to its end on the next frame.
+    landNow = () => {
+      cancelled = true;
+      settle();
+    };
+    // fx sets every total to 0 before its first await, so the real totals never flash.
+    void countUpScores(rows, {
+      instant,
+      once,
+      cancelled: () => cancelled || stopped,
+      onTick: () => playCue('scoreTick', null, who),
+    }).then((ran) => {
+      settle();
+      if (ran && !stopped) sfx.play('gameEnd');
+    });
   };
   const now = root.querySelector<HTMLElement>('.dt-result');
   if (now) start(now);

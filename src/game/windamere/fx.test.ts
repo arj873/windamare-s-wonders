@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { sfx } from '../../audio';
 import type { WwState } from '../../engine';
 import { tableModel } from '../../ui/table/model';
 import { DraftTable } from '../../ui/table/table';
@@ -60,33 +61,45 @@ describe('windamereFx', () => {
     expect(model.seasonEnd?.title).toMatch(/^End of Winter/);
     const raid = table.element.querySelector('.dt-result-raid');
     expect(raid?.querySelectorAll('.dt-season-lines li').length).toBeGreaterThanOrEqual(3);
+    vi.useFakeTimers();
+    const gameEnd = vi.spyOn(sfx, 'play');
     const card = table.element.querySelector('.dt-result')!;
     const totals = () => table.anchors.scoreTotals().map(({ el }) => el.textContent);
-    fx.onAction({
-      key: model.actionKey,
-      view,
-      model,
-      anchors: table.anchors,
-      reducedMotion: false,
-    });
+    const real = model.result!.columns.map((c) => String(c.total));
+    const moment = { key: model.actionKey, view, model, anchors: table.anchors };
+    fx.onAction({ ...moment, reducedMotion: false });
     expect(card.classList.contains('is-counting')).toBe(true); // ranks and headline wait (CSS)
     expect(totals()).toEqual(['0', '0', '0']);
-    // A tap lands every total at once and shows the ranks.
+    // A tap shows the ranks now; fx lands every total on its next frame.
     fx.skip?.();
     expect(card.classList.contains('is-counting')).toBe(false);
-    const real = model.result!.columns.map((c) => String(c.total));
+    for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(50);
     expect(totals()).toEqual(real);
-    // Untouched, the count runs lowest first to the same totals by itself (about 2.6 s here).
-    vi.useFakeTimers();
-    table.update({ ...model, actionKey: `${model.actionKey}-again` });
-    const again = table.element.querySelector('.dt-result')!;
-    fx.onAction({ key: 'again', view, model, anchors: table.anchors, reducedMotion: false });
-    for (let i = 0; i < 40; i++) await vi.advanceTimersByTimeAsync(100);
-    expect(again.classList.contains('is-counting')).toBe(false);
+    expect(gameEnd.mock.calls.filter(([id]) => id === 'gameEnd')).toHaveLength(1);
+    // The same game end again (a reconnect, a repeated call): totals as they are, no second count.
+    fx.onAction({ ...moment, reducedMotion: false });
     expect(totals()).toEqual(real);
-    vi.useRealTimers();
+    await vi.advanceTimersByTimeAsync(50);
+    expect(gameEnd.mock.calls.filter(([id]) => id === 'gameEnd')).toHaveLength(1);
     fx.dispose?.();
     table.destroy();
+
+    // Another game on a new table counts by itself, lowest first (about 2.6 s here).
+    const next = new DraftTable({ pick() {}, unpick() {}, answer() {} });
+    document.body.append(next.element);
+    next.update(model);
+    const fx2 = windamereFx(rules);
+    fx2.onAction({ ...moment, anchors: next.anchors, reducedMotion: false });
+    const nextTotals = () => next.anchors.scoreTotals().map(({ el }) => el.textContent);
+    expect(nextTotals()).toEqual(['0', '0', '0']);
+    for (let i = 0; i < 40; i++) await vi.advanceTimersByTimeAsync(100);
+    expect(next.element.querySelector('.dt-result')!.classList.contains('is-counting')).toBe(false);
+    expect(nextTotals()).toEqual(real);
+    expect(gameEnd.mock.calls.filter(([id]) => id === 'gameEnd')).toHaveLength(2);
+    gameEnd.mockRestore();
+    vi.useRealTimers();
+    fx2.dispose?.();
+    next.destroy();
   });
 
   it('gives fx F5 sprites the card face’s art and kind; nothing for goods', () => {
