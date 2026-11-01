@@ -1,8 +1,9 @@
-# Balance report: Windamere at bot levels 1 and 2 (cards L1-L5)
+# Balance report: Windamere at bot levels 1 and 2 (cards L1-L6)
 
 **Current state: section 8 (L4, main `86c28af`: every target) with section 9 (L5, main
-`2db6fa1`: what bots' B9 Lore plan moved, design's D12 grid, the rivalry payoff).** Sections 0-7
-are the history that led there, each on the main it names.
+`2db6fa1`: what bots' B9 Lore plan moved, design's D12 grid, the rivalry payoff) and section 10
+(L6, main `7466497`: level 2 and K2 with bots' B10).** Sections 0-7 are the history that led
+there, each on the main it names.
 
 Owner: balance lane. Run 2026-10-30 on main `4fb5baf`: design D9b (`868c469`, -1 good on 21
 Summer/Autumn cards) on top of D9 (Great Work thresholds 4/9/15/22, Valour 2/3/4/5), engine E4
@@ -481,3 +482,71 @@ at 3-4 seats. A change to it moves S1, S1g and I1 together and has to be measure
    (1-2%); S3 still fails at level 2.
 
 Every number is bot play (levels 1 and 2), not human play.
+
+## 10. L6 step 1: level 2 and K2 with bots' B10 (main `7466497`)
+
+Content is the same as `2db6fa1`; only the level-2/3 evaluator changed (`windamereEval.ts`
+`baa7915` -> `5f2ce6a`, B10: Guard weight x3). Level 1 is unchanged code, so it is not rerun.
+S4 is now judged at level 2 only (research R11; S4r replaces level 1's floor, run when bots' B11
+lands). Tables: `docs/balance/baseline/7466497-level2.md`, `-k2.md`. Steps 2 (design's D12 at
+both levels) and 3 (S4r) wait for those to be on main.
+
+### 10.1 Level 2, L5 (`baa7915`) -> L6 (`5f2ce6a`), 2 / 3 / 4 / 5 / 6 / 7 seats
+
+| Target                                  | L5                                   | L6 with B10                                  | Status now                                  |
+| --------------------------------------- | ------------------------------------ | -------------------------------------------- | ------------------------------------------- |
+| **Raids**: Valour share of all Renown   | 15-17%                               | **18-22%**                                   | report                                      |
+| Valour as the winner's top source       | 15 / 14 / 9 / 7 / 6 / 5%             | **25 / 19 / 14 / 9 / 8 / 6%**                | a source at 2-4 seats only                  |
+| Raids as the winner's top group (S1g)   | 0-5%                                 | 1-13%                                        | report                                      |
+| I3 Spring Raid held (>= 50%)            | 48-50%                               | **59-70%**                                   | **passes now**                              |
+| **S1** top source (<= 55%)              | Great Work 42-55%                    | Great Work 46-55% (7 seats exactly 55.0%)    | passes, on the line at 7 seats              |
+| **S1** sources >= 10% of winners (>= 4) | 3 / 4 / 2 / 2 / 3 / 2                | **2 / 3 / 3 / 2 / 2 / 3**                    | **fails at every count** (3 seats lost one) |
+| S1g top group (flag > 75%)              | Town 52-79%                          | Town 43-77%                                  | flag at 6 seats only (76.9%)                |
+| S4 tier IV (20-50%, level 2)            | 56-70%                               | 53-67%                                       | fails                                       |
+| S3 Lore run >= 3 (>= 25%)               | 16-21%                               | 11-19%                                       | fails (Guard takes picks from Lore)         |
+| R3 blowouts / margin median             | 34 / 16 / 12 / 8 / 7 / 6%; 7.6-16.9% | 26 / 15 / 10.4 / 9.1 / 5.6 / 5.0%; 7.6-14.3% | blowouts pass at 5-7; margin at 4-7         |
+| I1 (>= 10%)                             | 11-17%                               | 9.0-16.3%                                    | **2 seats now fails** (9.0%)                |
+| Rivalry Renown, winner                  | 8.0-14.5                             | 6.4-13.3                                     | report (-1..-1.6)                           |
+| P3 Summer / Autumn                      | 30-37% / 41-46%                      | 30-38% / 40-45%                              | fails                                       |
+| K1 vs random                            | 99.7% at 3, 4.95x at 5               | 99.8% at 3, 4.96x at 5                       | passes                                      |
+
+Where the sources sit now (level 2, winner's top source, %):
+
+| Seats | Great Work | Landmark | Valour | Purse | Other card | Hall | Lore | Honours | Sources >= 10% |
+| ----- | ---------- | -------- | ------ | ----- | ---------- | ---- | ---- | ------- | -------------- |
+| 2     | 53.6       | 5.2      | 24.9   | 2.8   | 0.0        | 8.6  | 1.0  | 3.9     | 2              |
+| 3     | 50.0       | 8.6      | 19.1   | 13.2  | 5.4        | 2.6  | 0.8  | 0.3     | 3              |
+| 4     | 54.7       | 14.8     | 13.8   | 8.4   | 2.5        | 4.0  | 1.6  | 0.2     | 3              |
+| 5     | 47.8       | 29.2     | 9.2    | 7.8   | 1.2        | 3.8  | 0.9  | 0.1     | 2              |
+| 6     | 46.3       | 24.3     | 8.2    | 7.6   | 9.1        | 3.7  | 0.8  | 0.0     | 2              |
+| 7     | 55.0       | 18.6     | 5.8    | 10.3  | 6.0        | 3.4  | 0.9  | 0.0     | 3              |
+
+B10 made Valour a real source at 2-4 seats (it was the change's aim: Guard counts), but it took
+those winners from Purse, Hall and Landmark rather than from the Great Work, so S1 breadth did not
+gain: the same zero-sum swap as the Valour steps in L5 (9.2). At 5-7 seats the 3rd and 4th places
+(Valour, Purse, other cards) all sit at 6-10%.
+
+### 10.2 K2 with B10
+
+| Seats | level 1 | level 2       | level 3       | level 3 / level 2 (L5) |
+| ----- | ------- | ------------- | ------------- | ---------------------- |
+| 2     | 3.9%    | 96.1% (1.92x) | -             | -                      |
+| 3     | 0.9%    | 51.1% (1.53x) | 48.0% (1.44x) | **0.94x** (1.07x)      |
+| 4     | 0.7%    | 45.1% (1.80x) | 53.5% (2.14x) | 1.19x (1.42x)          |
+| 5     | 0.3%    | 32.6% (1.63x) | 34.3% (1.72x) | 1.05x (1.43x)          |
+| 6     | 0.3%    | 23.7% (1.42x) | 26.0% (1.56x) | 1.10x (1.33x)          |
+| 7     | 0.3%    | 23.9% (1.68x) | 25.7% (1.80x) | 1.07x (1.34x)          |
+
+Level 3 over level 2 fell from 1.07-1.43x to **0.94-1.19x**; at 3 seats level 3 now wins less
+than level 2. B10 strengthened level 2 against level 3 (bots' own note: level 2 +9 points over
+Guard x1). K2's level-3 step fails at every count; level 2 over level 1 passes (25-109x).
+
+### 10.3 For design and bots
+
+- **Design (D12)**: B10 does not change the D12 picture. The Great Work still holds 46-55% of
+  level-2 winners and breadth is 2-3 sources. Under B10, Valour is already a source at 2-4 seats,
+  so a D12 Valour step would mostly swap more Purse for Valour (L5 9.2). The threshold rise
+  (L5: Great Work 38-46%) and a Purse lever remain the candidates; D12 will be measured with
+  B10 when it is on main.
+- **Bots**: level 3 no longer beats level 2 at 3 seats (0.94x); K2's level-3 step needs level 3
+  to get B10's gain too, or its denial reweighed. Lore runs fell with B10 (>= 3: 16-21% -> 11-19%).
