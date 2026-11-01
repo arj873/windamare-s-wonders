@@ -1,9 +1,17 @@
 /**
- * The ☰ menu for a room visit (research R8 #4): How to play, Animations and Sound, in the same
- * corner and widget as the hotseat menu (src/game/boot.ts). No New game or Bot speed: the room
- * owns those. Boot's own corner leaves the page while a room is on screen.
+ * The ☰ menu for a room visit (research R8 #4): How to play, Animations (fx's Fast / Normal /
+ * Off) and Sound, in the same corner and widget as the hotseat menu (src/game/boot.ts). No New
+ * game or Bot speed: the room owns those. Boot's own corner leaves the page while a room is on
+ * screen.
  */
 import { h, Menu, type MenuItem } from '../../ui';
+import {
+  FX_SPEED_LABEL,
+  FX_SPEEDS,
+  fxSpeed,
+  type FxSpeed,
+  type FxSpeedSetting,
+} from '../../ui/fx/speed';
 import { loadAnimations, saveAnimations } from '../../ui/prefs';
 
 /** The page's sound on/off (src/audio `sfx`; tests pass a stand-in). */
@@ -16,6 +24,8 @@ export interface OnlineMenuOptions {
   /** The tutorial lane's rules overlay; absent = no "How to play". */
   openRules?: () => void;
   sound?: SoundSwitch;
+  /** fx's animation speed (F6). Default: the page's `fxSpeed`. */
+  speed?: Pick<FxSpeedSetting, 'get' | 'set'>;
 }
 
 const ON_OFF = [
@@ -34,14 +44,18 @@ export function onlineMenuItems(opts: OnlineMenuOptions): MenuItem[] {
       onClick: rules,
     });
   }
+  const speed = opts.speed ?? fxSpeed;
   items.push({
     kind: 'choice',
     label: 'Animations',
-    options: ON_OFF,
-    value: loadAnimations() ? 'on' : 'off',
-    // As boot does: the class turns CSS motion off, the pref turns the reveal off.
+    options: FX_SPEEDS.map((id) => ({ id, label: FX_SPEED_LABEL[id] })),
+    // An earlier "Animations: Off" (ui's pref) still reads as Off.
+    value: loadAnimations() ? speed.get() : 'off',
+    // fx's speed drives the reveal and moments (F6). Off also turns the CSS motion off, as the
+    // old On/Off did, so the table's transitions and `motionOn()` agree with fx.
     onChange: (id) => {
-      saveAnimations(id === 'on');
+      speed.set(id as FxSpeed);
+      saveAnimations(id !== 'off');
       document.documentElement.classList.toggle('no-anim', id === 'off');
     },
   });

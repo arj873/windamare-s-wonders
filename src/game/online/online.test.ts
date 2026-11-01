@@ -19,6 +19,9 @@ import { DevServer } from './devServer';
 import { bootOnline } from './index';
 import { presence, roomLooks } from './netPlay';
 import { seatColor } from '../../ui/online/lobbyModel';
+import { fxSpeed } from '../../ui/fx/speed';
+import { loadAnimations, saveAnimations } from '../../ui/prefs';
+import { onlineMenuItems } from './menu';
 import type { WwSeat, WwTable } from '../../engine';
 
 type App = OnlineApp<WwSeat, WwTable>;
@@ -432,6 +435,15 @@ describe('online room visit (O3)', () => {
 });
 
 describe('online ☰ menu (O4)', () => {
+  it('an Animations Off saved before fx speeds reads as Off', () => {
+    const speed = { get: () => 'fast' as const, set: vi.fn() };
+    const value = () => onlineMenuItems({ speed }).find((i) => i.label === 'Animations');
+    saveAnimations(false);
+    expect(value()).toMatchObject({ kind: 'choice', value: 'off' });
+    saveAnimations(true);
+    expect(value()).toMatchObject({ kind: 'choice', value: 'fast' });
+  });
+
   it('How to play, Animations and Sound in the lobby and the game; All cards on the table', async () => {
     const w = world();
     const openRules = vi.fn();
@@ -459,10 +471,23 @@ describe('online ☰ menu (O4)', () => {
     openMenu();
     k(ann, 'choice-2-off')?.click();
     expect(sound.setMuted).toHaveBeenLastCalledWith(true);
-    k(ann, 'choice-1-off')?.click();
-    expect(document.documentElement.classList.contains('no-anim')).toBe(true);
-    k(ann, 'choice-1-on')?.click();
+    // Animations is fx's speed (F6): Fast / Normal / Off; Off also stops the CSS motion.
+    const speeds = [...ann.element.querySelectorAll('[data-k^="choice-1-"]')].map(
+      (e) => e.textContent,
+    );
+    expect(speeds).toEqual(['Fast', 'Normal', 'Off']);
+    expect(k(ann, 'choice-1-normal')?.getAttribute('aria-pressed')).toBe('true');
+    k(ann, 'choice-1-fast')?.click();
+    expect(fxSpeed.get()).toBe('fast');
     expect(document.documentElement.classList.contains('no-anim')).toBe(false);
+    k(ann, 'choice-1-off')?.click();
+    expect(fxSpeed.get()).toBe('off');
+    expect(document.documentElement.classList.contains('no-anim')).toBe(true);
+    expect(loadAnimations()).toBe(false);
+    k(ann, 'choice-1-normal')?.click();
+    expect(fxSpeed.get()).toBe('normal');
+    expect(document.documentElement.classList.contains('no-anim')).toBe(false);
+    expect(loadAnimations()).toBe(true);
     // The same menu over the table, and the hand's "All cards" opens the card list.
     k(ann, 'lobby-start')?.click();
     await w.settle();
